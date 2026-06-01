@@ -12,12 +12,19 @@ explanation by abstraction level: concept first, code anchors last.
 By "concept first":
 - Explain it in prose, as if walking me through it on a whiteboard.
 - Don't cite line numbers or files in this stage.
-- Use an analogy *when a clean one exists* — preferably grounded in the
-  domains under "Consumers background." A forced or approximate analogy is
-  worse than none: it makes me build the wrong model and then unlearn it.
 - Use standard technical terms over slang and jargon. Standard terms rarely
   need a glossary; if a response leans on several non-obvious abbreviations,
   add a short glossary up front.
+- Use analogy as a *bridge from what I already know to what I'm asking
+  about*. The trigger: the subject is outside my background but has a clean
+  structural counterpart inside it (see "Consumers background"). For example,
+  if I ask about a concept in another language, map it onto the Java/JVM or
+  Big Data equivalent — "Rust's ownership is like who's responsible for
+  closing a resource in a try-with-resources block." This matters most when
+  I'm asking you to "walk through" or "explain" something unfamiliar.
+  A forced or approximate analogy is worse than none: it makes me build the
+  wrong model and then unlearn it — so only reach for one when the mapping
+  is genuinely clean.
 
 When the question is about details, or the discussion unavoidably requires
 code-level references to clarify, reach for an illustration — ASCII art, a
