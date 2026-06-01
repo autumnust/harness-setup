@@ -1,27 +1,39 @@
 # Communication style
 
+> Scope: this section covers how to *explain* things — bugs, designs, "why"
+> questions. It does not constrain other work (writing code, running commands,
+> planning). Silence here is not "no preferences" elsewhere.
+
 ## Lead explanations with concept, not code
 
 When explaining a bug, a design issue, or "why X is happening," structure the
-explanation by abstraction level: concept first, code anchors last. 
-By "concept first": 
-- Try to explain everything in prose as if you are walking
-me through it on a whiteboard. 
-- Don't cite line number or files in this stage.
-- Use a concise analogy to help users understand the explanation. See 
-"Consumers background" for more information.
-- Use standard technical terms, instead of slangs and jargon. When using
-abbreviation: Make sure creating a glossary section upfront.
+explanation by abstraction level: concept first, code anchors last.
 
-When user asked about details, or the discussion will unavoidably requires 
-referencing code-level details to clarify / assist understanding, use illustration
-tool like ascii-art, mermaid diagram to draw sequencing diagram, flowchart or 
-other good way of illustration best practice based on user's inquiries.
+By "concept first":
+- Explain it in prose, as if walking me through it on a whiteboard.
+- Don't cite line numbers or files in this stage.
+- Use an analogy *when a clean one exists* — preferably grounded in the
+  domains under "Consumers background." A forced or approximate analogy is
+  worse than none: it makes me build the wrong model and then unlearn it.
+- Use standard technical terms over slang and jargon. Standard terms rarely
+  need a glossary; if a response leans on several non-obvious abbreviations,
+  add a short glossary up front.
+
+When the question is about details, or the discussion unavoidably requires
+code-level references to clarify, reach for an illustration — ASCII art, a
+Mermaid sequence diagram, a flowchart — whatever best fits the inquiry.
+
+**When NOT to do this:** direct questions get direct answers. The concept-first
+treatment is for *explanations*, not lookups. "What's the type of this var?",
+"Did the test pass?", "Which file defines X?" get the short answer, no analogy,
+no whiteboard.
 
 **Consumers background:**
 Main background of users:
 - Java
-- Big Data Processing: HDFS, Spark, Kafka etc. 
+- Big Data Processing: HDFS, Spark, Kafka, etc.
+
+Draw analogies and framing from this world when it helps.
 
 **Smell test:** if the first paragraph has more backticks than verbs, the
 explanation has been led by code. Rewrite leading with what the user
@@ -51,9 +63,13 @@ has to swim through the code to extract the mental model, or gets the
 mental model up front.
 
 # Execution style
-When implementing a specification, practively ask user if they want agent to maintain a running implementation-notes-<theme>-<dates>.html file that captures anything user should know about how the implementation diverges from or interprets the spec, including:
 
-- Design decisions: choices you made where the spec was ambiguous
-- Deviations: places where you intentionally departed from the spec, and why
-- Tradeoffs:  alternatives you considered and why you picked what you did
-- Open questions: anything you'd want user to confirm or revise
+When implementing a specification, proactively ask whether I want you to
+maintain a running `implementation-notes-<theme>-<date>.html` file that
+captures anything I should know about how the implementation diverges from or
+interprets the spec, including:
+
+- **Design decisions:** choices you made where the spec was ambiguous
+- **Deviations:** places where you intentionally departed from the spec, and why
+- **Tradeoffs:** alternatives you considered and why you picked what you did
+- **Open questions:** anything you'd want me to confirm or revise
