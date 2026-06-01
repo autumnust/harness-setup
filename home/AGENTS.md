@@ -3,16 +3,25 @@
 ## Lead explanations with concept, not code
 
 When explaining a bug, a design issue, or "why X is happening," structure the
-explanation by abstraction level: concept first, code anchors last.
+explanation by abstraction level: concept first, code anchors last. 
+By "concept first": 
+- Try to explain everything in prose as if you are walking
+me through it on a whiteboard. 
+- Don't cite line number or files in this stage.
+- Use a concise analogy to help users understand the explanation. See 
+"Consumers background" for more information.
+- Use standard technical terms, instead of slangs and jargon. When using
+abbreviation: Make sure creating a glossary section upfront.
 
-**Order to use:**
-1. What the user should be experiencing, or what the system was promising.
-2. The symptom in domain language (what's actually visible to them).
-3. The conceptual gap — what guarantee is broken, what input the system
-   should have tracked but didn't, what the design assumed and shouldn't
-   have.
-4. Only then mention specific functions, structs, fields, file paths — and
-   only as anchors for "the fix lives here," not as the explanation itself.
+When user asked about details, or the discussion will unavoidably requires 
+referencing code-level details to clarify / assist understanding, use illustration
+tool like ascii-art, mermaid diagram to draw sequencing diagram, flowchart or 
+other good way of illustration best practice based on user's inquiries.
+
+**Consumers background:**
+Main background of users:
+- Java
+- Big Data Processing: HDFS, Spark, Kafka etc. 
 
 **Smell test:** if the first paragraph has more backticks than verbs, the
 explanation has been led by code. Rewrite leading with what the user
@@ -41,45 +50,10 @@ The technical content is identical. The difference is whether the reader
 has to swim through the code to extract the mental model, or gets the
 mental model up front.
 
-### When to skip this rule
+# Execution style
+When implementing a specification, practively ask user if they want agent to maintain a running implementation-notes-<theme>-<dates>.html file that captures anything user should know about how the implementation diverges from or interprets the spec, including:
 
-- The user explicitly asks for a code walkthrough, debugger-level
-  inspection, or implementation review.
-- The user's question is itself at the implementation level (e.g., "what
-  does this function return") — match their abstraction level instead of
-  forcing a higher one.
-- A short, scoped technical answer is what's wanted.
-
-# Available skill catalog
-
-Customized agent skills live in `~/Documents/kumo-skills-catalog` (repo:
-`kumo-ai/kumo-skills-catalog`). It's an [agentskills.io](https://agentskills.io)
-catalog with a **per-project** install model — `install.sh` or
-`sync-skills-catalog.py` symlinks selected skills into a project's
-`.agents/skills/` and registers them as slash commands under
-`.claude/commands/`. Skills are not auto-loaded globally; they have to be
-installed per consuming repo.
-
-**Browsing what's available:** read `<catalog>/README.md` for the table,
-or look in the domain dirs (`collab/`, `github/`, `VPC/`, `aws/`, `kumo/`)
-for individual `SKILL.md` files. Notable ones I should know exist:
-
-- `collab/annotate-iterate` — iterate on a written doc / RFC / spec via
-  inline `annotate:` markers. Use when the user reviews a markdown file
-  by editing in `annotate:` lines and expects me to address each one in
-  place. Stable protocol for first-pass replies, follow-ups, resolution,
-  and promotion of inline answers into the doc body.
-- `github/gh-issue-management`, `github/learn-diff` — GitHub workflows.
-- `VPC/*`, `aws/billing-investigate`, `kumo/kumo-rfm-agent`,
-  `kumo/kumo-tuning-agent` — domain-specific (Kumo infra / SDK).
-
-**When the user references a catalog skill by name** that isn't in the
-current session's available-skills list:
-1. Check whether the project has the catalog installed
-   (`.agents/skills/<name>` or `.claude/commands/<name>`).
-2. If not, read the SKILL.md from the catalog directly
-   (`~/Documents/kumo-skills-catalog/<domain>/<name>/SKILL.md`) and
-   follow it as a manual procedure — don't blindly invoke `Skill(...)`,
-   since the runtime won't have the schema loaded.
-3. Offer to install it for the project via the catalog's sync script if
-   the workflow looks like it'll recur.
+- Design decisions: choices you made where the spec was ambiguous
+- Deviations: places where you intentionally departed from the spec, and why
+- Tradeoffs:  alternatives you considered and why you picked what you did
+- Open questions: anything you'd want user to confirm or revise
