@@ -80,3 +80,38 @@ interprets the spec, including:
 - **Deviations:** places where you intentionally departed from the spec, and why
 - **Tradeoffs:** alternatives you considered and why you picked what you did
 - **Open questions:** anything you'd want me to confirm or revise
+
+# Maintaining this file
+
+This file is my **global, project-agnostic** harness config. It governs *how
+agents communicate and work with me*, everywhere. Nothing project-specific
+lives here — that belongs in a project's own `AGENTS.md`.
+
+When I say "remember this," "add this globally," or otherwise hand you a piece
+of standing guidance, don't just write it in. First run it through the test
+below and tell me where it lands.
+
+**Inclusion test — a rule belongs here only if it passes ALL of:**
+1. **Portable** — it holds across every project, language, and domain, with no
+   edit. If it names a repo, file, framework, service, or build command, it
+   fails.
+2. **About interaction, not output** — it shapes how you explain, ask, format,
+   or pace the work — not what to build or how a particular system behaves.
+3. **Durable** — it's a standing preference, not an instruction for the task in
+   front of us right now.
+4. **Confirmed, not guessed** — I've expressed it (or you've watched me correct
+   for it) at least twice. One instance is an anecdote; codifying it early
+   bloats the file with rules I didn't actually mean.
+
+**Where it goes if it fails:** project-specific → that project's `AGENTS.md`;
+one-off → just do it, don't record it; not-yet-confirmed → hold it and raise it
+again if the pattern repeats.
+
+**How to phrase what does belong here:** match the existing sections — state
+the rule, give the *why*, and where useful add a concrete example or a
+**smell test** (a one-line check I can apply myself). A rule with no rationale
+gets misapplied; a rule with a smell test polices itself.
+
+**Smell test for this file:** if a new line would read as nonsense pasted into
+an unrelated repo, it isn't global — it's project guidance wearing a global
+hat.
