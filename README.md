@@ -12,7 +12,7 @@ clone of `kumo-skills-catalog`). Drop this onto a new device, run
 ## Quick start on a new device
 
 ```bash
-git clone <this-repo-url> ~/Documents/harness-setup
+git clone git@github.com:autumnust/harness-setup.git ~/Documents/harness-setup
 cd ~/Documents/harness-setup
 ./install.sh
 ```
@@ -33,7 +33,7 @@ exits non-zero. Pick one of:
 
 ### Prompt to paste into Claude Code on the new device
 
-> Clone `<this-repo-url>` into `~/Documents/harness-setup`, then run
+> Clone `git@github.com:autumnust/harness-setup.git` into `~/Documents/harness-setup`, then run
 > `./install.sh` from inside it.
 >
 > If the script detects existing global Claude Code config and exits
