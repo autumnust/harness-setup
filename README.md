@@ -53,7 +53,6 @@ exits non-zero. Pick one of:
 | `home/AGENTS.md` | `~/AGENTS.md` (and `~/.claude/CLAUDE.md` → symlink to it) |
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
 | `claude/skills/frontend-slides/` | `~/.claude/skills/frontend-slides/` |
-| `claude/skills/k8s-egress-diagnose/` | `~/.claude/skills/k8s-egress-diagnose/` |
 | *(cloned at install)* | `~/Documents/kumo-skills-catalog/` (from `kumo-ai/kumo-skills-catalog`) |
 
 ## What the settings.json controls
