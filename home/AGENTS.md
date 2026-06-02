@@ -73,13 +73,15 @@ mental model up front.
 
 When implementing a specification, proactively ask whether I want you to
 maintain a running `implementation-notes-<theme>-<date>.html` file that
-captures anything I should know about how the implementation diverges from or
-interprets the spec, including:
+captures anything I should know about (1) progress in simple languages with 
+timestamp in PST, (2) how the implementation diverges from or interprets the spec, 
+including:
 
 - **Design decisions:** choices you made where the spec was ambiguous
 - **Deviations:** places where you intentionally departed from the spec, and why
 - **Tradeoffs:** alternatives you considered and why you picked what you did
 - **Open questions:** anything you'd want me to confirm or revise
+
 
 # Maintaining this file
 
