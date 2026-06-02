@@ -186,10 +186,23 @@ fi
 
 # --- 2. settings.json (with node path patched for this device) --------------
 say "Installing $CLAUDE_DIR/settings.json"
+
+# Locate a real node binary. `command -v` misses nvm-managed node over a
+# non-interactive ssh session (nvm is sourced from ~/.bashrc, which such shells
+# skip), so also probe nvm's install dir and the common system paths before
+# giving up. Pick the newest nvm version when several are installed.
 NODE_BIN="$(command -v node || true)"
+if [[ -z "$NODE_BIN" && -d "$HOME/.nvm/versions/node" ]]; then
+  NODE_BIN="$(ls -1d "$HOME"/.nvm/versions/node/*/bin/node 2>/dev/null | sort -V | tail -1)"
+fi
 if [[ -z "$NODE_BIN" ]]; then
-  warn "node not found on PATH — claude-hud statusline will not render until node is installed."
-  warn "Install node (brew install node), then rerun this script to patch the path."
+  for cand in /usr/local/bin/node /usr/bin/node /opt/homebrew/bin/node; do
+    [[ -x "$cand" ]] && NODE_BIN="$cand" && break
+  done
+fi
+if [[ -z "$NODE_BIN" ]]; then
+  warn "node not found (PATH, nvm, or common locations) — claude-hud statusline"
+  warn "will not render until node is installed. Install it, then rerun to patch."
   NODE_BIN="/opt/homebrew/bin/node"
 fi
 say "Pinning statusline node binary to: $NODE_BIN"
