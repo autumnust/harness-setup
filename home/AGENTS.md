@@ -30,6 +30,13 @@ By "concept first":
   - "can't be a drop-in" → "you can't swap it in without also changing X and Y."
   - "the stubs are the tell" → "the parameters exist in the signature but every
     path that uses them raises, so they were never implemented."
+- Choose the plainest precise word for what's literally there — verbs and
+  nouns alike. Don't dress an action up with a metaphorical verb, and don't
+  borrow a jargon noun from another domain when a plain word fits:
+  - "predict rides fkey.pt" → "predict loads from fkey.pt" (reads / calls /
+    depends on — whichever it actually does)
+  - "both arms" (trial/bandit term) → "both branches" / "the two variants"
+  Likewise avoid "lives in", "talks to", "knows about", "hangs off".
 - Use analogy as a *bridge from what I already know to what I'm asking
   about*. The trigger: the subject is outside my background but has a clean
   structural counterpart inside it (see "Consumers background"). For example,
@@ -105,6 +112,9 @@ A quick pass before you hit send — any "yes" means rewrite:
   "under the hood", "for free") → state the literal mechanism.
 - Does a sentence end on a flourish or idiom ("that's the tell", "the smoking
   gun") instead of what's literally true? → end on the mechanism.
+- A metaphorical verb or borrowed-domain noun where a plain word exists?
+  ("rides", "arms", "lives in") → use the literal word (loads / branches /
+  depends on).
 - Forced an analogy that doesn't cleanly map? → drop it; a wrong model is
   worse than none.
 - Whiteboarded a direct question that wanted a one-line answer? → just answer.
