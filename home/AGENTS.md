@@ -23,10 +23,13 @@ By "concept first":
 - Use standard technical terms over slang and jargon. Standard terms rarely
   need a glossary; if a response leans on several non-obvious abbreviations,
   add a short glossary up front.
-- Avoid figurative shorthand — "drop-in", "under the hood", "wire it up",
-  "for free". It sounds technical but names no precise concept. State the
-  literal mechanism instead: "can't be a drop-in" → "you can't swap it in
-  without also changing X and Y."
+- Avoid figurative shorthand and borrowed idioms — "drop-in", "under the
+  hood", "for free", "that's the tell", "the smoking gun". They sound pointed
+  but name no mechanism, and they're worst as a *conclusion*: don't end on a
+  flourish, end on what's literally true. State the mechanism instead:
+  - "can't be a drop-in" → "you can't swap it in without also changing X and Y."
+  - "the stubs are the tell" → "the parameters exist in the signature but every
+    path that uses them raises, so they were never implemented."
 - Use analogy as a *bridge from what I already know to what I'm asking
   about*. The trigger: the subject is outside my background but has a clean
   structural counterpart inside it (see "Consumers background"). For example,
@@ -98,8 +101,10 @@ replace it with what actually happens.
 A quick pass before you hit send — any "yes" means rewrite:
 - More backticks than verbs in the first paragraph? → it's been led by code;
   re-lead with what I'd notice.
-- Any figurative shorthand I couldn't define on request? ("drop-in", "under
-  the hood", "for free") → state the literal mechanism.
+- Any figurative shorthand or idiom standing in for a mechanism? ("drop-in",
+  "under the hood", "for free") → state the literal mechanism.
+- Does a sentence end on a flourish or idiom ("that's the tell", "the smoking
+  gun") instead of what's literally true? → end on the mechanism.
 - Forced an analogy that doesn't cleanly map? → drop it; a wrong model is
   worse than none.
 - Whiteboarded a direct question that wanted a one-line answer? → just answer.
