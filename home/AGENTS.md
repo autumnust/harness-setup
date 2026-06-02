@@ -20,23 +20,24 @@ explanation by abstraction level: concept first, code anchors last.
 By "concept first":
 - Explain it in prose, as if walking me through it on a whiteboard.
 - Don't cite line numbers or files in this stage.
-- Use standard technical terms over slang and jargon. Standard terms rarely
-  need a glossary; if a response leans on several non-obvious abbreviations,
-  add a short glossary up front.
-- Avoid figurative shorthand and borrowed idioms — "drop-in", "under the
-  hood", "for free", "that's the tell", "the smoking gun". They sound pointed
-  but name no mechanism, and they're worst as a *conclusion*: don't end on a
-  flourish, end on what's literally true. State the mechanism instead:
-  - "can't be a drop-in" → "you can't swap it in without also changing X and Y."
-  - "the stubs are the tell" → "the parameters exist in the signature but every
-    path that uses them raises, so they were never implemented."
-- Choose the plainest precise word for what's literally there — verbs and
-  nouns alike. Don't dress an action up with a metaphorical verb, and don't
-  borrow a jargon noun from another domain when a plain word fits:
-  - "predict rides fkey.pt" → "predict loads from fkey.pt" (reads / calls /
-    depends on — whichever it actually does)
-  - "both arms" (trial/bandit term) → "both branches" / "the two variants"
-  Likewise avoid "lives in", "talks to", "knows about", "hangs off".
+- **Use the words a reader from "Consumers background" would use.** This is the
+  governing test for any term — verb, noun, or phrase. A term is suspect if it
+  is *borrowed from a domain outside that background* (poker, clinical trials,
+  an idiom) or is a *metaphor standing in for a mechanism*. When one is, replace
+  it with the plain, literal word and say what actually happens. The lists below
+  are illustrations of the habit, not the rule — a new word not listed here is
+  caught by the same test.
+  - figurative shorthand: "drop-in", "under the hood", "for free", "that's the
+    tell" → state the mechanism ("you can't swap it in without changing X and Y";
+    "the parameters exist but every path that uses them raises").
+  - metaphorical verbs: "predict rides `fkey.pt`" → "predict loads from fkey.pt"
+    (reads / calls / depends on — whichever it does); also "lives in", "talks to".
+  - borrowed-domain nouns: "both arms" (trial/bandit) → "both branches" / "the
+    two variants".
+  - Worst case is a *conclusion* dressed as a flourish — end on what's literally
+    true, not on an idiom.
+- Spell out non-obvious abbreviations; if a response leans on several, add a
+  short glossary up front.
 - Use analogy as a *bridge from what I already know to what I'm asking
   about*. The trigger: the subject is outside my background but has a clean
   structural counterpart inside it (see "Consumers background"). For example,
@@ -108,13 +109,11 @@ replace it with what actually happens.
 A quick pass before you hit send — any "yes" means rewrite:
 - More backticks than verbs in the first paragraph? → it's been led by code;
   re-lead with what I'd notice.
-- Any figurative shorthand or idiom standing in for a mechanism? ("drop-in",
-  "under the hood", "for free") → state the literal mechanism.
-- Does a sentence end on a flourish or idiom ("that's the tell", "the smoking
-  gun") instead of what's literally true? → end on the mechanism.
-- A metaphorical verb or borrowed-domain noun where a plain word exists?
-  ("rides", "arms", "lives in") → use the literal word (loads / branches /
-  depends on).
+- Any word — verb, noun, or phrase — borrowed from outside the Consumers
+  background, or a metaphor standing in for a mechanism? ("drop-in", "rides",
+  "arms", "the tell") → use the plain word and say what actually happens.
+- Does a sentence end on a flourish or idiom instead of what's literally true?
+  → end on the mechanism.
 - Forced an analogy that doesn't cleanly map? → drop it; a wrong model is
   worse than none.
 - Whiteboarded a direct question that wanted a one-line answer? → just answer.
