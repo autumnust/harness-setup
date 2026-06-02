@@ -8,13 +8,22 @@
     "claude-hud@claude-hud": true,
     "understand-anything@understand-anything": true,
     "frontend-design@claude-plugins-official": true,
-    "crit@crit": true
+    "crit@crit": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "codex@openai-codex": true
   },
   "extraKnownMarketplaces": {
     "claude-hud": {
       "source": {
         "source": "github",
         "repo": "jarrodwatts/claude-hud"
+      }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
       }
     },
     "understand-anything": {
