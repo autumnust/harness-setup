@@ -1,3 +1,11 @@
+# Contents
+
+- [Communication style](#communication-style)
+  - [Lead explanations with concept, not code](#lead-explanations-with-concept-not-code)
+  - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
+- [Execution style](#execution-style)
+- [Maintaining this file](#maintaining-this-file)
+
 # Communication style
 
 > Scope: this section covers how to *explain* things — bugs, designs, "why"
@@ -18,8 +26,7 @@ By "concept first":
 - Avoid figurative shorthand — "drop-in", "under the hood", "wire it up",
   "for free". It sounds technical but names no precise concept. State the
   literal mechanism instead: "can't be a drop-in" → "you can't swap it in
-  without also changing X and Y." **Smell test:** if a phrase is a metaphor
-  you couldn't define on request, replace it with what actually happens.
+  without also changing X and Y."
 - Use analogy as a *bridge from what I already know to what I'm asking
   about*. The trigger: the subject is outside my background but has a clean
   structural counterpart inside it (see "Consumers background"). For example,
@@ -47,10 +54,6 @@ Main background of users:
 
 Draw analogies and framing from this world when it helps.
 
-**Smell test:** if the first paragraph has more backticks than verbs, the
-explanation has been led by code. Rewrite leading with what the user
-notices.
-
 ### Example — explaining a cache-staleness bug
 
 ❌ Code-first (avoid):
@@ -73,6 +76,33 @@ notices.
 The technical content is identical. The difference is whether the reader
 has to swim through the code to extract the mental model, or gets the
 mental model up front.
+
+### Example — naming the mechanism instead of a metaphor
+
+❌ Figurative (avoid):
+
+> The real coupling here — why it can't be a drop-in.
+
+✅ Literal (prefer):
+
+> Why you can't swap it in without other changes: its callers hand it a focus
+> list and read back a filtered snapshot, so a replacement has to honor both
+> sides or every caller breaks.
+
+"Drop-in" sounds precise but names nothing; the rewrite says exactly what the
+constraint is. If a phrase is a metaphor you couldn't define on request,
+replace it with what actually happens.
+
+## Self-check before sending an explanation
+
+A quick pass before you hit send — any "yes" means rewrite:
+- More backticks than verbs in the first paragraph? → it's been led by code;
+  re-lead with what I'd notice.
+- Any figurative shorthand I couldn't define on request? ("drop-in", "under
+  the hood", "for free") → state the literal mechanism.
+- Forced an analogy that doesn't cleanly map? → drop it; a wrong model is
+  worse than none.
+- Whiteboarded a direct question that wanted a one-line answer? → just answer.
 
 # Execution style
 
