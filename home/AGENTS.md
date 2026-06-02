@@ -15,6 +15,11 @@ By "concept first":
 - Use standard technical terms over slang and jargon. Standard terms rarely
   need a glossary; if a response leans on several non-obvious abbreviations,
   add a short glossary up front.
+- Avoid figurative shorthand — "drop-in", "under the hood", "wire it up",
+  "for free". It sounds technical but names no precise concept. State the
+  literal mechanism instead: "can't be a drop-in" → "you can't swap it in
+  without also changing X and Y." **Smell test:** if a phrase is a metaphor
+  you couldn't define on request, replace it with what actually happens.
 - Use analogy as a *bridge from what I already know to what I'm asking
   about*. The trigger: the subject is outside my background but has a clean
   structural counterpart inside it (see "Consumers background"). For example,
