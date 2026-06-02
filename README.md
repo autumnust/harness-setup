@@ -29,6 +29,9 @@ exits non-zero. Pick one of:
                               #   <path>.bak.<timestamp> before installing.
 ./install.sh --overwrite      # Replace existing files outright. No backup.
 ./install.sh --skip-existing  # Keep existing files; only install missing ones.
+./install.sh --update         # Steady-state sync: rewrite only files that
+                              #   differ, diff + back up each first, no-op
+                              #   when in sync. Use update.sh below instead.
 ```
 
 ### Prompt to paste into Claude Code on the new device
@@ -93,9 +96,28 @@ aside to `<path>.bak.<timestamp>` first.
   first use of each.
 - Project-level `AGENTS.md` files and project `.claude/` directories.
 
-## Updating this repo from the source machine
+## Keeping a machine in sync after the repo changes (repo → `~/`)
 
-If I add a new global skill or tweak settings before fully migrating:
+The repo is the source of truth. After it changes — you edited `home/AGENTS.md`
+and pushed, or you pulled someone else's commit — the live `~/` copy is stale,
+because `install.sh` installs by **copying** (it won't silently overwrite). To
+push the latest repo state onto the current machine:
+
+```bash
+cd ~/Documents/harness-setup
+./update.sh            # git pull --ff-only, then install.sh --update
+./update.sh --no-pull  # skip the pull (you just edited the repo locally)
+```
+
+`update.sh` only rewrites files that actually differ, prints a diff of each
+change, backs up the prior copy to `<path>.bak.<timestamp>`, and is a no-op
+when everything is already in sync. Restart Claude Code afterward so it
+re-reads the refreshed global config.
+
+## Updating the repo from a source machine (`~/` → repo)
+
+The other direction: you tweaked the live global config and want to capture it
+back into the repo before committing.
 
 ```bash
 cd ~/Documents/harness-setup

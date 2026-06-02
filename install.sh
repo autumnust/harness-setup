@@ -11,6 +11,11 @@
 #   ./install.sh --overwrite      # Replace existing files with no backup.
 #   ./install.sh --skip-existing  # Keep every existing file, only install
 #                                 # what is missing.
+#   ./install.sh --update         # Steady-state sync after the repo changes:
+#                                 # only rewrites files that actually differ,
+#                                 # shows a diff and backs up each before
+#                                 # writing, and is a no-op when in sync.
+#                                 # (See update.sh, which git-pulls first.)
 set -euo pipefail
 
 MODE="prompt"
@@ -19,6 +24,7 @@ for arg in "$@"; do
     --backup)         MODE="backup" ;;
     --overwrite)      MODE="overwrite" ;;
     --skip-existing)  MODE="skip" ;;
+    --update)         MODE="update" ;;
     -h|--help)
       cat <<'HELP'
 Installs Lei's global Claude Code harness setup onto this machine.
@@ -33,6 +39,11 @@ Usage:
   ./install.sh --overwrite      Replace existing files with no backup.
   ./install.sh --skip-existing  Keep every existing file, only install
                                 what is missing.
+  ./install.sh --update         Steady-state sync after the repo changes:
+                                rewrite only files that differ, showing a
+                                diff and backing up each first; no-op when
+                                already in sync. update.sh wraps this and
+                                git-pulls beforehand.
 HELP
       exit 0 ;;
     *)
@@ -111,35 +122,83 @@ handle_existing() {
   return 0
 }
 
+# Counters for the --update summary.
+UPDATED=0
+UNCHANGED=0
+
+# place_file SRC DST — install a single rendered file at DST honoring MODE.
+# In --update mode: skip when byte-identical, otherwise diff + back up + write.
+place_file() {
+  local src="$1" dst="$2"
+  if [[ "$MODE" == "update" ]]; then
+    if [[ -f "$dst" && ! -L "$dst" ]] && cmp -s "$src" "$dst"; then
+      ok "in sync: $dst"; UNCHANGED=$((UNCHANGED + 1)); return 0
+    fi
+    if [[ -e "$dst" || -L "$dst" ]]; then
+      say "Updating $dst (changed):"
+      diff -u "$dst" "$src" | sed 's/^/    /' || true
+      local bak="${dst}.bak.${TS}"
+      mv "$dst" "$bak"; warn "backed up prior → $bak"
+    fi
+    cp "$src" "$dst"; ok "synced $dst"; UPDATED=$((UPDATED + 1)); return 0
+  fi
+  if handle_existing "$dst"; then cp "$src" "$dst"; ok "Wrote $dst"; fi
+}
+
+# place_tree SRC DST — install a directory tree at DST honoring MODE.
+place_tree() {
+  local src="$1" dst="$2"
+  if [[ "$MODE" == "update" ]]; then
+    if [[ -d "$dst" ]] && diff -rq "$src" "$dst" >/dev/null 2>&1; then
+      ok "in sync: $dst"; UNCHANGED=$((UNCHANGED + 1)); return 0
+    fi
+    if [[ -e "$dst" || -L "$dst" ]]; then
+      say "Updating $dst (changed)"
+      local bak="${dst}.bak.${TS}"
+      mv "$dst" "$bak"; warn "backed up prior → $bak"
+    fi
+    cp -R "$src" "$dst"; ok "synced $dst"; UPDATED=$((UPDATED + 1)); return 0
+  fi
+  if handle_existing "$dst"; then cp -R "$src" "$dst"; ok "Installed skill: $(basename "$dst")"; fi
+}
+
 # --- 1. AGENTS.md + CLAUDE.md symlink ---------------------------------------
 say "Installing ~/AGENTS.md (global instructions)"
-if handle_existing "$HOME/AGENTS.md"; then
-  cp "$REPO_ROOT/home/AGENTS.md" "$HOME/AGENTS.md"
-  ok "Wrote $HOME/AGENTS.md"
-fi
+place_file "$REPO_ROOT/home/AGENTS.md" "$HOME/AGENTS.md"
 
 say "Ensuring $CLAUDE_DIR exists"
 mkdir -p "$CLAUDE_DIR"
 
 say "Linking $CLAUDE_DIR/CLAUDE.md → $HOME/AGENTS.md"
-if handle_existing "$CLAUDE_DIR/CLAUDE.md"; then
+if [[ "$MODE" == "update" ]]; then
+  # The link target is content-stable; only (re)create it if it's wrong/missing.
+  if [[ -L "$CLAUDE_DIR/CLAUDE.md" && "$(readlink "$CLAUDE_DIR/CLAUDE.md")" == "$HOME/AGENTS.md" ]]; then
+    ok "in sync: $CLAUDE_DIR/CLAUDE.md (symlink)"
+  else
+    [[ -e "$CLAUDE_DIR/CLAUDE.md" || -L "$CLAUDE_DIR/CLAUDE.md" ]] && mv "$CLAUDE_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md.bak.${TS}"
+    ln -s "$HOME/AGENTS.md" "$CLAUDE_DIR/CLAUDE.md"
+    ok "Symlink (re)created"
+  fi
+elif handle_existing "$CLAUDE_DIR/CLAUDE.md"; then
   ln -s "$HOME/AGENTS.md" "$CLAUDE_DIR/CLAUDE.md"
   ok "Symlink in place"
 fi
 
 # --- 2. settings.json (with node path patched for this device) --------------
 say "Installing $CLAUDE_DIR/settings.json"
-if handle_existing "$CLAUDE_DIR/settings.json"; then
-  NODE_BIN="$(command -v node || true)"
-  if [[ -z "$NODE_BIN" ]]; then
-    warn "node not found on PATH — claude-hud statusline will not render until node is installed."
-    warn "Install node (brew install node), then rerun this script to patch the path."
-    NODE_BIN="/opt/homebrew/bin/node"
-  fi
-  say "Pinning statusline node binary to: $NODE_BIN"
+NODE_BIN="$(command -v node || true)"
+if [[ -z "$NODE_BIN" ]]; then
+  warn "node not found on PATH — claude-hud statusline will not render until node is installed."
+  warn "Install node (brew install node), then rerun this script to patch the path."
+  NODE_BIN="/opt/homebrew/bin/node"
+fi
+say "Pinning statusline node binary to: $NODE_BIN"
 
-  # The statusline command embeds a literal node path. Rewrite it for this device.
-  python3 - "$REPO_ROOT/claude/settings.json" "$CLAUDE_DIR/settings.json" "$NODE_BIN" <<'PY'
+# The statusline command embeds a literal node path. Render the device-specific
+# settings.json into a temp file, then place it (so --update can diff against it).
+RENDERED_SETTINGS="$(mktemp)"
+trap 'rm -f "$RENDERED_SETTINGS"' EXIT
+python3 - "$REPO_ROOT/claude/settings.json" "$RENDERED_SETTINGS" "$NODE_BIN" <<'PY'
 import json, sys, re
 src, dst, node_bin = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(src) as f:
@@ -153,19 +212,14 @@ cfg["statusLine"] = sl
 with open(dst, "w") as f:
     json.dump(cfg, f, indent=2)
 PY
-  ok "Wrote $CLAUDE_DIR/settings.json"
-fi
+place_file "$RENDERED_SETTINGS" "$CLAUDE_DIR/settings.json"
 
 # --- 3. Global skills (~/.claude/skills/<name>) ------------------------------
 say "Installing global skills into $CLAUDE_DIR/skills/"
 mkdir -p "$CLAUDE_DIR/skills"
 for skill_dir in "$REPO_ROOT"/claude/skills/*/; do
   name="$(basename "$skill_dir")"
-  target="$CLAUDE_DIR/skills/$name"
-  if handle_existing "$target"; then
-    cp -R "$skill_dir" "$target"
-    ok "Installed skill: $name"
-  fi
+  place_tree "$skill_dir" "$CLAUDE_DIR/skills/$name"
 done
 
 # --- 4. Clone kumo-skills-catalog (referenced by AGENTS.md) -----------------
@@ -186,6 +240,21 @@ else
 fi
 
 # --- 5. Final report --------------------------------------------------------
+if [[ "$MODE" == "update" ]]; then
+  cat <<EOF
+
+$(ok "Harness sync complete: $UPDATED updated, $UNCHANGED already in sync.")
+
+EOF
+  if (( UPDATED > 0 )); then
+    cat <<EOF
+Prior contents of any changed file were saved as <path>.bak.${TS}.
+Restart Claude Code so it re-reads the updated global config.
+EOF
+  fi
+  exit 0
+fi
+
 cat <<EOF
 
 $(ok "Global Claude Code harness installed.")
