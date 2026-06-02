@@ -209,11 +209,14 @@ say "Pinning statusline node binary to: $NODE_BIN"
 
 # The statusline command embeds a literal node path. Render the device-specific
 # settings.json into a temp file, then place it (so --update can diff against it).
+# The render is ADDITIVE for plugins: it patches the node path and forces the
+# repo's baseline keys, but unions enabledPlugins / extraKnownMarketplaces with
+# whatever this machine already has, so host-specific plugins are never dropped.
 RENDERED_SETTINGS="$(mktemp)"
 trap 'rm -f "$RENDERED_SETTINGS"' EXIT
-python3 - "$REPO_ROOT/claude/settings.json" "$RENDERED_SETTINGS" "$NODE_BIN" <<'PY'
-import json, sys, re
-src, dst, node_bin = sys.argv[1], sys.argv[2], sys.argv[3]
+python3 - "$REPO_ROOT/claude/settings.json" "$RENDERED_SETTINGS" "$NODE_BIN" "$CLAUDE_DIR/settings.json" <<'PY'
+import json, sys, re, os
+src, dst, node_bin, existing = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 with open(src) as f:
     cfg = json.load(f)
 sl = cfg.get("statusLine", {})
@@ -222,6 +225,19 @@ cmd = sl.get("command", "")
 cmd = re.sub(r'exec\s+"[^"]*/node"', f'exec "{node_bin}"', cmd)
 sl["command"] = cmd
 cfg["statusLine"] = sl
+# Additive merge: keep plugins/marketplaces this machine already enabled.
+# Repo values win on key conflicts; host-only entries are preserved.
+if os.path.exists(existing):
+    try:
+        with open(existing) as f:
+            cur = json.load(f)
+    except (ValueError, OSError):
+        cur = {}
+    for field in ("enabledPlugins", "extraKnownMarketplaces"):
+        merged = dict(cur.get(field, {}))   # host entries first (stable order)
+        merged.update(cfg.get(field, {}))   # repo entries win on conflict
+        if merged:
+            cfg[field] = merged
 with open(dst, "w") as f:
     json.dump(cfg, f, indent=2)
 PY
