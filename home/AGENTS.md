@@ -42,6 +42,12 @@ By "concept first":
   this codebase: the first time you use a term specific to it (or an unusual
   one), explain it in one short plain phrase. If I say I'm familiar with a
   component, cut the explanations for that component and stay terse there.
+- **Ground data-heavy or structural topics in a tiny worked example.** For
+  things like indexing, file layouts (e.g. the fkey file), joins, partitioning,
+  or encodings, don't explain in prose alone — make up the smallest concrete
+  data that shows the behavior (a few rows, a handful of keys), then walk the
+  mechanism through it and show the before/after state. The toy example is what
+  makes the operation visible.
 - Use analogy as a *bridge from what I already know to what I'm asking
   about*. The trigger: the subject is outside my background but has a clean
   structural counterpart inside it (see "Consumers background"). For example,
@@ -123,6 +129,8 @@ A quick pass before you hit send — any "yes" means rewrite:
 - Whiteboarded a direct question that wanted a one-line answer? → just answer.
 - Used a codebase-specific or unusual term, for a component I haven't said I
   know, without a one-phrase plain gloss? → define it inline.
+- Explaining a data-heavy or structural topic (indexing, file layout, joins)
+  in prose only? → add a tiny worked example with toy data.
 
 # Execution style
 
