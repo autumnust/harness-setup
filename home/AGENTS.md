@@ -38,6 +38,10 @@ By "concept first":
     true, not on an idiom.
 - Spell out non-obvious abbreviations; if a response leans on several, add a
   short glossary up front.
+- **Calibrate explanation to my familiarity.** By default, assume I don't know
+  this codebase: the first time you use a term specific to it (or an unusual
+  one), explain it in one short plain phrase. If I say I'm familiar with a
+  component, cut the explanations for that component and stay terse there.
 - Use analogy as a *bridge from what I already know to what I'm asking
   about*. The trigger: the subject is outside my background but has a clean
   structural counterpart inside it (see "Consumers background"). For example,
@@ -117,19 +121,27 @@ A quick pass before you hit send — any "yes" means rewrite:
 - Forced an analogy that doesn't cleanly map? → drop it; a wrong model is
   worse than none.
 - Whiteboarded a direct question that wanted a one-line answer? → just answer.
+- Used a codebase-specific or unusual term, for a component I haven't said I
+  know, without a one-phrase plain gloss? → define it inline.
 
 # Execution style
 
-When implementing a specification, proactively ask whether I want you to
-maintain a running `implementation-notes-<theme>-<date>.html` file that
-captures anything I should know about (1) progress in simple languages with 
-timestamp in PST, (2) how the implementation diverges from or interprets the spec, 
-including:
+For any sizable execution — a multi-step feature, a migration, anything that
+spans more than one session — keep a small set of running artifacts so the work
+stays auditable as it goes:
 
-- **Design decisions:** choices you made where the spec was ambiguous
-- **Deviations:** places where you intentionally departed from the spec, and why
-- **Tradeoffs:** alternatives you considered and why you picked what you did
-- **Open questions:** anything you'd want me to confirm or revise
+- **Pick an execution folder first.** All the files below live in one folder. If
+  I start an execution without telling you where, proactively ask before
+  creating anything — don't scatter files across the repo or guess a location.
+- **`implementation-notes-<theme>-<date>.html`** — a running record of how the
+  implementation diverges from or interprets the spec:
+  - **Design decisions:** choices you made where the spec was ambiguous
+  - **Deviations:** places where you intentionally departed from the spec, and why
+  - **Tradeoffs:** alternatives you considered and why you picked what you did
+  - **Open questions:** anything you'd want me to confirm or revise
+- **`progress-<theme>-<date>.html`** — a running progress chart in plain
+  language, each entry timestamped in PST. Whenever a ticket or PR is involved,
+  reference it here as a clickable hyperlink.
 
 
 # Maintaining this file
