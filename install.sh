@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Installs Lei's global Claude Code harness setup onto this machine.
+# Installs Lei's global coding-agent harness onto this machine
+# (tool-agnostic ~/AGENTS.md + Claude Code integration: settings, skills, plugins).
 #
 # Usage:
 #   ./install.sh                  # Refuses to clobber any existing global
@@ -27,7 +28,8 @@ for arg in "$@"; do
     --update)         MODE="update" ;;
     -h|--help)
       cat <<'HELP'
-Installs Lei's global Claude Code harness setup onto this machine.
+Installs Lei's global coding-agent harness onto this machine
+(tool-agnostic ~/AGENTS.md + Claude Code integration: settings, skills, plugins).
 
 Usage:
   ./install.sh                  Refuses to clobber any existing global

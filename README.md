@@ -1,9 +1,19 @@
-# harness-setup — Lei's portable Claude Code global config
+# harness-setup — Lei's portable AI coding-agent harness
 
-A self-contained snapshot of my **global** Claude Code harness setup
-(`~/AGENTS.md`, `~/.claude/settings.json`, `~/.claude/skills/`, plus a
-clone of `kumo-skills-catalog`). Drop this onto a new device, run
-`install.sh`, and the global half of my CC environment is restored.
+A self-contained snapshot of my **global** AI coding-agent harness. It has two
+layers:
+
+- **Tool-agnostic core — `~/AGENTS.md`.** How any agent should communicate and
+  work with me: explanation style, word choice, execution conventions.
+  `AGENTS.md` is a cross-tool convention, not a Claude Code feature — the
+  guidance is about *how to work with me*, so any coding agent that reads
+  `AGENTS.md` can use it. This is the portable heart of the setup.
+- **Claude Code integration — `~/.claude/settings.json`, `~/.claude/skills/`,
+  plugins.** Wires that core into Claude Code specifically: statusline, enabled
+  plugins, skills, and a `~/.claude/CLAUDE.md` symlink pointing at `~/AGENTS.md`.
+
+Drop this onto a new device, run `install.sh`, and the global setup is restored
+(plus a clone of `kumo-skills-catalog`).
 
 > Project-local skills (`bench-ec2`, `gpu-ec2`, `learn`, `ship`, `cs224w`,
 > `pdf`) and project `AGENTS.md` files are **not** included here — those
@@ -20,9 +30,9 @@ cd ~/Documents/harness-setup
 On a **fresh device** with no existing `~/AGENTS.md`, `~/.claude/settings.json`,
 or `~/.claude/skills/*`, this installs cleanly with no prompts.
 
-On a **device that already has global Claude Code config**, `./install.sh`
-**refuses to overwrite anything**. It lists every conflicting file and
-exits non-zero. Pick one of:
+On a **device that already has global config** (`~/AGENTS.md` or any of the
+Claude Code files), `./install.sh` **refuses to overwrite anything**. It lists
+every conflicting file and exits non-zero. Pick one of:
 
 ```bash
 ./install.sh --backup         # Safest. Move each conflict to
