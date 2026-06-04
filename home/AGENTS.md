@@ -134,9 +134,11 @@ A quick pass before you hit send — any "yes" means rewrite:
 
 # Execution style
 
-For any sizable execution — a multi-step feature, a migration, anything that
-spans more than one session — keep a small set of running artifacts so the work
-stays auditable as it goes:
+This applies only to **large, multi-step** executions — a multi-part feature, a
+migration, anything spanning more than one session. **Skip all of it for small
+or spotty changes** (a quick fix, a single-file tweak, a one-off): the overhead
+isn't worth it there. For the large ones, keep a small set of running artifacts
+so the work stays auditable as it goes:
 
 - **Pick an execution folder first.** All the files below live in one folder. If
   I start an execution without telling you where, proactively ask before
