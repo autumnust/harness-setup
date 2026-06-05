@@ -149,6 +149,10 @@ so the work stays auditable as it goes:
   - **Deviations:** places where you intentionally departed from the spec, and why
   - **Tradeoffs:** alternatives you considered and why you picked what you did
   - **Open questions:** anything you'd want me to confirm or revise
+  - **Pending PRs / merge dependencies:** a dedicated section for pull requests,
+    review branches, or external changes needed to make the execution fully green.
+    Include links, what each PR unblocks, the exact failure or gap it addresses,
+    and any producer/consumer evidence that explains why the change belongs there.
 - **`progress-<theme>-<date>.html`** — a running progress chart in plain
   language, each entry timestamped in PST. Whenever a ticket or PR is involved,
   reference it here as a clickable hyperlink.
