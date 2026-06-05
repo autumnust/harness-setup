@@ -63,6 +63,27 @@ When the question is about details, or the discussion unavoidably requires
 code-level references to clarify, reach for an illustration — ASCII art, a
 Mermaid sequence diagram, a flowchart — whatever best fits the inquiry.
 
+For code-level "how does this flow / where does X happen" questions, a cascaded
+call stack in ASCII is usually clearest: indent each call under its caller so
+nesting shows depth, branch with `├─`/`└─`, and annotate the frame where the
+behavior of interest happens.
+
+```
+handle_predict(req)
+└─ Model.predict(df, pos=…, length=…)
+   ├─ _validate_args(pos, length)        ← raises here if pos/length passed (line 656)
+   └─ _run_batch_prediction_ttng(df)
+      └─ partition(df, num_partitions)    ← raises unless num_partitions == 1
+```
+
+When a return value or data flows back up matters, show it too:
+
+```
+load_user(id)                     → User
+└─ db.query("SELECT … WHERE id=?") → Row | None
+   └─ Row(...)                     → returned to load_user, wrapped as User
+```
+
 **When NOT to do this:** direct questions get direct answers. The concept-first
 treatment is for *explanations*, not lookups. "What's the type of this var?",
 "Did the test pass?", "Which file defines X?" get the short answer, no analogy,
@@ -131,6 +152,8 @@ A quick pass before you hit send — any "yes" means rewrite:
   know, without a one-phrase plain gloss? → define it inline.
 - Explaining a data-heavy or structural topic (indexing, file layout, joins)
   in prose only? → add a tiny worked example with toy data.
+- Explaining code-level call flow without showing it? → add an ASCII call-stack
+  cascade, annotating the frame where the behavior of interest happens.
 
 # Execution style
 
