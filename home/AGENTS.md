@@ -166,6 +166,10 @@ so the work stays auditable as it goes:
 - **Pick an execution folder first.** All the files below live in one folder. If
   I start an execution without telling you where, proactively ask before
   creating anything — don't scatter files across the repo or guess a location.
+- **Link all references.** Any generated HTML or Markdown file that references
+  another file, section, PR, or external resource must use a clickable
+  hyperlink — never bare text. Generated files are read in a rendered context
+  (browser, Markdown viewer), so bare paths and names are dead ends.
 - **`implementation-notes-<theme>-<date>.html`** — a running record of how the
   implementation diverges from or interprets the spec:
   - **Design decisions:** choices you made where the spec was ambiguous
