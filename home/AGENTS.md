@@ -169,7 +169,9 @@ so the work stays auditable as it goes:
 - **Link all references.** Any generated HTML or Markdown file that references
   another file, section, PR, or external resource must use a clickable
   hyperlink — never bare text. Generated files are read in a rendered context
-  (browser, Markdown viewer), so bare paths and names are dead ends.
+  (browser, Markdown viewer), so bare paths and names are dead ends. When the
+  referenced item lives in a code repository, link to the repo (e.g. a GitHub
+  permalink to the file, line, commit, or PR) — not just the local path.
 - **`implementation-notes-<theme>-<date>.html`** — a running record of how the
   implementation diverges from or interprets the spec:
   - **Design decisions:** choices you made where the spec was ambiguous
