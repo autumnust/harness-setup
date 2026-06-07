@@ -2,6 +2,7 @@
 
 - [Communication style](#communication-style)
   - [Lead explanations with concept, not code](#lead-explanations-with-concept-not-code)
+  - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
 - [Execution style](#execution-style)
 - [Maintaining this file](#maintaining-this-file)
@@ -135,6 +136,33 @@ mental model up front.
 constraint is. If a phrase is a metaphor you couldn't define on request,
 replace it with what actually happens.
 
+## Resolve domain-ambiguous terms before acting
+
+Some technical terms carry meaningfully different definitions across domains.
+Examples:
+
+| Term | Possible meanings |
+|------|-------------------|
+| "driver" | device driver, database driver, Spark driver, UI test driver |
+| "partition" | OS disk partition, Kafka partition, Spark RDD partition, DB shard |
+| "executor" | Java thread pool, Spark worker node, CI job runner |
+| "broker" | Kafka broker, message broker, network proxy |
+
+When a user message contains a term like these and the surrounding context does
+not pin down which meaning applies, **do not guess — ask one short clarifying
+question before proceeding.** A silent assumption that turns out wrong produces
+work built on the wrong foundation; a one-sentence question costs almost nothing.
+
+**When to ask:** the term has two or more distinct technical definitions, and
+substituting one for another would produce meaningfully different work.
+
+**When NOT to ask:** the codebase, the open file, or the conversation already
+makes the meaning unambiguous — proceed, and note which meaning you used.
+
+**Smell test:** could you write two different one-sentence answers — each
+correct under a different definition — that point at completely different work?
+If yes, surface the ambiguity before acting.
+
 ## Self-check before sending an explanation
 
 A quick pass before you hit send — any "yes" means rewrite:
@@ -154,6 +182,8 @@ A quick pass before you hit send — any "yes" means rewrite:
   in prose only? → add a tiny worked example with toy data.
 - Explaining code-level call flow without showing it? → add an ASCII call-stack
   cascade, annotating the frame where the behavior of interest happens.
+- About to act on a term that carries different meanings across technical
+  domains, and context doesn't resolve which one? → ask before acting.
 
 # Execution style
 
