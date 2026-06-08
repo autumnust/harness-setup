@@ -215,7 +215,14 @@ so the work stays auditable as it goes:
 - **`progress-<theme>-<date>.html`** — a running progress chart in plain
   language, each entry timestamped in PST. Whenever a ticket or PR is involved,
   reference it here as a clickable hyperlink.
-
+- **Keep work products self-contained.** PR descriptions, commit messages, and
+  code comments must stand alone — never reference the execution artifacts above
+  (implementation-notes, progress files, or any other session-scoped context
+  file). Those files are working documents for the author during the execution;
+  they are not part of the permanent record and will not be available to anyone
+  reading the PR or the code later. If something from those files is worth
+  preserving, restate it directly in the PR description or commit message in
+  plain language.
 
 # Maintaining this file
 
