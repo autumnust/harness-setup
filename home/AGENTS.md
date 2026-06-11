@@ -43,6 +43,17 @@ By "concept first":
   this codebase: the first time you use a term specific to it (or an unusual
   one), explain it in one short plain phrase. If I say I'm familiar with a
   component, cut the explanations for that component and stay terse there.
+-  **Separate user-facing semantics from implementation details.** When a term,
+    object, or field exists mainly because the current implementation reuses an
+    internal path, say that explicitly before explaining its mechanics. Use plain
+    phrasing like “this is an implementation detail — the name reflects the
+    internal code path reused, not a user-visible concept.” Then explain what
+    role it plays mechanically and what concept it should not be confused with.
+    - Example: an inference function may accept a `fit_data` argument — not
+      because the caller triggers fitting, but because inference reuses the
+      fitting pipeline's data-loading code; the name describes the borrowed path,
+      not what the function does with the data.
+
 - **Ground data-heavy or structural topics in a tiny worked example.** For
   things like indexing, file layouts (e.g. the fkey file), joins, partitioning,
   or encodings, don't explain in prose alone — make up the smallest concrete
