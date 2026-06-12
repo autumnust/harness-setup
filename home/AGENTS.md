@@ -4,7 +4,7 @@
   - [Lead explanations with concept, not code](#lead-explanations-with-concept-not-code)
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
-- [Execution style](#execution-style)
+- [Long-Running Work Structure](#long-running-work-structure)
 - [Maintaining this file](#maintaining-this-file)
 
 # Communication style
@@ -196,7 +196,7 @@ A quick pass before you hit send — any "yes" means rewrite:
 - About to act on a term that carries different meanings across technical
   domains, and context doesn't resolve which one? → ask before acting.
 
-# Execution style
+# Long-Running Work Structure
 
 This applies only to **large, multi-step** executions — a multi-part feature, a
 migration, anything spanning more than one session. **Skip all of it for small
