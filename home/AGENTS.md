@@ -213,24 +213,37 @@ so the work stays auditable as it goes:
   (browser, Markdown viewer), so bare paths and names are dead ends. When the
   referenced item lives in a code repository, link to the repo (e.g. a GitHub
   permalink to the file, line, commit, or PR) — not just the local path.
-- **`implementation-notes-<theme>-<date>.html`** — a running record of how the
-  implementation diverges from or interprets the spec:
-  - **Design decisions:** choices you made where the spec was ambiguous
-  - **Deviations:** places where you intentionally departed from the spec, and why
-  - **Tradeoffs:** alternatives you considered and why you picked what you did
-  - **Open questions:** anything you'd want me to confirm or revise
-  - **Pending PRs / merge dependencies:** a dedicated section for pull requests,
-    review branches, or external changes needed to make the execution fully green.
-    Include links, what each PR unblocks, the exact failure or gap it addresses,
-    and any producer/consumer evidence that explains why the change belongs there.
-- **`progress-<theme>-<date>.html`** — a running progress chart in plain
-  language, each entry timestamped in PST. Whenever a ticket or PR is involved,
-  reference it here as a clickable hyperlink.
+- **Use an execution-folder contract, not ad hoc files.** Unless local
+  `AGENTS.md` or `README.md` says otherwise, keep the top-level execution folder
+  small and organized around these roles:
+
+  | Path | Purpose |
+  |---|---|
+  | `README.md` or `SPEC.md` | Self-contained "what and how": goal, success criteria, folder layout, how to add work, and how to resume. |
+  | `progress.html` | Human/agent dashboard for "where we are": current status, completed stages, active blockers, open follow-ups, and links to stage evidence. |
+  | `findings/` | Issues discovered while executing. Keep a catalog with ticket links, source scenario, status, and resolution. Closed items should remain visible but marked closed. |
+  | `evidence/` or `logs/` | Raw logs, traces, dry-run JSON, screenshots, command output, and artifact summaries worth preserving. |
+  | `stages/` or `batches/` | Only for large goals. Each stage has its own `README.md` or runbook and `evidence/`, and updates the top-level `progress.html` and top-level `findings/`. |
+
+- **Keep the top level clean.** Do not create one-off top-level runbooks,
+  trackers, or evidence folders. If a stage or batch exists, put its runbook
+  and artifacts inside that stage folder and reference it from the top-level
+  progress dashboard.
+- **Use one progress entry point.** Prefer one visual dashboard as the status
+  entry point; avoid multiple competing trackers that answer the same "where are
+  we?" question.
+- **Keep generated dashboards and specs self-contained.** Another developer
+  should understand the goal and current state without reading chat history.
+  Links can point to PRs, issues, source files, stage evidence, or logs, but the
+  surrounding text must explain why the link matters.
+- **Close phases explicitly.** When a phase is done, mark it closed in the
+  top-level spec and dashboard. Separate remaining work into clear buckets such
+  as backlog, non-local, invalid, or blocked-by-issue.
 - **Keep work products self-contained.** PR descriptions, commit messages, and
   code comments must stand alone — never reference the execution artifacts above
-  (implementation-notes, progress files, or any other session-scoped context
-  file). Those files are working documents for the author during the execution;
-  they are not part of the permanent record and will not be available to anyone
+  (progress dashboards, evidence logs, or any other session-scoped context
+  file) as the only explanation. Those files are working documents for the
+  author during the execution; they are not guaranteed to be available to anyone
   reading the PR or the code later. If something from those files is worth
   preserving, restate it directly in the PR description or commit message in
   plain language.
