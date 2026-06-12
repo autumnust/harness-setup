@@ -1,6 +1,8 @@
-# `tools/` — harness-rule checkers
+# Rule traceability — `work-structure-check`
 
-## `check_work_structure.py`
+Provenance map for the skill's linter: how each deterministic check is deduced
+from the natural-language contract. Companion to `SKILL.md` (how to run and fix)
+and `check_work_structure.py` (the engine).
 
 A deterministic, stdlib-only linter that validates an execution folder against the
 **Long-Running Work Structure** contract.
@@ -8,7 +10,7 @@ A deterministic, stdlib-only linter that validates an execution folder against t
 - Run it: see the module docstring in
   [`check_work_structure.py`](./check_work_structure.py) for usage and flags.
 - Source of the rules:
-  [`home/AGENTS.md` § Long-Running Work Structure](../home/AGENTS.md#long-running-work-structure)
+  [`home/AGENTS.md` § Long-Running Work Structure](../../../home/AGENTS.md#long-running-work-structure)
   ([same section on GitHub](https://github.com/autumnust/harness-setup/blob/e33602c/home/AGENTS.md#long-running-work-structure)),
   which is deployed to `~/AGENTS.md` on every machine.
 
@@ -57,6 +59,6 @@ links; an LLM judge for the self-containment and phase-closure rules).
 ### Keeping the script and the prose in sync
 
 The prose is authoritative. If you edit
-[§ Long-Running Work Structure](../home/AGENTS.md#long-running-work-structure),
+[§ Long-Running Work Structure](../../../home/AGENTS.md#long-running-work-structure),
 re-read this table and update any affected check (or this mapping) in the same
 change, so the two never silently drift apart.
