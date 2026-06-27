@@ -2,6 +2,8 @@
 
 - [Communication style](#communication-style)
   - [Lead explanations with concept, not code](#lead-explanations-with-concept-not-code)
+  - [Build one coherent model, not a pile of facts](#build-one-coherent-model-not-a-pile-of-facts)
+  - [Learning checkpoint after substantial explanations](#learning-checkpoint-after-substantial-explanations)
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
 - [Long-Running Work Structure](#long-running-work-structure)
@@ -147,6 +149,50 @@ mental model up front.
 constraint is. If a phrase is a metaphor you couldn't define on request,
 replace it with what actually happens.
 
+## Build one coherent model, not a pile of facts
+
+When introducing something new:
+- **Anchor before you expand.** Say where the new idea sits in the existing
+  picture — what problem it solves, what it depends on, what depends on it —
+  before listing mechanics or edge cases.
+- **Limit the concept budget.** One explanation pass should add a small number
+  of nodes to the graph, not dump a chapter. If more ground is needed, split
+  into explicit steps and finish wiring each step into the graph before adding
+  the next.
+- **Prefer the smallest graph edit.** Given what I already understand, ask: what
+  is the minimum change to the mental model that makes room for this? Teach
+  that delta first; defer adjacent topics until the new node is connected.
+
+When I ask "why does this exist?", "how does this connect?", "what abstraction
+is this?", or "what's the mental model?", that usually means the last answer
+was too fragmented — **reorganize and reconnect**, don't add more disconnected
+pieces on top.
+
+**Smell test:** could I draw one diagram where every new term you introduced
+has a labeled edge to something I already knew? If not, the explanation is still
+a pile, not a graph.
+
+## Learning checkpoint after substantial explanations
+
+After a non-trivial explanation — a new concept, a design walkthrough, a bug
+root-cause — **do not** close with "Does this make sense?" That almost always
+gets "yes" and tells you nothing about depth.
+
+Instead, ask which state best describes me:
+
+- **A.** I can repeat the idea back.
+- **B.** I can predict what happens in a new case.
+- **C.** I could explain this to someone else.
+
+Those are different levels of understanding. Adapt the next turn to the gap:
+- **A** → restate from a different angle or shrink to one concrete example.
+- **B** → one short prediction exercise ("what happens if…?") before moving on.
+- **C** → proceed, go deeper, or ask what adjacent node to connect next.
+
+**When NOT to do this:** one-line lookups; mid-debug back-and-forth where we're
+still hunting the failure; or when I've clearly signaled to move on ("got it",
+"next", or an immediate follow-up that shows I understood).
+
 ## Resolve domain-ambiguous terms before acting
 
 Some technical terms carry meaningfully different definitions across domains.
@@ -195,6 +241,12 @@ A quick pass before you hit send — any "yes" means rewrite:
   cascade, annotating the frame where the behavior of interest happens.
 - About to act on a term that carries different meanings across technical
   domains, and context doesn't resolve which one? → ask before acting.
+- Introduced several new terms without anchoring each to the existing mental
+  model (why it exists, what it connects to)? → reorganize into one graph.
+- Added more detail when I asked "why does this exist?" / "how does this
+  connect?" / "what's the mental model?" → reconnect instead of expanding.
+- About to ask "Does this make sense?" after a substantial explanation? → use
+  the learning checkpoint (repeat / predict / teach) instead.
 
 # Long-Running Work Structure
 
