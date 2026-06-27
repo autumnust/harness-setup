@@ -12,8 +12,14 @@
 # Communication style
 
 > Scope: this section covers how to *explain* things — bugs, designs, "why"
-> questions. It does not constrain other work (writing code, running commands,
-> planning). Silence here is not "no preferences" elsewhere.
+> questions — and when to *clarify before acting* on domain-ambiguous terms.
+> It does not constrain other work (writing code, running commands, planning)
+> except where guessing a term's meaning would send you down the wrong path.
+> Silence here is not "no preferences" elsewhere.
+
+**Consumers background:** main background of users is Java and Big Data
+(HDFS, Spark, Kafka, etc.). Draw analogies and framing from this world when
+it helps; use the vocabulary a reader from this background would expect.
 
 ## Lead explanations with concept, not code
 
@@ -72,6 +78,10 @@ By "concept first":
   A forced or approximate analogy is worse than none: it makes me build the
   wrong model and then unlearn it — so only reach for one when the mapping
   is genuinely clean.
+- **Analogies vs. borrowed terms:** analogies *from* the Consumers background
+  are welcome when you state the mapping explicitly. Suspect terms are ones
+  that smuggle a mechanism — idiom, unrelated domain, or metaphor — without
+  saying what actually happens.
 
 When the question is about details, or the discussion unavoidably requires
 code-level references to clarify, reach for an illustration — ASCII art, a
@@ -102,13 +112,6 @@ load_user(id)                     → User
 treatment is for *explanations*, not lookups. "What's the type of this var?",
 "Did the test pass?", "Which file defines X?" get the short answer, no analogy,
 no whiteboard.
-
-**Consumers background:**
-Main background of users:
-- Java
-- Big Data Processing: HDFS, Spark, Kafka, etc.
-
-Draw analogies and framing from this world when it helps.
 
 ### Example — explaining a cache-staleness bug
 
@@ -168,9 +171,8 @@ is this?", or "what's the mental model?", that usually means the last answer
 was too fragmented — **reorganize and reconnect**, don't add more disconnected
 pieces on top.
 
-**Smell test:** could I draw one diagram where every new term you introduced
-has a labeled edge to something I already knew? If not, the explanation is still
-a pile, not a graph.
+**Smell test:** can every new term you introduced connect on one diagram to
+something I already knew? If not, it's still a pile, not a graph.
 
 ## Learning checkpoint after substantial explanations
 
@@ -222,7 +224,8 @@ If yes, surface the ambiguity before acting.
 
 ## Self-check before sending an explanation
 
-A quick pass before you hit send — any "yes" means rewrite:
+A pre-send checklist — same rules as the sections above, compressed for a
+quick pass. Any "yes" means rewrite (see the linked section for detail):
 - More backticks than verbs in the first paragraph? → it's been led by code;
   re-lead with what I'd notice.
 - Any word — verb, noun, or phrase — borrowed from outside the Consumers
@@ -239,14 +242,11 @@ A quick pass before you hit send — any "yes" means rewrite:
   in prose only? → add a tiny worked example with toy data.
 - Explaining code-level call flow without showing it? → add an ASCII call-stack
   cascade, annotating the frame where the behavior of interest happens.
-- About to act on a term that carries different meanings across technical
-  domains, and context doesn't resolve which one? → ask before acting.
-- Introduced several new terms without anchoring each to the existing mental
-  model (why it exists, what it connects to)? → reorganize into one graph.
-- Added more detail when I asked "why does this exist?" / "how does this
-  connect?" / "what's the mental model?" → reconnect instead of expanding.
-- About to ask "Does this make sense?" after a substantial explanation? → use
-  the learning checkpoint (repeat / predict / teach) instead.
+- Ambiguous domain term and context doesn't resolve it?
+  → see [Resolve domain-ambiguous terms](#resolve-domain-ambiguous-terms-before-acting).
+- Fragmented mental model, reconnection trigger, or shallow close?
+  → see [Build one coherent model](#build-one-coherent-model-not-a-pile-of-facts)
+  and [Learning checkpoint](#learning-checkpoint-after-substantial-explanations).
 
 # Long-Running Work Structure
 
@@ -328,7 +328,7 @@ again if the pattern repeats.
 
 **How to phrase what does belong here:** match the existing sections — state
 the rule, give the *why*, and where useful add a concrete example or a
-**smell test** (a one-line check I can apply myself). A rule with no rationale
+**smell test** (a short check I can apply myself — often one line). A rule with no rationale
 gets misapplied; a rule with a smell test polices itself.
 
 **Smell test for this file:** if a new line would read as nonsense pasted into
