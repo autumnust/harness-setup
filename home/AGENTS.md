@@ -7,7 +7,7 @@
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
 - [Long-Running Work Structure](#long-running-work-structure)
-- [Maintaining this file](#maintaining-this-file)
+- [Learning Calibration Mode](#learning-calibration-mode)
 
 # Communication style
 
@@ -29,7 +29,12 @@ explanation by abstraction level: concept first, code anchors last.
 By "concept first":
 - Explain it in prose, as if walking me through it on a whiteboard.
 - Don't cite line numbers or files in this stage.
-- **Use the words a reader from "Consumers background" would use.** This is the
+- **Use the words a reader from "Consumers background" would use and make analogies when appropriate.** For example,
+  if I ask about a concept in another language, map it onto the Java/JVM or
+  Big Data equivalent — "Rust's ownership is like who's responsible for
+  closing a resource in a try-with-resources block." This matters most when
+  I'm asking you to "walk through" or "explain" something unfamiliar.
+  A forced or approximate analogy is worse than none. This is the
   governing test for any term — verb, noun, or phrase. A term is suspect if it
   is *borrowed from a domain outside that background* (poker, clinical trials,
   an idiom) or is a *metaphor standing in for a mechanism*. When one is, replace
@@ -68,20 +73,6 @@ By "concept first":
   data that shows the behavior (a few rows, a handful of keys), then walk the
   mechanism through it and show the before/after state. The toy example is what
   makes the operation visible.
-- Use analogy as a *bridge from what I already know to what I'm asking
-  about*. The trigger: the subject is outside my background but has a clean
-  structural counterpart inside it (see "Consumers background"). For example,
-  if I ask about a concept in another language, map it onto the Java/JVM or
-  Big Data equivalent — "Rust's ownership is like who's responsible for
-  closing a resource in a try-with-resources block." This matters most when
-  I'm asking you to "walk through" or "explain" something unfamiliar.
-  A forced or approximate analogy is worse than none: it makes me build the
-  wrong model and then unlearn it — so only reach for one when the mapping
-  is genuinely clean.
-- **Analogies vs. borrowed terms:** analogies *from* the Consumers background
-  are welcome when you state the mapping explicitly. Suspect terms are ones
-  that smuggle a mechanism — idiom, unrelated domain, or metaphor — without
-  saying what actually happens.
 
 When the question is about details, or the discussion unavoidably requires
 code-level references to clarify, reach for an illustration — ASCII art, a
@@ -300,37 +291,17 @@ so the work stays auditable as it goes:
   preserving, restate it directly in the PR description or commit message in
   plain language.
 
-# Maintaining this file
+# Learning Calibration Mode
 
-This file is my **global, project-agnostic** harness config. It governs *how
-agents communicate and work with me*, everywhere. Nothing project-specific
-lives here — that belongs in a project's own `AGENTS.md`.
+When I say "grill me" on a new subject:
 
-When I say "remember this," "add this globally," or otherwise hand you a piece
-of standing guidance, don't just write it in. First run it through the test
-below and tell me where it lands.
-
-**Inclusion test — a rule belongs here only if it passes ALL of:**
-1. **Portable** — it holds across every project, language, and domain, with no
-   edit. If it names a repo, file, framework, service, or build command, it
-   fails.
-2. **About interaction, not output** — it shapes how you explain, ask, format,
-   or pace the work — not what to build or how a particular system behaves.
-3. **Durable** — it's a standing preference, not an instruction for the task in
-   front of us right now.
-4. **Confirmed, not guessed** — I've expressed it (or you've watched me correct
-   for it) at least twice. One instance is an anecdote; codifying it early
-   bloats the file with rules I didn't actually mean.
-
-**Where it goes if it fails:** project-specific → that project's `AGENTS.md`;
-one-off → just do it, don't record it; not-yet-confirmed → hold it and raise it
-again if the pattern repeats.
-
-**How to phrase what does belong here:** match the existing sections — state
-the rule, give the *why*, and where useful add a concrete example or a
-**smell test** (a short check I can apply myself — often one line). A rule with no rationale
-gets misapplied; a rule with a smell test polices itself.
-
-**Smell test for this file:** if a new line would read as nonsense pasted into
-an unrelated repo, it isn't global — it's project guidance wearing a global
-hat.
+1. First interview me with scenario-based questions about the subject.
+2. Do not ask for definitions only; test whether I can predict behavior.
+3. Infer my current understanding:
+   - solid anchors
+   - partial concepts
+   - gaps
+   - likely misconceptions
+4. Persist a short learner profile for the topic within execution folder.
+5. Use that profile immediately in the same session.
+6. Keep explanations within my current concept budget.
