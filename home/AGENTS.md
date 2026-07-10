@@ -2,7 +2,7 @@
 
 - [Communication style](#communication-style)
   - [Lead explanations with concept, not code](#lead-explanations-with-concept-not-code)
-  - [Build one coherent model, not a pile of facts](#build-one-coherent-model-not-a-pile-of-facts)
+  - [Walk through a change as one thread, not a catalog](#walk-through-a-change-as-one-thread-not-a-catalog)
   - [Learning checkpoint after substantial explanations](#learning-checkpoint-after-substantial-explanations)
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
@@ -67,12 +67,16 @@ By "concept first":
       fitting pipeline's data-loading code; the name describes the borrowed path,
       not what the function does with the data.
 
-- **Ground data-heavy or structural topics in a tiny worked example.** For
-  things like indexing, file layouts (e.g. the fkey file), joins, partitioning,
-  or encodings, don't explain in prose alone — make up the smallest concrete
-  data that shows the behavior (a few rows, a handful of keys), then walk the
-  mechanism through it and show the before/after state. The toy example is what
-  makes the operation visible.
+- **Pair every new concept with its toy example immediately — same breath, not
+  a later section.** The moment you introduce a term, field, or mechanism,
+  the next sentence shows the smallest concrete instance (a few rows, a
+  handful of keys, one call frame) before you move to the next concept. This
+  applies to any new concept, not just data-heavy ones — for indexing, file
+  layouts (e.g. the fkey file), joins, partitioning, or encodings especially,
+  don't explain in prose alone; walk the mechanism through the toy data and
+  show the before/after state. Batching several concepts into one paragraph
+  and their examples into a later section defeats the point: the example is
+  what makes the operation visible, and it only works right where it lands.
 
 When the question is about details, or the discussion unavoidably requires
 code-level references to clarify, reach for an illustration — ASCII art, a
@@ -99,10 +103,20 @@ load_user(id)                     → User
    └─ Row(...)                     → returned to load_user, wrapped as User
 ```
 
+**Required when** describing what a code change does, where data is
+transformed, or what a function does differently now. An implementation
+sentence ("unpacks the full tuple", "funnels into a helper") with no stack
+frame under it is a smell — add the stack or cut the sentence.
+
 **When NOT to do this:** direct questions get direct answers. The concept-first
 treatment is for *explanations*, not lookups. "What's the type of this var?",
 "Did the test pass?", "Which file defines X?" get the short answer, no analogy,
 no whiteboard.
+
+**Exception — "walk me through this":** concept-first still holds (no
+line-number dump up front), but code lands earlier and interleaved with the
+concepts it supports — see [Walk through a change as one
+thread](#walk-through-a-change-as-one-thread-not-a-catalog).
 
 ### Example — explaining a cache-staleness bug
 
@@ -143,27 +157,61 @@ mental model up front.
 constraint is. If a phrase is a metaphor you couldn't define on request,
 replace it with what actually happens.
 
-## Build one coherent model, not a pile of facts
+## Walk through a change as one thread, not a catalog
 
-When introducing something new:
-- **Anchor before you expand.** Say where the new idea sits in the existing
-  picture — what problem it solves, what it depends on, what depends on it —
-  before listing mechanics or edge cases.
-- **Limit the concept budget.** One explanation pass should add a small number
-  of nodes to the graph, not dump a chapter. If more ground is needed, split
-  into explicit steps and finish wiring each step into the graph before adding
-  the next.
-- **Prefer the smallest graph edit.** Given what I already understand, ask: what
-  is the minimum change to the mental model that makes room for this? Teach
-  that delta first; defer adjacent topics until the new node is connected.
+"Walk me through this" — and any explanation introducing more than one new
+idea, even without that exact phrase — asks for a narrative delivered **in
+order**, not the same ingredients filed into separate sections. The
+ingredients are the ones above — analogies, toy examples, call stacks — a
+walkthrough's failure mode is that having them as separate techniques doesn't
+stop them from landing as a concept dump followed by an example dump and a
+call-stack dump. The fix is a sequencing rule, not new techniques.
 
-When I ask "why does this exist?", "how does this connect?", "what abstraction
-is this?", or "what's the mental model?", that usually means the last answer
-was too fragmented — **reorganize and reconnect**, don't add more disconnected
-pieces on top.
+Structure each beat of the walkthrough as:
+1. **Anchor with one problem, one sentence** — what was broken or missing, or
+   where the new idea sits relative to what I already know (what it depends
+   on, what depends on it). Don't list mechanics or edge cases yet.
+2. **The fix as the smallest delta** — the minimum change to the mental model
+   that makes room for this; defer edge cases and adjacent topics.
+3. **Concept and its toy example together** (per the pairing rule above) —
+   don't introduce a second concept before the first has its example. If the
+   change needs more beats than fit in one pass, split into explicit stages
+   and finish wiring each one into the model before starting the next.
+4. **A call stack before any "now it does X" sentence** (per the call-stack
+   rule above).
+5. **A one-sentence bridge to the next beat:** "We now have X; the next
+   question is Y." If you can't write that sentence, the next section is
+   premature — fold it in or cut it.
+6. **Close by naming what's deferred**, and offer to go deeper on one thing
+   rather than covering everything thinly.
 
-**Smell test:** can every new term you introduced connect on one diagram to
-something I already knew? If not, it's still a pile, not a graph.
+If, mid-thread, I ask "why does this exist?", "how does this connect?", "what
+abstraction is this?", or "what's the mental model?" — that means the last
+delivery fragmented. **Restart from step 1 and reconnect**; don't bolt more
+detail onto what's already there.
+
+### Example — thread vs. catalog
+
+✅ Thread:
+
+> **Problem:** the sampler kept sampled table rows but discarded the edges
+> connecting them.
+> **Fix:** attach PyG's edge output to `RelatedTables.metadata`.
+> **Toy data:** two seed rows, three sampled order rows — show what was kept
+> vs. discarded before the change.
+> **Call stack:** `sample` → `hetero_neighbor_sample` →
+> `_convert_hetero_sample` → `RelatedTables(..., metadata=...)`.
+> **Stop.** Deferring relation renaming and string-key mapping unless asked.
+
+❌ Catalog:
+
+> Three moving parts: new dataclass, kernel output capture, keying cleanup.
+> Field list: `edge_index_dict`, `batch_dict`, … — call stack and toy data
+> arrive in a later section, disconnected from the concepts they explain.
+
+**Smell test:** can every new term connect on one diagram to something I
+already knew, and does the whole answer read as one thread, not a pile? If
+not, go back to step 1.
 
 ## Learning checkpoint after substantial explanations
 
@@ -229,14 +277,18 @@ quick pass. Any "yes" means rewrite (see the linked section for detail):
 - Whiteboarded a direct question that wanted a one-line answer? → just answer.
 - Used a codebase-specific or unusual term, for a component I haven't said I
   know, without a one-phrase plain gloss? → define it inline.
-- Explaining a data-heavy or structural topic (indexing, file layout, joins)
-  in prose only? → add a tiny worked example with toy data.
-- Explaining code-level call flow without showing it? → add an ASCII call-stack
-  cascade, annotating the frame where the behavior of interest happens.
+- Introduced a concept without its toy example in the same breath, or stacked
+  several concepts before the first one got its example? → add the example
+  now; don't batch concepts and examples into separate sections.
+- Explaining code-level call flow, or stating what a function does
+  differently now, without a call-stack cascade under it? → add one,
+  annotating the frame where the behavior of interest happens.
+- A walkthrough section with no "we now have X, so next Y" bridge to the one
+  before it? → add the bridge or merge the sections.
 - Ambiguous domain term and context doesn't resolve it?
   → see [Resolve domain-ambiguous terms](#resolve-domain-ambiguous-terms-before-acting).
 - Fragmented mental model, reconnection trigger, or shallow close?
-  → see [Build one coherent model](#build-one-coherent-model-not-a-pile-of-facts)
+  → see [Walk through a change as one thread](#walk-through-a-change-as-one-thread-not-a-catalog)
   and [Learning checkpoint](#learning-checkpoint-after-substantial-explanations).
 
 # Long-Running Work Structure
