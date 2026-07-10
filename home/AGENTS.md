@@ -68,15 +68,12 @@ By "concept first":
       not what the function does with the data.
 
 - **Pair every new concept with its toy example immediately — same breath, not
-  a later section.** The moment you introduce a term, field, or mechanism,
-  the next sentence shows the smallest concrete instance (a few rows, a
-  handful of keys, one call frame) before you move to the next concept. This
-  applies to any new concept, not just data-heavy ones — for indexing, file
-  layouts (e.g. the fkey file), joins, partitioning, or encodings especially,
-  don't explain in prose alone; walk the mechanism through the toy data and
-  show the before/after state. Batching several concepts into one paragraph
-  and their examples into a later section defeats the point: the example is
-  what makes the operation visible, and it only works right where it lands.
+  a later section.** The moment you introduce a term, field, or mechanism, show
+  the smallest concrete instance (a few rows, a handful of keys, one call
+  frame) before moving on — for indexing, file layouts, joins, partitioning,
+  and encodings especially, this toy example is what makes the operation
+  visible. Batching concepts into one paragraph and examples into a later
+  section defeats the point.
 
 When the question is about details, or the discussion unavoidably requires
 code-level references to clarify, reach for an illustration — ASCII art, a
@@ -160,12 +157,11 @@ replace it with what actually happens.
 ## Walk through a change as one thread, not a catalog
 
 "Walk me through this" — and any explanation introducing more than one new
-idea, even without that exact phrase — asks for a narrative delivered **in
-order**, not the same ingredients filed into separate sections. The
-ingredients are the ones above — analogies, toy examples, call stacks — a
-walkthrough's failure mode is that having them as separate techniques doesn't
-stop them from landing as a concept dump followed by an example dump and a
-call-stack dump. The fix is a sequencing rule, not new techniques.
+idea — asks for one **narrative** delivered in order, not the same
+ingredients (analogies, toy examples, call stacks) filed into separate
+sections. Those already exist as techniques; what's missing is a sequencing
+rule that stops them from landing as a concept dump, an example dump, and a
+call-stack dump.
 
 Structure each beat of the walkthrough as:
 1. **Anchor with one problem, one sentence** — what was broken or missing, or
