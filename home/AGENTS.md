@@ -6,6 +6,7 @@
   - [Learning checkpoint after substantial explanations](#learning-checkpoint-after-substantial-explanations)
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
+- [Banned words](#banned-words)
 - [Long-Running Work Structure](#long-running-work-structure)
 - [Learning Calibration Mode](#learning-calibration-mode)
 
@@ -286,6 +287,19 @@ quick pass. Any "yes" means rewrite (see the linked section for detail):
 - Fragmented mental model, reconnection trigger, or shallow close?
   → see [Walk through a change as one thread](#walk-through-a-change-as-one-thread-not-a-catalog)
   and [Learning checkpoint](#learning-checkpoint-after-substantial-explanations).
+
+# Banned words
+
+This section applies to **every response, in every context** — explanations,
+code comments, commit messages, PR descriptions, plans, chat replies,
+everything. It is not limited by the Communication-style scope note above.
+
+- **"invariant"** — never output this word. Replace it with the concrete
+  claim it stands for: what stays true, what never changes, what always
+  holds. Example: "the invariant here is that the queue length never exceeds
+  N" → "the queue length never exceeds N". "the loop invariant is `sum ==
+  total_so_far`" → "at the top of each iteration, `sum` equals
+  `total_so_far`".
 
 # Long-Running Work Structure
 
