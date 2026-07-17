@@ -24,11 +24,12 @@ the linter would flag a folder that was never meant to follow it.
 
 ## How to run
 
-The linter sits next to this file. Once the harness is installed it is at
-`~/.claude/skills/work-structure-check/check_work_structure.py`:
+The linter sits next to this file, in this skill's own directory — for Claude
+Code that's `~/.claude/skills/work-structure-check/`, for Codex CLI it's
+`~/.codex/skills/work-structure-check/`:
 
 ```
-python3 ~/.claude/skills/work-structure-check/check_work_structure.py <execution-folder>
+python3 <this-skill-directory>/check_work_structure.py <execution-folder>
 ```
 
 Exit code `0` = conforms, `1` = at least one error (or, with `--strict`, any

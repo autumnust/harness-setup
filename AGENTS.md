@@ -11,7 +11,7 @@ itself a software project to build or test.
 |------|------------|
 | `home/AGENTS.md` | The global agent prompt deployed to `~/AGENTS.md` on every machine |
 | `claude/settings.json` | Claude Code settings deployed to `~/.claude/settings.json` |
-| `claude/skills/` | Skills deployed to `~/.claude/skills/` |
+| `agent-skills/` | Skills deployed to `~/.claude/skills/`, and also to `~/.codex/skills/` when Codex CLI is already present on the machine — both tools use the same SKILL.md directory convention |
 | `install.sh` / `update.sh` | Installers that copy the above onto a target machine |
 | `.claude/skills/broadcast-harness/` | Skill for pushing this repo to remote machines via SSH |
 
@@ -26,6 +26,15 @@ it as a text artifact you are editing on behalf of the user.
 **Editing the harness prompt:**
 Edit `home/AGENTS.md` directly. The file uses Markdown. Keep sections
 consistent with the existing structure (ToC, section headers, smell tests).
+
+**Editing a skill (`agent-skills/<name>/`):**
+These are deployed verbatim to both `~/.claude/skills/` and `~/.codex/skills/`
+(see the table above). Avoid hardcoding Claude-Code-only assumptions into a
+skill's `SKILL.md` — a hardcoded `~/.claude/...` path, or a step that relies
+on a Claude-Code-only mechanism (e.g. the auto-memory system) with no
+fallback — since the same file also has to make sense read by Codex CLI. If a
+step is genuinely Claude-only, say so explicitly and give the other tool an
+alternative, rather than silently assuming the reader is Claude Code.
 
 **Deploying changes:**
 After committing and pushing, use the `broadcast-harness` skill to rsync

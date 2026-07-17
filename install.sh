@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Installs Lei's global coding-agent harness onto this machine
-# (tool-agnostic ~/AGENTS.md + Claude Code integration: settings, skills, plugins).
+# (tool-agnostic ~/AGENTS.md + Claude Code integration: settings, skills,
+# plugins). Skills also install into ~/.codex/skills/ when Codex CLI is
+# already present on the machine (Codex uses the same SKILL.md convention).
 #
 # Usage:
 #   ./install.sh                  # Refuses to clobber any existing global
@@ -55,6 +57,12 @@ done
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+CODEX_DIR="${CODEX_CONFIG_DIR:-$HOME/.codex}"
+# Codex CLI creates ~/.codex on first run. Its presence is our signal that
+# this machine also uses Codex, so skills get materialized there too —
+# no separate opt-in flag.
+CODEX_PRESENT=0
+[[ -d "$CODEX_DIR" ]] && CODEX_PRESENT=1
 TS="$(date +%Y%m%dT%H%M%S)"
 
 say()  { printf '\033[1;34m>>\033[0m %s\n' "$*"; }
@@ -72,8 +80,9 @@ record_conflict() {
 record_conflict "$HOME/AGENTS.md"
 record_conflict "$CLAUDE_DIR/CLAUDE.md"
 record_conflict "$CLAUDE_DIR/settings.json"
-for skill_dir in "$REPO_ROOT"/claude/skills/*/; do
+for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
   record_conflict "$CLAUDE_DIR/skills/$(basename "$skill_dir")"
+  (( CODEX_PRESENT )) && record_conflict "$CODEX_DIR/skills/$(basename "$skill_dir")"
 done
 
 if (( ${#CONFLICTS[@]} > 0 )) && [[ "$MODE" == "prompt" ]]; then
@@ -245,12 +254,20 @@ with open(dst, "w") as f:
 PY
 place_file "$RENDERED_SETTINGS" "$CLAUDE_DIR/settings.json"
 
-# --- 3. Global skills (~/.claude/skills/<name>) ------------------------------
+# --- 3. Global skills (agent-skills/<name> → every tool this machine has) ---
+# agent-skills/ is the tool-agnostic source of truth. Claude Code and Codex
+# CLI both use the same on-disk convention (a directory per skill holding
+# SKILL.md), so each skill is installed as-is into every target present.
 say "Installing global skills into $CLAUDE_DIR/skills/"
 mkdir -p "$CLAUDE_DIR/skills"
-for skill_dir in "$REPO_ROOT"/claude/skills/*/; do
+if (( CODEX_PRESENT )); then
+  say "Codex CLI detected ($CODEX_DIR) — also installing into $CODEX_DIR/skills/"
+  mkdir -p "$CODEX_DIR/skills"
+fi
+for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
   name="$(basename "$skill_dir")"
   place_tree "$skill_dir" "$CLAUDE_DIR/skills/$name"
+  (( CODEX_PRESENT )) && place_tree "$skill_dir" "$CODEX_DIR/skills/$name"
 done
 
 # --- 4. Clone kumo-skills-catalog (referenced by AGENTS.md) -----------------
@@ -307,6 +324,7 @@ Files this run created or replaced (with .bak.${TS} for any prior contents):
   $CLAUDE_DIR/CLAUDE.md       (symlink → $HOME/AGENTS.md)
   $CLAUDE_DIR/settings.json
   $CLAUDE_DIR/skills/*
+$(if (( CODEX_PRESENT )); then echo "  $CODEX_DIR/skills/*         (Codex CLI detected on this machine)"; fi)
 
 Not migrated (intentionally — these are per-project or per-session):
   $CLAUDE_DIR/projects/   $CLAUDE_DIR/sessions/   $CLAUDE_DIR/tasks/

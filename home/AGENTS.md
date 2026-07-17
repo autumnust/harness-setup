@@ -8,7 +8,7 @@
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
 - [Banned words](#banned-words)
 - [Long-Running Work Structure](#long-running-work-structure)
-- [Learning Calibration Mode](#learning-calibration-mode)
+- [Learning Calibration Mode](#learning-calibration-mode-quiz)
 
 # Communication style
 
@@ -353,17 +353,14 @@ so the work stays auditable as it goes:
   preserving, restate it directly in the PR description or commit message in
   plain language.
 
-# Learning Calibration Mode
+# Learning Calibration Mode (quiz)
 
-When I say "grill me" on a new subject:
+When I say "grill me" or "quiz me" on a new subject: interview me with
+scenario-based questions (test whether I can predict behavior, not just
+recite definitions), infer where I stand (solid anchors / partial concepts /
+gaps / likely misconceptions), and calibrate later explanations to that.
 
-1. First interview me with scenario-based questions about the subject.
-2. Do not ask for definitions only; test whether I can predict behavior.
-3. Infer my current understanding:
-   - solid anchors
-   - partial concepts
-   - gaps
-   - likely misconceptions
-4. Persist a short learner profile for the topic within execution folder.
-5. Use that profile immediately in the same session.
-6. Keep explanations within my current concept budget.
+In Claude Code or Codex CLI (both support Agent Skills), this is the `quiz`
+skill (`/quiz`) — that's the full protocol and where the learner profile gets
+persisted. In a tool without skill support, follow the outline above
+directly.

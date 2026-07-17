@@ -8,9 +8,14 @@ layers:
   `AGENTS.md` is a cross-tool convention, not a Claude Code feature — the
   guidance is about *how to work with me*, so any coding agent that reads
   `AGENTS.md` can use it. This is the portable heart of the setup.
-- **Claude Code integration — `~/.claude/settings.json`, `~/.claude/skills/`,
-  plugins.** Wires that core into Claude Code specifically: statusline, enabled
-  plugins, skills, and a `~/.claude/CLAUDE.md` symlink pointing at `~/AGENTS.md`.
+- **Skills — `agent-skills/`.** Reusable, invokable procedures (a directory
+  per skill holding `SKILL.md`). Claude Code and Codex CLI both use this same
+  convention, so `install.sh` installs each skill into `~/.claude/skills/`
+  always, and into `~/.codex/skills/` too whenever Codex CLI is already
+  present on the machine.
+- **Claude Code integration — `~/.claude/settings.json`, plugins.** Wires the
+  core into Claude Code specifically: statusline, enabled plugins, and a
+  `~/.claude/CLAUDE.md` symlink pointing at `~/AGENTS.md`.
 
 Drop this onto a new device, run `install.sh`, and the global setup is restored
 (plus a clone of `kumo-skills-catalog`).
@@ -28,7 +33,8 @@ cd ~/Documents/harness-setup
 ```
 
 On a **fresh device** with no existing `~/AGENTS.md`, `~/.claude/settings.json`,
-or `~/.claude/skills/*`, this installs cleanly with no prompts.
+`~/.claude/skills/*`, or (if Codex CLI is present) `~/.codex/skills/*`, this
+installs cleanly with no prompts.
 
 On a **device that already has global config** (`~/AGENTS.md` or any of the
 Claude Code files), `./install.sh` **refuses to overwrite anything**. It lists
@@ -65,7 +71,7 @@ every conflicting file and exits non-zero. Pick one of:
 |---|---|
 | `home/AGENTS.md` | `~/AGENTS.md` (and `~/.claude/CLAUDE.md` → symlink to it) |
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
-| `claude/skills/frontend-slides/` | `~/.claude/skills/frontend-slides/` |
+| `agent-skills/<name>/` | `~/.claude/skills/<name>/`, and `~/.codex/skills/<name>/` too if Codex CLI is already on the machine |
 | *(cloned at install)* | `~/Documents/kumo-skills-catalog/` (from `kumo-ai/kumo-skills-catalog`) |
 
 ## What the settings.json controls
@@ -133,6 +139,13 @@ back into the repo before committing.
 cd ~/Documents/harness-setup
 cp ~/AGENTS.md home/AGENTS.md
 cp ~/.claude/settings.json claude/settings.json
-rsync -a --delete --exclude='.git' ~/.claude/skills/ claude/skills/
+rsync -a --delete --exclude='.git' ~/.claude/skills/ agent-skills/
 git add -A && git commit -m "sync global config" && git push
 ```
+
+Skills now deploy to two possible live locations (`~/.claude/skills/` and, if
+Codex CLI is present, `~/.codex/skills/`). Prefer editing `agent-skills/` in
+the repo directly and re-running `./update.sh` rather than live-editing a
+deployed copy — if you do live-edit one, rsync from *that* one back into
+`agent-skills/`, not both, or you risk clobbering one tool's edits with the
+other's.
