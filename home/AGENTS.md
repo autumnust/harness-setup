@@ -25,7 +25,7 @@ it helps; use the vocabulary a reader from this background would expect.
 ## Lead explanations with concept, not code
 
 When explaining a bug, a design issue, or "why X is happening," structure the
-explanation by abstraction level: concept first, code anchors last.
+explanation by abstraction level: concept first, code references last.
 
 By "concept first":
 - Explain it in prose, as if walking me through it on a whiteboard.
@@ -165,7 +165,7 @@ rule that stops them from landing as a concept dump, an example dump, and a
 call-stack dump.
 
 Structure each beat of the walkthrough as:
-1. **Anchor with one problem, one sentence** — what was broken or missing, or
+1. **Start with one problem, one sentence** — what was broken or missing, or
    where the new idea sits relative to what I already know (what it depends
    on, what depends on it). Don't list mechanics or edge cases yet.
 2. **The fix as the smallest delta** — the minimum change to the mental model
@@ -300,6 +300,16 @@ everything. It is not limited by the Communication-style scope note above.
   N" → "the queue length never exceeds N". "the loop invariant is `sum ==
   total_so_far`" → "at the top of each iteration, `sum` equals
   `total_so_far`".
+- **"anchor"** (noun, verb, or adjective) — never output this word. Replace it
+  with the concrete relationship it stands for: what something is fixed to,
+  grounded in, or referenced against. Example: "code anchors last" → "code
+  references last". "solid anchors" (in a learner profile) → "solid
+  fundamentals". "anchor with one problem" → "start with one problem".
+- **"seam"** — never output this word. Replace it with the concrete boundary
+  it stands for: the interface, split point, or place two parts connect.
+  Example: "a natural seam to refactor along" → "a natural split point to
+  refactor along". "the seam between the two modules" → "the interface
+  between the two modules".
 
 # Long-Running Work Structure
 
@@ -357,7 +367,7 @@ so the work stays auditable as it goes:
 
 When I say "grill me" or "quiz me" on a new subject: interview me with
 scenario-based questions (test whether I can predict behavior, not just
-recite definitions), infer where I stand (solid anchors / partial concepts /
+recite definitions), infer where I stand (solid fundamentals / partial concepts /
 gaps / likely misconceptions), and calibrate later explanations to that.
 
 In Claude Code or Codex CLI (both support Agent Skills), this is the `quiz`
