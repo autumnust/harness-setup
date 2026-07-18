@@ -161,6 +161,20 @@ change, backs up the prior copy to `<path>.bak.<timestamp>`, and is a no-op
 when everything is already in sync. Restart active Claude Code and Codex
 sessions afterward so they re-read the refreshed global config.
 
+## Testing deployment without touching the live harness
+
+On macOS, run the same fail-closed Seatbelt smoke test used by CI:
+
+```bash
+scripts/smoke-test-deployment.sh --offline
+```
+
+It installs into a temporary home, denies network and all writes outside that
+temporary root, launches both real CLIs, verifies the rendered workflow and
+update behavior, then cleans up. See
+[`tests/deployment-smoke/README.md`](./tests/deployment-smoke/README.md) for the
+coverage, containment boundary, CI trigger, and optional online awareness probe.
+
 ## Updating the repo from a source machine (`~/` → repo)
 
 The other direction: you tweaked the live global config and want to capture it

@@ -66,7 +66,7 @@ if [[ -d "$CODEX_DIR" ]] || command -v codex >/dev/null 2>&1; then
   CODEX_PRESENT=1
 fi
 TS="$(date +%Y%m%dT%H%M%S)"
-TEMP_ROOT="$(mktemp -d)"
+TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/harness-install.XXXXXX")"
 cleanup() { rm -rf "$TEMP_ROOT"; }
 trap cleanup EXIT
 
@@ -267,33 +267,11 @@ say "Pinning statusline node binary to: $NODE_BIN"
 # repo's baseline keys, but unions enabledPlugins / extraKnownMarketplaces with
 # whatever this machine already has, so host-specific plugins are never dropped.
 RENDERED_SETTINGS="$TEMP_ROOT/claude-settings.json"
-python3 - "$REPO_ROOT/claude/settings.json" "$RENDERED_SETTINGS" "$NODE_BIN" "$CLAUDE_DIR/settings.json" <<'PY'
-import json, sys, re, os
-src, dst, node_bin, existing = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
-with open(src) as f:
-    cfg = json.load(f)
-sl = cfg.get("statusLine", {})
-cmd = sl.get("command", "")
-# Replace any "/.../node" literal inside the embedded `exec "<path>" ...` call.
-cmd = re.sub(r'exec\s+"[^"]*/node"', f'exec "{node_bin}"', cmd)
-sl["command"] = cmd
-cfg["statusLine"] = sl
-# Additive merge: keep plugins/marketplaces this machine already enabled.
-# Repo values win on key conflicts; host-only entries are preserved.
-if os.path.exists(existing):
-    try:
-        with open(existing) as f:
-            cur = json.load(f)
-    except (ValueError, OSError):
-        cur = {}
-    for field in ("enabledPlugins", "extraKnownMarketplaces"):
-        merged = dict(cur.get(field, {}))   # host entries first (stable order)
-        merged.update(cfg.get(field, {}))   # repo entries win on conflict
-        if merged:
-            cfg[field] = merged
-with open(dst, "w") as f:
-    json.dump(cfg, f, indent=2)
-PY
+python3 "$REPO_ROOT/scripts/render-claude-settings.py" \
+  --source "$REPO_ROOT/claude/settings.json" \
+  --output "$RENDERED_SETTINGS" \
+  --node-bin "$NODE_BIN" \
+  --existing "$CLAUDE_DIR/settings.json"
 place_file "$RENDERED_SETTINGS" "$CLAUDE_DIR/settings.json"
 
 # --- 3. Portable workflow specs + native custom agents ---------------------
@@ -368,56 +346,51 @@ fi
 
 # --- 6. Final report --------------------------------------------------------
 if [[ "$MODE" == "update" ]]; then
-  cat <<EOF
-
-$(ok "Harness sync complete: $UPDATED updated, $UNCHANGED already in sync.")
-
-EOF
+  printf '\n'
+  ok "Harness sync complete: $UPDATED updated, $UNCHANGED already in sync."
+  printf '\n'
   if (( UPDATED > 0 )); then
-    cat <<EOF
-Prior contents of any changed file were saved as <path>.bak.${TS}.
-Restart active Claude Code or Codex sessions so they re-read updated config.
-EOF
+    printf '%s\n' \
+      "Prior contents of any changed file were saved as <path>.bak.${TS}." \
+      "Restart active Claude Code or Codex sessions so they re-read updated config."
   fi
   exit 0
 fi
 
-cat <<EOF
-
-$(ok "Global coding-agent harness installed.")
-
-Next steps:
-  1. Launch Claude Code in any directory. On first launch it will:
-       - Read $CLAUDE_DIR/settings.json
-       - See the four enabled plugins (claude-hud, understand-anything,
-         frontend-design, crit) and their marketplaces
-       - Install them automatically into $CLAUDE_DIR/plugins/cache/
-  2. If a plugin does not auto-install, run inside Claude Code:
-         /plugin
-       and enable from the four entries listed in settings.json.
-  3. Verify the statusline renders. If not, check node path in
-       $CLAUDE_DIR/settings.json  (statusLine.command embeds it literally).
-
-Files this run created or replaced (with .bak.${TS} for any prior contents):
-  $HOME/AGENTS.md
-  $CLAUDE_DIR/CLAUDE.md       (symlink → $HOME/AGENTS.md)
-  $CLAUDE_DIR/settings.json
-  $CLAUDE_DIR/skills/*
-  $CLAUDE_DIR/agents/lei-harness/*
-  $AGENT_HARNESS_HOME/specs
-  $AGENT_HARNESS_HOME/state/learner-profiles  (initialized, never overwritten)
-$(if (( CODEX_PRESENT )); then cat <<CODEX_FILES
-  $CODEX_DIR/AGENTS.md        (symlink → $HOME/AGENTS.md)
-  $CODEX_DIR/config.toml      (agents.max_depth = 2)
-  $CODEX_DIR/agents/lei-harness-*.toml
-  $PORTABLE_SKILLS_DIR/*
-  $CODEX_DIR/skills/*         (legacy-compatible copy)
-CODEX_FILES
-fi)
-
-Not migrated (intentionally — these are per-project or per-session):
-  $CLAUDE_DIR/projects/   $CLAUDE_DIR/sessions/   $CLAUDE_DIR/tasks/
-  $CLAUDE_DIR/plugins/cache/   $CLAUDE_DIR/history.jsonl
-  Any project-local .claude/ directories (bench-ec2, gpu-ec2, ship, learn, …)
-
-EOF
+printf '\n'
+ok "Global coding-agent harness installed."
+printf '\n%s\n' \
+  "Next steps:" \
+  "  1. Launch Claude Code in any directory. On first launch it will:" \
+  "       - Read $CLAUDE_DIR/settings.json" \
+  "       - See the four enabled plugins (claude-hud, understand-anything," \
+  "         frontend-design, crit) and their marketplaces" \
+  "       - Install them automatically into $CLAUDE_DIR/plugins/cache/" \
+  "  2. If a plugin does not auto-install, run inside Claude Code:" \
+  "         /plugin" \
+  "       and enable from the four entries listed in settings.json." \
+  "  3. Verify the statusline renders. If not, check node path in" \
+  "       $CLAUDE_DIR/settings.json  (statusLine.command embeds it literally)." \
+  "" \
+  "Files this run created or replaced (with .bak.${TS} for any prior contents):" \
+  "  $HOME/AGENTS.md" \
+  "  $CLAUDE_DIR/CLAUDE.md       (symlink -> $HOME/AGENTS.md)" \
+  "  $CLAUDE_DIR/settings.json" \
+  "  $CLAUDE_DIR/skills/*" \
+  "  $CLAUDE_DIR/agents/lei-harness/*" \
+  "  $AGENT_HARNESS_HOME/specs" \
+  "  $AGENT_HARNESS_HOME/state/learner-profiles  (initialized, never overwritten)"
+if (( CODEX_PRESENT )); then
+  printf '%s\n' \
+    "  $CODEX_DIR/AGENTS.md        (symlink -> $HOME/AGENTS.md)" \
+    "  $CODEX_DIR/config.toml      (agents.max_depth = 2)" \
+    "  $CODEX_DIR/agents/lei-harness-*.toml" \
+    "  $PORTABLE_SKILLS_DIR/*" \
+    "  $CODEX_DIR/skills/*         (legacy-compatible copy)"
+fi
+printf '\n%s\n' \
+  "Not migrated (intentionally - these are per-project or per-session):" \
+  "  $CLAUDE_DIR/projects/   $CLAUDE_DIR/sessions/   $CLAUDE_DIR/tasks/" \
+  "  $CLAUDE_DIR/plugins/cache/   $CLAUDE_DIR/history.jsonl" \
+  "  Any project-local .claude/ directories (bench-ec2, gpu-ec2, ship, learn, ...)" \
+  ""

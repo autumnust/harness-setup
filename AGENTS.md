@@ -15,6 +15,7 @@ itself a software project to build or test.
 | `agent-workflows/` | Provider-neutral role prompts, topology, workflows, contracts, and adapter mappings rendered into native Claude and Codex custom agents |
 | `scripts/render-agents.py` | Validates the topology and renders provider-native custom-agent files during installation |
 | `install.sh` / `update.sh` | Installers that copy the above onto a target machine |
+| `tests/deployment-smoke/` | macOS Seatbelt deployment, CLI launch, and optional runtime-awareness checks |
 | `.claude/skills/broadcast-harness/` | Skill for pushing this repo to remote machines via SSH |
 
 ## Critical distinction

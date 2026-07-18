@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "provider": {"type": "string", "enum": ["claude", "codex"]},
+    "global_marker": {"type": "string"},
+    "reviewer_marker": {"type": "string"},
+    "workflow_marker": {"type": "string"},
+    "skill_marker": {"type": "string"},
+    "available_roles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "coordinator",
+          "exec-env-prepper",
+          "executor",
+          "reviewer",
+          "educator",
+          "pr-maintainer"
+        ]
+      },
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true
+    },
+    "max_depth": {"type": "integer"},
+    "educator_is_leaf": {"type": "boolean"},
+    "state_path": {"type": "string"}
+  },
+  "required": [
+    "provider",
+    "global_marker",
+    "reviewer_marker",
+    "workflow_marker",
+    "skill_marker",
+    "available_roles",
+    "max_depth",
+    "educator_is_leaf",
+    "state_path"
+  ]
+}
