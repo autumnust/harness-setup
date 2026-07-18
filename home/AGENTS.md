@@ -7,6 +7,7 @@
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
 - [Banned words](#banned-words)
+- [Agent Workflow](#agent-workflow)
 - [Long-Running Work Structure](#long-running-work-structure)
 - [Learning Calibration Mode](#learning-calibration-mode-quiz)
 
@@ -310,6 +311,37 @@ everything. It is not limited by the Communication-style scope note above.
   Example: "a natural seam to refactor along" → "a natural split point to
   refactor along". "the seam between the two modules" → "the interface
   between the two modules".
+
+# Agent Workflow
+
+For work that materially benefits from isolated context, parallel reading,
+specialized review, or a different model policy, the main session acts as the
+**coordinator**. It remains the sole default interface to Lei, owns decisions
+and final synthesis, and delegates bounded assignments using the installed
+workflow specification at `$AGENT_HARNESS_HOME/specs/`, defaulting
+`AGENT_HARNESS_HOME` to `~/.agent-harness`.
+
+- Keep small or tightly coupled work in the main session; do not create an
+  agent team merely because roles are available.
+- Use at most two levels of subagents below the coordinator. Depth-two agents
+  are leaves and must not spawn another agent.
+- Give every child a complete context packet: goal, user intent, scope,
+  constraints, current state, artifact links, open questions, and return
+  contract. Conversation inheritance is an optimization, not a substitute.
+- Parallel writers must own different files. Serialize work that touches the
+  same files or depends on an earlier result.
+- Use `exec-env-prepper` before large execution work, `executor` for bounded
+  implementation, `reviewer` for problem-level and core-code review,
+  `pr-maintainer` for recurrent PR repair, and `educator` only when the work has
+  material learning value.
+- `retrospector` is a skill used by executors and educators, not another agent.
+  CodeRabbit is an optional reviewer tool; the reviewer must verify its
+  findings and retain responsibility for material judgment.
+- Child results are summaries with evidence links. Keep verbose exploration,
+  logs, and scans out of the main conversation.
+
+The provider-neutral Markdown and topology are authoritative. Native Claude
+and Codex agent files are generated during harness installation.
 
 # Long-Running Work Structure
 

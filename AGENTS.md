@@ -11,7 +11,9 @@ itself a software project to build or test.
 |------|------------|
 | `home/AGENTS.md` | The global agent prompt deployed to `~/AGENTS.md` on every machine |
 | `claude/settings.json` | Claude Code settings deployed to `~/.claude/settings.json` |
-| `agent-skills/` | Skills deployed to `~/.claude/skills/`, and also to `~/.codex/skills/` when Codex CLI is already present on the machine — both tools use the same SKILL.md directory convention |
+| `agent-skills/` | Skills deployed to `~/.claude/skills/`; when Codex is present they also deploy to current `~/.agents/skills/` and legacy-compatible `~/.codex/skills/` |
+| `agent-workflows/` | Provider-neutral role prompts, topology, workflows, contracts, and adapter mappings rendered into native Claude and Codex custom agents |
+| `scripts/render-agents.py` | Validates the topology and renders provider-native custom-agent files during installation |
 | `install.sh` / `update.sh` | Installers that copy the above onto a target machine |
 | `.claude/skills/broadcast-harness/` | Skill for pushing this repo to remote machines via SSH |
 
@@ -28,13 +30,20 @@ Edit `home/AGENTS.md` directly. The file uses Markdown. Keep sections
 consistent with the existing structure (ToC, section headers, smell tests).
 
 **Editing a skill (`agent-skills/<name>/`):**
-These are deployed verbatim to both `~/.claude/skills/` and `~/.codex/skills/`
-(see the table above). Avoid hardcoding Claude-Code-only assumptions into a
-skill's `SKILL.md` — a hardcoded `~/.claude/...` path, or a step that relies
-on a Claude-Code-only mechanism (e.g. the auto-memory system) with no
-fallback — since the same file also has to make sense read by Codex CLI. If a
-step is genuinely Claude-only, say so explicitly and give the other tool an
-alternative, rather than silently assuming the reader is Claude Code.
+These are deployed verbatim to Claude's skill directory and both current and
+legacy-compatible Codex skill directories (see the table above). Avoid
+hardcoding Claude-Code-only assumptions into a skill's `SKILL.md` — a
+hardcoded `~/.claude/...` path, or a step that relies on a Claude-Code-only
+mechanism (e.g. the auto-memory system) with no fallback — since the same file
+also has to make sense read by Codex CLI. If a step is genuinely Claude-only,
+say so explicitly and give the other tool an alternative, rather than silently
+assuming the reader is Claude Code.
+
+**Editing agent workflows (`agent-workflows/`):**
+Keep role behavior and shared contracts in Markdown, topology and policy in
+`manifest.json`, and provider-specific model mappings in `adapters/`. Do not
+hand-edit generated files under `~/.claude/agents/` or `~/.codex/agents/`.
+Run `python3 scripts/render-agents.py --check` after changes.
 
 **Deploying changes:**
 After committing and pushing, use the `broadcast-harness` skill to rsync

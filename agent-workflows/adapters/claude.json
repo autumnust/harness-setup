@@ -1,0 +1,12 @@
+{
+  "models": {
+    "fast": "sonnet",
+    "capable": "sonnet",
+    "strongest-review": "opus"
+  },
+  "effort": {
+    "low": "low",
+    "medium": "medium",
+    "high": "high"
+  }
+}

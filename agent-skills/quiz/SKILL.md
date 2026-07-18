@@ -33,13 +33,14 @@ this codebase, anything.
    - **likely misconceptions** — a confident, wrong model (more useful to
      find than a gap, since it actively steers future answers wrong)
 4. **Persist the result as a learner profile, in a fixed global location** —
-   not the per-project auto-memory system. Auto-memory is keyed to whichever
-   repo you're sitting in (`~/.claude/projects/<cwd>/memory/`), but
-   understanding of a subject like a language feature or design pattern isn't
-   repo-specific and shouldn't reset every time you `cd` somewhere else.
-   Write to `~/.claude/learner-profiles/<topic>.md` (create the directory and
-   file if they don't exist yet), regardless of which tool or project you're
-   running in.
+   not a provider's per-project auto-memory system. Understanding of a subject
+   like a language feature or design pattern is not repo-specific and should
+   not reset every time you `cd` somewhere else. Resolve
+   `AGENT_HARNESS_HOME` from the environment, default it to
+   `~/.agent-harness`, and write to
+   `$AGENT_HARNESS_HOME/state/learner-profiles/<topic>.md` (create the
+   directory and file if they do not exist). This location is shared by Claude
+   Code, Codex CLI, and tools that follow the harness manually.
    - **Before quizzing**, check whether a profile for the topic already
      exists and treat it as the starting point, not a blank slate — skip
      re-probing what it already marks as a solid fundamental unless the

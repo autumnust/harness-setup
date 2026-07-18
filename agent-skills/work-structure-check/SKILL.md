@@ -25,8 +25,9 @@ the linter would flag a folder that was never meant to follow it.
 ## How to run
 
 The linter sits next to this file, in this skill's own directory — for Claude
-Code that's `~/.claude/skills/work-structure-check/`, for Codex CLI it's
-`~/.codex/skills/work-structure-check/`:
+Code that is `~/.claude/skills/work-structure-check/`; current Codex installs
+use `~/.agents/skills/work-structure-check/`, with
+`~/.codex/skills/work-structure-check/` retained for compatibility:
 
 ```
 python3 <this-skill-directory>/check_work_structure.py <execution-folder>

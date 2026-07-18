@@ -1,0 +1,12 @@
+{
+  "models": {
+    "fast": "gpt-5.6-terra",
+    "capable": "gpt-5.6",
+    "strongest-review": "gpt-5.6"
+  },
+  "reasoning_effort": {
+    "low": "low",
+    "medium": "medium",
+    "high": "high"
+  }
+}

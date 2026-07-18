@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync this machine's global Claude Code harness to the latest repo state.
+# Sync this machine's global coding-agent harness to the latest repo state.
 #
 # Steady-state companion to install.sh: pull the repo, then rewrite only the
 # global files that actually changed (showing a diff and backing up each first).

@@ -11,8 +11,12 @@ layers:
 - **Skills — `agent-skills/`.** Reusable, invokable procedures (a directory
   per skill holding `SKILL.md`). Claude Code and Codex CLI both use this same
   convention, so `install.sh` installs each skill into `~/.claude/skills/`
-  always, and into `~/.codex/skills/` too whenever Codex CLI is already
-  present on the machine.
+  always, and into `~/.agents/skills/` plus the legacy-compatible
+  `~/.codex/skills/` whenever Codex CLI is already present.
+- **Agent workflows — `agent-workflows/`.** Provider-neutral role prompts,
+  topology, handoff contracts, model policies, and workflow procedures.
+  Installation renders these into native Claude Markdown agents and Codex TOML
+  agents, while keeping one readable source of truth.
 - **Claude Code integration — `~/.claude/settings.json`, plugins.** Wires the
   core into Claude Code specifically: statusline, enabled plugins, and a
   `~/.claude/CLAUDE.md` symlink pointing at `~/AGENTS.md`.
@@ -32,13 +36,12 @@ cd ~/Documents/harness-setup
 ./install.sh
 ```
 
-On a **fresh device** with no existing `~/AGENTS.md`, `~/.claude/settings.json`,
-`~/.claude/skills/*`, or (if Codex CLI is present) `~/.codex/skills/*`, this
-installs cleanly with no prompts.
+On a **fresh device** with no existing harness instructions, settings, skills,
+workflow specs, or generated agents, this installs cleanly with no prompts.
 
-On a **device that already has global config** (`~/AGENTS.md` or any of the
-Claude Code files), `./install.sh` **refuses to overwrite anything**. It lists
-every conflicting file and exits non-zero. Pick one of:
+On a **device that already has global agent config**, `./install.sh` **refuses
+to overwrite anything**. It lists every conflicting file and exits non-zero.
+Pick one of:
 
 ```bash
 ./install.sh --backup         # Safest. Move each conflict to
@@ -55,7 +58,7 @@ every conflicting file and exits non-zero. Pick one of:
 > Clone `git@github.com:autumnust/harness-setup.git` into `~/Documents/harness-setup`, then run
 > `./install.sh` from inside it.
 >
-> If the script detects existing global Claude Code config and exits
+> If the script detects existing global agent config and exits
 > with a conflict list, **ask me** which mode I want — `--backup`,
 > `--overwrite`, or `--skip-existing` — before re-running. Do not
 > choose for me.
@@ -69,10 +72,34 @@ every conflicting file and exits non-zero. Pick one of:
 
 | Source in this repo | Target on the new machine |
 |---|---|
-| `home/AGENTS.md` | `~/AGENTS.md` (and `~/.claude/CLAUDE.md` → symlink to it) |
+| `home/AGENTS.md` | `~/AGENTS.md` (and tool-specific global-instruction symlinks for Claude and Codex) |
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
-| `agent-skills/<name>/` | `~/.claude/skills/<name>/`, and `~/.codex/skills/<name>/` too if Codex CLI is already on the machine |
+| `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
+| `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/lei-harness/*.md` and, when Codex is present, `~/.codex/agents/lei-harness-*.toml` |
+| workflow depth setting | `agents.max_depth = 2` merged into `~/.codex/config.toml` when Codex is present |
+| mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates) |
 | *(cloned at install)* | `~/Documents/kumo-skills-catalog/` (from `kumo-ai/kumo-skills-catalog`) |
+
+## Portable agent workflow
+
+The main session is the coordinator. It can delegate environment preparation,
+implementation, review, PR maintenance, and education while keeping user
+decisions and final synthesis in the main context. Nesting stops after two
+subagent levels.
+
+```text
+coordinator
+├── exec-env-prepper ─┐
+├── executor ─────────┤
+├── reviewer ─────────┼── educator
+├── pr-maintainer ────┘
+└── educator
+```
+
+`retrospector` is a skill used in executor or educator mode. CodeRabbit is an
+optional supporting review tool, not a role that owns material review
+judgment. See [`agent-workflows/`](./agent-workflows/) for the complete
+contracts and routing rules.
 
 ## What the settings.json controls
 
@@ -98,8 +125,9 @@ where to fetch them on first launch — they auto-install into
 
 ## Idempotency
 
-Re-running `install.sh` is safe. Any file it would overwrite is moved
-aside to `<path>.bak.<timestamp>` first.
+Re-running `install.sh` is safe: the default mode refuses conflicts, while
+`--backup` and `--update` preserve replaced content as
+`<path>.bak.<timestamp>`. Mutable state is never replaced.
 
 ## What is deliberately not included
 
@@ -111,6 +139,9 @@ aside to `<path>.bak.<timestamp>` first.
   Gmail, Notion, Figma, …) — those re-authenticate interactively on
   first use of each.
 - Project-level `AGENTS.md` files and project `.claude/` directories.
+- Mutable learner profiles and execution history. The installer initializes a
+  local state directory but never checks its contents into this repository or
+  overwrites it during updates.
 
 ## Keeping a machine in sync after the repo changes (repo → `~/`)
 
@@ -127,8 +158,8 @@ cd ~/Documents/harness-setup
 
 `update.sh` only rewrites files that actually differ, prints a diff of each
 change, backs up the prior copy to `<path>.bak.<timestamp>`, and is a no-op
-when everything is already in sync. Restart Claude Code afterward so it
-re-reads the refreshed global config.
+when everything is already in sync. Restart active Claude Code and Codex
+sessions afterward so they re-read the refreshed global config.
 
 ## Updating the repo from a source machine (`~/` → repo)
 
@@ -143,9 +174,9 @@ rsync -a --delete --exclude='.git' ~/.claude/skills/ agent-skills/
 git add -A && git commit -m "sync global config" && git push
 ```
 
-Skills now deploy to two possible live locations (`~/.claude/skills/` and, if
-Codex CLI is present, `~/.codex/skills/`). Prefer editing `agent-skills/` in
-the repo directly and re-running `./update.sh` rather than live-editing a
-deployed copy — if you do live-edit one, rsync from *that* one back into
-`agent-skills/`, not both, or you risk clobbering one tool's edits with the
-other's.
+Skills now deploy to three possible live locations (`~/.claude/skills/` and,
+if Codex CLI is present, `~/.agents/skills/` and `~/.codex/skills/`). Prefer
+editing `agent-skills/` in the repo directly and re-running `./update.sh`
+rather than live-editing a deployed copy — if you do live-edit one, rsync from
+*that* one back into `agent-skills/`, not several copies, or you risk
+overwriting one tool's edits with another's.
