@@ -91,6 +91,11 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
 
     installed_specs = home / ".agent-harness/specs"
     assert file_hashes(repo / "agent-workflows") == file_hashes(installed_specs)
+    education_workflow = (
+        installed_specs / "workflows/education.md"
+    ).read_text(encoding="utf-8")
+    assert "Do not create an execution folder" in education_workflow
+    assert "invoke `educator` directly" in education_workflow
 
     skill_names = {
         path.parent.name for path in (repo / "agent-skills").glob("*/SKILL.md")

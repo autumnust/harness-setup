@@ -32,6 +32,7 @@
       "const": "registered-session"
     },
     "coordinator_owns_education_lifecycle": {"type": "boolean"},
+    "education_only_bypasses_execution_roles": {"type": "boolean"},
     "education_session_state_path": {"type": "string"},
     "all_operational_children_are_leaves": {"type": "boolean"},
     "canonical_state_writer": {"type": "string", "const": "coordinator"},
@@ -52,6 +53,7 @@
     "educator_display_name",
     "educator_human_interface",
     "coordinator_owns_education_lifecycle",
+    "education_only_bypasses_execution_roles",
     "education_session_state_path",
     "all_operational_children_are_leaves",
     "canonical_state_writer",

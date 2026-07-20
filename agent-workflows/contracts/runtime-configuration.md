@@ -1,10 +1,11 @@
 # Runtime-configuration contract
 
 The installed mutable configuration lives at
-`$AGENT_HARNESS_HOME/config.json`. At the start of a goal, before spawning a
-child, the coordinator reads it and batches unresolved choices into one request
-to Lei. Only the coordinator may ask Lei configuration questions or write this
-file.
+`$AGENT_HARNESS_HOME/config.json`. At the start of a goal, the coordinator reads
+it and resolves only the configuration required by the selected workflow. For
+an execution or review goal, it batches unresolved required choices into one
+request to Lei before spawning a child. Only the coordinator may ask Lei
+configuration questions or write this file.
 
 The configuration resolves:
 
@@ -20,3 +21,10 @@ chosen. The coordinator records confirmed choices, then passes only the
 relevant resolved values to children in their context packets. A child reports
 a missing prerequisite or proposed configuration change to the coordinator; it
 never asks Lei directly and never edits global configuration.
+
+An education-only goal is the deliberate exception to full first-run
+configuration. It may immediately use the portable learner-state fallback and
+leave `configured: false`; unresolved execution roots, review backends,
+supporting scanners, and PR settings do not block or prompt during that lesson.
+Ask about an external-memory backend only when Lei explicitly requires it for
+the current education session.

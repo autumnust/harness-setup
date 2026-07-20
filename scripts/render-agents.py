@@ -112,6 +112,19 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     max_depth = manifest.get("max_depth")
     if max_depth != 2:
         raise SpecError("max_depth must remain the defensive provider ceiling of 2")
+    workflows = manifest.get("workflows")
+    required_workflows = {
+        "default",
+        "education-only",
+        "pr-maintenance",
+        "pr-review",
+    }
+    if not isinstance(workflows, dict) or set(workflows) != required_workflows:
+        raise SpecError("manifest must declare the complete workflow set")
+    for workflow, relative_path in workflows.items():
+        if not isinstance(relative_path, str):
+            raise SpecError(f"{workflow}: workflow path must be a string")
+        source_file(source, relative_path)
     validate_runtime_config(source)
 
     roles_value = manifest.get("roles")

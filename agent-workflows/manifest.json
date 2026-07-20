@@ -2,6 +2,12 @@
   "version": 1,
   "max_depth": 2,
   "default_result_word_limit": 800,
+  "workflows": {
+    "default": "workflows/default.md",
+    "education-only": "workflows/education.md",
+    "pr-maintenance": "workflows/pr-maintenance.md",
+    "pr-review": "workflows/pr-review.md"
+  },
   "roles": [
     {
       "name": "coordinator",

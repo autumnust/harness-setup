@@ -319,12 +319,20 @@ specialized review, or a different model policy, the main session acts as the
 **coordinator**. It remains the sole default interface to Lei, owns decisions
 and canonical mutable state, and delegates bounded assignments using the
 installed workflow specification at `$AGENT_HARNESS_HOME/specs/`, defaulting
-`AGENT_HARNESS_HOME` to `~/.agent-harness`. Before spawning a child, read
-`$AGENT_HARNESS_HOME/config.json`; when it is unconfirmed, batch the unresolved
-choices into one configuration request to Lei and persist the answers there.
+`AGENT_HARNESS_HOME` to `~/.agent-harness`. Classify the goal before resolving
+configuration or spawning a child. Read `$AGENT_HARNESS_HOME/config.json` and
+resolve only the choices required by the selected workflow.
 
 - Keep small or tightly coupled work in the main session; do not create an
   agent team merely because roles are available.
+- Treat a request to learn, understand, discuss, walk through, or be quizzed as
+  an education-only goal when it requests no implementation. Follow
+  `$AGENT_HARNESS_HOME/specs/workflows/education.md`: invoke `educator` directly
+  and do not create an execution folder, execution-notes files,
+  `progress.html`, environment-preparation artifacts, review work, or a PR
+  queue. Do not invoke `exec-env-prepper`, `executor`, `reviewer`, or
+  `pr-maintainer`. Unresolved execution and review configuration must not delay
+  the lesson; use the portable learner-state fallback.
 - Only the coordinator spawns agents. Current operational children are
   depth-one leaves. Keep the installed maximum depth of two as a defensive
   provider ceiling, not as permission for children to spawn.
@@ -345,9 +353,11 @@ choices into one configuration request to Lei and persist the answers there.
   teammate `Educator` and tell Lei to use `Shift+Down` or its split pane.
   Remain active while Lei interacts with the educator and wait for an explicit
   education-session status; a child turn ending is not lesson completion.
-- Start one `pr-maintainer` for the coordinator lifetime. Register every PR with
-  its responsible executor identity. The maintainer polls the configured queue
-  and may message only the coordinator or that exact executor.
+- Start one `pr-maintainer` when the session first enters a PR-producing or
+  PR-monitoring workflow, then keep it for the remaining coordinator lifetime.
+  Register every PR with its responsible executor identity. The maintainer
+  polls the configured queue and may message only the coordinator or that exact
+  executor.
 - `retrospector` is a coordinator-invoked skill, not another agent. It proposes
   changes and never applies them. Supporting review tools are selected from
   runtime configuration rather than hardcoded; the primary reviewer verifies

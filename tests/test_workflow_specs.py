@@ -44,6 +44,10 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertEqual(manifest["max_depth"], 2)
         self.assertEqual(adapters["claude"]["models"]["deep"], "opus")
         self.assertEqual(adapters["codex"]["models"]["deep"], "gpt-5.6-sol")
+        self.assertEqual(
+            set(manifest["workflows"]),
+            {"default", "education-only", "pr-maintenance", "pr-review"},
+        )
         interfaces = {
             role["name"]: role["human_interface"] for role in manifest["roles"]
         }
@@ -63,6 +67,23 @@ class WorkflowSpecTests(unittest.TestCase):
         self.write_manifest(manifest)
         with self.assertRaisesRegex(render_agents.SpecError, "must be a leaf"):
             render_agents.validate(self.source)
+
+    def test_requires_education_only_workflow(self) -> None:
+        manifest = self.manifest()
+        del manifest["workflows"]["education-only"]
+        self.write_manifest(manifest)
+        with self.assertRaisesRegex(render_agents.SpecError, "complete workflow set"):
+            render_agents.validate(self.source)
+
+    def test_education_only_workflow_bypasses_execution_roles(self) -> None:
+        workflow = (self.source / "workflows/education.md").read_text()
+        self.assertIn("Education is a first-class goal", workflow)
+        self.assertIn("Do not create an execution folder", workflow)
+        self.assertIn(
+            "Do not invoke `exec-env-prepper`, `executor`, `reviewer`, or `pr-maintainer`",
+            workflow,
+        )
+        self.assertIn("invoke `educator` directly", workflow)
 
     def test_rejects_broad_pr_maintainer_messaging(self) -> None:
         manifest = self.manifest()

@@ -45,6 +45,9 @@ The offline test verifies:
 - Provider-neutral specs render as the complete Claude and Codex role sets.
 - The educator renders with a stable display name, provider switch guidance,
   and the registered direct-human interface policy.
+- The installed education-only workflow invokes the educator directly and
+  explicitly bypasses execution folders, preparation, execution, review, and
+  PR maintenance.
 - Mutable education-session state is initialized separately from learner
   profiles and survives updates.
 - Each role includes its declared shared contracts.

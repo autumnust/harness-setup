@@ -45,6 +45,9 @@ second editable copy of every prompt.
   defensive provider ceiling.
 - Mutable learner profiles and execution history never live here. Installed
   state belongs under `$AGENT_HARNESS_HOME/state/`.
+- `workflows/education.md` is a standalone coordinator-to-educator path. It
+  deliberately bypasses execution preparation, implementation, review, PR
+  maintenance, and their artifacts.
 
 ## Interactive education adapters
 

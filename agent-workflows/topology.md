@@ -10,7 +10,7 @@ coordinator (depth 0)
 |-- exec-env-prepper (depth 1, leaf)
 |-- executor (depth 1, leaf)
 |-- reviewer (depth 1, leaf)
-|-- pr-maintainer (depth 1, leaf; coordinator-lifetime background service)
+|-- pr-maintainer (depth 1, leaf; lazy-started, then coordinator-lifetime)
 `-- educator (depth 1, leaf; registered direct-human session)
 
 retrospector: a coordinator-invoked skill; it is not another agent
@@ -35,3 +35,5 @@ supporting reviewer: a configured tool/backend; it is not another agent
    coordinator-registered session is active. This does not grant it state-write
    or workflow-completion authority.
 8. The coordinator owns final synthesis and every user-visible decision.
+9. An education-only goal uses only coordinator and educator. It does not start
+   execution, review, environment-preparation, or PR-maintenance roles.
