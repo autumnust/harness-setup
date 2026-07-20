@@ -21,13 +21,17 @@ educator.
 
 2. Only one educator may be active for a coordinator. Spawn it with the stable
    display name `Educator`, a complete context packet, and the session ID.
-3. The educator sends one bounded initial explanation or question to the
-   coordinator with `status: awaiting-human` without returning or ending its
-   turn. It then enters the provider's live wait primitive and remains active.
-4. The coordinator receives that nonterminal message, presents its content, and
-   tells Lei how to open the exact educator thread using the active provider's
-   adapter instructions. The coordinator also remains active and waits for
-   educator messages or terminal results.
+3. Follow the active provider adapter:
+   - **Direct-thread mode:** the educator sends one bounded initial explanation
+     or question to the coordinator with `status: awaiting-human` without
+     returning, then enters the provider's live wait primitive.
+   - **Coordinator-relay mode:** the educator returns that bounded
+     `awaiting-human` turn to the coordinator and becomes idle. The coordinator
+     presents it and ends its own turn so Lei regains the input UI.
+4. In direct-thread mode, the coordinator tells Lei how to open the educator
+   and waits for messages or a terminal result. In relay mode, it tells Lei that
+   replies will be forwarded to the same educator identity on the next
+   coordinator turn.
 5. When direct child interaction is unavailable, use the same protocol through
    transparent coordinator relay. Do not silently drop the teaching session.
 
@@ -37,9 +41,10 @@ Lei may answer, redirect, request a different depth, pause, or say that the
 session is done directly in the educator thread. The educator keeps the same
 session ID and uses one of these statuses:
 
-- `awaiting-human`: a nonterminal message or live state. Never return it as the
-  child result. Continue the same session and re-enter the provider wait
-  primitive after responding.
+- `awaiting-human`: a nonterminal state. In direct-thread mode, send it without
+  returning and re-enter the provider wait primitive. In coordinator-relay
+  mode, return it to the coordinator, become idle, and resume the same educator
+  identity when the coordinator forwards Lei's next response.
 - `education-complete`: Lei ended the session normally; return the closure
   payload below.
 - `education-paused`: preserve the session for later resumption and do not
@@ -47,13 +52,13 @@ session ID and uses one of these statuses:
 - `education-abandoned`: close without a learner-state update.
 - `blocked`: direct interaction or required context failed.
 
-While selected in the educator thread, respond to Lei as an intermediary update
-and then re-enter the provider wait primitive. Do not emit a final response,
-return a child result, or become idle merely because one teaching turn ended.
-The coordinator may receive intermediate notifications but does not republish
-or close the lesson for `awaiting-human`; it returns to waiting. A provider
-lifecycle stop event is only a wake-up signal. Only an explicit terminal
-education status determines session completion.
+In direct-thread mode, respond to Lei as an intermediary update and re-enter the
+provider wait primitive after each nonterminal turn. In coordinator-relay mode,
+return one compact teaching turn at a time; the coordinator publishes it,
+releases the UI, and resumes the exact same educator identity with Lei's next
+response. Do not spawn a replacement educator for each turn. Neither mode
+closes the lesson for `awaiting-human`. Only an explicit terminal education
+status determines session completion.
 
 ## Completion callback
 

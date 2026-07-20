@@ -96,7 +96,7 @@ def verify(provider: str, home: Path, markers_path: Path, response_path: Path) -
     assert candidate["educator_human_interface"] == "registered-session"
     assert candidate["coordinator_owns_education_lifecycle"] is True
     assert candidate["education_only_bypasses_execution_roles"] is True
-    assert candidate["educator_waits_while_awaiting_human"] is True
+    assert candidate["codex_educator_uses_stateful_relay"] is True
     assert candidate["all_operational_children_are_leaves"] is True
     assert candidate["canonical_state_writer"] == "coordinator"
     assert candidate["review_independence"] == "different-foundation"

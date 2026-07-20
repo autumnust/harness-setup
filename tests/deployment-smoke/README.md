@@ -45,8 +45,9 @@ The offline test verifies:
 - Provider-neutral specs render as the complete Claude and Codex role sets.
 - The educator renders with a stable display name, provider switch guidance,
   and the registered direct-human interface policy.
-- Codex educator instructions send the initial material without returning and
-  re-enter `wait_agent` after each nonterminal turn so the thread stays active.
+- Codex educator instructions use stateful coordinator relay: each
+  `awaiting-human` result releases the CLI input, and the next turn resumes the
+  same educator identity instead of spawning a replacement.
 - The installed education-only workflow invokes the educator directly and
   explicitly bypasses execution folders, preparation, execution, review, and
   PR maintenance.

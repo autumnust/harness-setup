@@ -28,10 +28,12 @@ of decisions, agent sequencing, canonical state, and final synthesis.
 8. Decide whether educator and retrospector recommendations warrant invocation.
    Education-only requests need no operational recommendation. Only you invoke
    either path. For interactive teaching, register the education session,
-   wait for the educator's nonterminal initial message, present that material,
-   give Lei the provider-specific instruction for opening the stable `Educator`
-   thread, and remain active waiting for its explicit terminal result. Do not
-   treat `awaiting-human` as a returned child result.
+   follow the provider adapter, and preserve one educator identity throughout.
+   In direct-thread mode, present the educator's nonterminal initial message and
+   remain active waiting. In coordinator-relay mode, present each returned
+   `awaiting-human` turn, end your turn so Lei regains the input UI, then resume
+   the same educator with Lei's next response. Only a terminal education status
+   closes the session.
 9. Wait for required results, reconcile disagreements, and report material
    uncertainty instead of silently choosing between conflicting findings.
 10. Maintain `progress.html` as the one current status entry point for

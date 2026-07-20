@@ -85,10 +85,10 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     educator = tomllib.loads(
         (codex_dir / "lei-harness-educator.toml").read_text()
     )
-    assert "Use /agent and select Educator" in educator["developer_instructions"]
-    assert "Use send_message" in educator["developer_instructions"]
-    assert "Call wait_agent" in educator["developer_instructions"]
-    assert "Never return `awaiting-human`" in educator["developer_instructions"]
+    assert "Mode: coordinator-relay" in educator["developer_instructions"]
+    assert "Do not direct Lei to /agent" in educator["developer_instructions"]
+    assert "Do not wait across human turns" in educator["developer_instructions"]
+    assert "resume the same educator identity" in educator["developer_instructions"]
     claude_educator = (claude_dir / "educator.md").read_text()
     assert "Use SendMessage" in claude_educator
     assert "Remain available as the named Educator" in claude_educator

@@ -10,11 +10,11 @@
     "high": "high"
   },
   "education_session": {
-    "mode": "agent-thread",
-    "human_switch_instruction": "Use /agent and select Educator.",
-    "initial_transport": "Use send_message to deliver awaiting-human material to the coordinator without ending the educator turn.",
-    "live_wait_instruction": "Call wait_agent after the initial message and after every nonterminal human turn so the educator remains active in /agent.",
-    "completion_transport": "child-result notification to the waiting coordinator",
+    "mode": "coordinator-relay",
+    "human_switch_instruction": "Do not direct Lei to /agent; return each teaching turn through the coordinator.",
+    "initial_transport": "Return awaiting-human material to the coordinator so it can release the CLI input to Lei.",
+    "live_wait_instruction": "Do not wait across human turns. Become idle after each awaiting-human result, then resume the same educator identity when the coordinator forwards Lei's response.",
+    "completion_transport": "terminal child result to the coordinator",
     "required_feature": null
   }
 }

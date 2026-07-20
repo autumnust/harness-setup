@@ -85,11 +85,11 @@ class WorkflowSpecTests(unittest.TestCase):
         )
         self.assertIn("invoke `educator` directly", workflow)
 
-    def test_interactive_educator_waits_instead_of_returning(self) -> None:
+    def test_interactive_educator_supports_direct_and_relay_modes(self) -> None:
         contract = (self.source / "contracts/education-session.md").read_text()
-        self.assertIn("Never return it as the\n  child result", contract)
-        self.assertIn("re-enter the provider wait primitive", contract)
-        self.assertIn("intermediary update", contract)
+        self.assertIn("Direct-thread mode", contract)
+        self.assertIn("Coordinator-relay mode", contract)
+        self.assertIn("resumes the exact same educator identity", contract)
 
     def test_rejects_broad_pr_maintainer_messaging(self) -> None:
         manifest = self.manifest()
@@ -164,14 +164,15 @@ class WorkflowSpecTests(unittest.TestCase):
         educator_path = output / "codex/lei-harness-educator.toml"
         educator = tomllib.loads(educator_path.read_text())
         self.assertEqual(educator["nickname_candidates"], ["Educator"])
-        self.assertIn("Mode: agent-thread", educator["developer_instructions"])
+        self.assertIn("Mode: coordinator-relay", educator["developer_instructions"])
         self.assertIn(
-            "Use /agent and select Educator", educator["developer_instructions"]
+            "Do not direct Lei to /agent", educator["developer_instructions"]
         )
-        self.assertIn("Use send_message", educator["developer_instructions"])
-        self.assertIn("Call wait_agent", educator["developer_instructions"])
         self.assertIn(
-            "Never return `awaiting-human`", educator["developer_instructions"]
+            "Do not wait across human turns", educator["developer_instructions"]
+        )
+        self.assertIn(
+            "resume the same educator identity", educator["developer_instructions"]
         )
 
         claude_educator = (output / "claude/educator.md").read_text()

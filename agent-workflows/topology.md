@@ -2,8 +2,9 @@
 
 The main session is always the coordinator and is Lei's sole default interface.
 It owns spawning, decisions, canonical state, and final synthesis. Every
-operational child is a leaf. The educator is the only scoped exception: Lei may
-interact directly with it during a coordinator-registered education session.
+operational child is a leaf. The educator is the only role eligible for a
+scoped direct-human exception during a coordinator-registered education
+session; providers without a nonblocking child UI use coordinator relay.
 
 ```text
 coordinator (depth 0)
@@ -32,8 +33,10 @@ supporting reviewer: a configured tool/backend; it is not another agent
    exception is PR maintainer to the exact executor identity registered for a
    queue item, with coordinator fallback when delivery fails.
 7. Only the educator may accept direct human turns, and only while its
-   coordinator-registered session is active. This does not grant it state-write
-   or workflow-completion authority.
+   coordinator-registered session is active and the provider adapter supports a
+   nonblocking child UI. Otherwise the coordinator relays turns to the same
+   educator identity. Neither mode grants state-write or workflow-completion
+   authority.
 8. The coordinator owns final synthesis and every user-visible decision.
 9. An education-only goal uses only coordinator and educator. It does not start
    execution, review, environment-preparation, or PR-maintenance roles.

@@ -348,16 +348,14 @@ resolve only the choices required by the selected workflow.
   material learning value.
 - The coordinator is Lei's default interface. For interactive teaching, it may
   register one direct educator session, show the educator's first turn, and
-  route Lei to the stable `Educator` thread. In Codex CLI, tell Lei to use
-  `/agent` and select `Educator`. In Claude Code agent-team mode, name the
-  teammate `Educator` and tell Lei to use `Shift+Down` or its split pane.
-  The educator must send its initial material to the coordinator without
-  returning, then enter the provider's live wait primitive. In Codex, use
-  `send_message` followed by `wait_agent`; after every nonterminal human turn,
-  answer as an intermediary update and call `wait_agent` again so the educator
-  remains active in `/agent`. The coordinator also remains active and waits for
-  an explicit terminal education status. Never return `awaiting-human` as a
-  child result; a teaching turn ending is not lesson completion.
+  route Lei according to the provider adapter. Current Codex CLI uses
+  coordinator relay because an active coordinator wait keeps the TUI in
+  `Working` and prevents `/agent` interaction: return one `awaiting-human` turn,
+  release the UI, then resume the same educator identity with Lei's next
+  response. Do not spawn a new educator per turn. Claude Code agent-team mode
+  may use direct interaction: name the teammate `Educator`, tell Lei to use
+  `Shift+Down` or its split pane, and keep that teammate available. Only an
+  explicit terminal education status closes either mode.
 - Start one `pr-maintainer` when the session first enters a PR-producing or
   PR-monitoring workflow, then keep it for the remaining coordinator lifetime.
   Register every PR with its responsible executor identity. The maintainer
