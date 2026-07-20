@@ -8,5 +8,11 @@
     "low": "low",
     "medium": "medium",
     "high": "high"
+  },
+  "education_session": {
+    "mode": "agent-team",
+    "human_switch_instruction": "Use Shift+Down to select Educator, or open the Educator split pane.",
+    "completion_transport": "direct message and teammate idle notification",
+    "required_feature": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"
   }
 }

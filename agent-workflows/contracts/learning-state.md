@@ -11,7 +11,9 @@ $AGENT_HARNESS_HOME/state/communication.md
 `AGENT_HARNESS_HOME` defaults to `~/.agent-harness`. Only the coordinator writes
 learner state. The educator and quiz procedure read the current profile and
 return a proposed replacement snapshot with evidence; the coordinator validates
-and writes it.
+and writes it. Interactive educator lifecycle records live separately under
+`$AGENT_HARNESS_HOME/state/education-sessions/`; they do not replace the current
+topic profile.
 
 A topic profile is a current snapshot, not an append-only transcript. Keep:
 
@@ -26,3 +28,5 @@ scenario answer, an explanation in the user's own words, a concrete decision,
 or another clear demonstration. The coordinator synchronizes an external
 memory backend only when runtime configuration selects one. The local files
 remain the portable fallback unless Lei chooses a different source of truth.
+Ask Lei before persisting a material or uncertain profile change proposed by an
+interactive session.

@@ -92,6 +92,9 @@ def verify(provider: str, home: Path, markers_path: Path, response_path: Path) -
     assert set(candidate["available_roles"]) == ROLES
     assert candidate["max_depth"] == 2
     assert candidate["educator_is_leaf"] is True
+    assert candidate["educator_display_name"] == "Educator"
+    assert candidate["educator_human_interface"] == "registered-session"
+    assert candidate["coordinator_owns_education_lifecycle"] is True
     assert candidate["all_operational_children_are_leaves"] is True
     assert candidate["canonical_state_writer"] == "coordinator"
     assert candidate["review_independence"] == "different-foundation"
@@ -105,6 +108,16 @@ def verify(provider: str, home: Path, markers_path: Path, response_path: Path) -
         "$AGENT_HARNESS_HOME/state/learner-profiles",
     }
     assert reported_state in accepted_paths, f"incorrect state_path: {reported_state}"
+    expected_sessions = home / ".agent-harness/state/education-sessions"
+    reported_sessions = candidate["education_session_state_path"]
+    accepted_session_paths = {
+        str(expected_sessions),
+        "~/.agent-harness/state/education-sessions",
+        "$AGENT_HARNESS_HOME/state/education-sessions",
+    }
+    assert reported_sessions in accepted_session_paths, (
+        f"incorrect education_session_state_path: {reported_sessions}"
+    )
 
 
 def main() -> int:

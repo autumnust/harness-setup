@@ -8,5 +8,11 @@
     "low": "low",
     "medium": "medium",
     "high": "high"
+  },
+  "education_session": {
+    "mode": "agent-thread",
+    "human_switch_instruction": "Use /agent and select Educator.",
+    "completion_transport": "child-result notification to the waiting coordinator",
+    "required_feature": null
   }
 }

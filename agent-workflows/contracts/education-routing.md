@@ -7,6 +7,8 @@ why it matters now, and the evidence or decision context to teach.
 
 The coordinator decides whether teaching is useful, prepares the complete
 context packet, and spawns the educator. Mechanical repairs do not warrant an
-educator. The educator returns its brief and learner-state proposal to the
-coordinator, which remains the sole interface to Lei and the sole learner-state
-writer.
+educator. For a one-way brief, the educator returns its material to the
+coordinator. For interactive teaching, use the registered education-session
+contract: the coordinator remains Lei's default interface while Lei may
+interact directly with that session's educator. The coordinator remains the sole
+learner-state writer in either mode.

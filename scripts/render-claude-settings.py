@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 
-MERGED_FIELDS = ("enabledPlugins", "extraKnownMarketplaces")
+MERGED_FIELDS = ("enabledPlugins", "extraKnownMarketplaces", "env")
 
 
 def load_optional(path: Path) -> dict[str, Any]:

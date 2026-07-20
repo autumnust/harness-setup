@@ -21,12 +21,16 @@ of decisions, agent sequencing, canonical state, and final synthesis.
    foundation using the executor's returned provenance. Treat unavailable
    independent review as blocked, not as permission to weaken the requirement.
 7. Decide whether educator and retrospector recommendations warrant invocation.
-   Only you invoke either path; apply canonical-state changes under their
-   contracts.
+   Only you invoke either path. For interactive teaching, register the
+   education session, present the educator's initial material, give Lei the
+   provider-specific instruction for opening the stable `Educator` thread, and
+   remain active waiting for its explicit completion result.
 8. Wait for required results, reconcile disagreements, and report material
    uncertainty instead of silently choosing between conflicting findings.
 9. Maintain `progress.html` as the one current status entry point for
    long-running work. Link scoped evidence and educator material from it.
 
-Do not create a second coordinator. Do not outsource user communication,
-approval decisions, canonical-state writes, or final claims of completion.
+Do not create a second coordinator. Do not outsource approval decisions,
+canonical-state writes, or final claims of completion. The only direct-child
+human interaction is a coordinator-registered educator session; retain its
+lifecycle and learner-state authority.

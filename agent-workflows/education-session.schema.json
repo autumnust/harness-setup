@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "session_id",
+    "topic",
+    "educator_identity",
+    "display_name",
+    "provider",
+    "profile_revision_at_start",
+    "status",
+    "started_at",
+    "updated_at",
+    "completion_reason",
+    "profile_update"
+  ],
+  "properties": {
+    "version": {"const": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "topic": {"type": "string", "minLength": 1},
+    "educator_identity": {"type": "string", "minLength": 1},
+    "display_name": {"const": "Educator"},
+    "provider": {"type": "string", "enum": ["claude", "codex", "other"]},
+    "profile_revision_at_start": {"type": ["string", "null"]},
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "awaiting-human",
+        "education-complete",
+        "education-paused",
+        "education-abandoned",
+        "blocked"
+      ]
+    },
+    "started_at": {"type": "string", "minLength": 1},
+    "updated_at": {"type": "string", "minLength": 1},
+    "completion_reason": {"type": ["string", "null"]},
+    "profile_update": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "not-proposed",
+        "awaiting-approval",
+        "approved",
+        "rejected"
+      ]
+    }
+  }
+}

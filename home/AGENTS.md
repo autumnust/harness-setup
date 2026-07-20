@@ -338,6 +338,13 @@ choices into one configuration request to Lei and persist the answers there.
   bounded implementation, an independent-foundation `reviewer` for
   problem-level and core-code review, and `educator` only when the work has
   material learning value.
+- The coordinator is Lei's default interface. For interactive teaching, it may
+  register one direct educator session, show the educator's first turn, and
+  route Lei to the stable `Educator` thread. In Codex CLI, tell Lei to use
+  `/agent` and select `Educator`. In Claude Code agent-team mode, name the
+  teammate `Educator` and tell Lei to use `Shift+Down` or its split pane.
+  Remain active while Lei interacts with the educator and wait for an explicit
+  education-session status; a child turn ending is not lesson completion.
 - Start one `pr-maintainer` for the coordinator lifetime. Register every PR with
   its responsible executor identity. The maintainer polls the configured queue
   and may message only the coordinator or that exact executor.
@@ -349,7 +356,9 @@ choices into one configuration request to Lei and persist the answers there.
   logs, and scans out of the main conversation.
 - Only the coordinator writes runtime configuration, learner state,
   communication conventions, `progress.html`, or accepted retrospective
-  changes. Children return evidence-backed state proposals.
+  changes. Children return evidence-backed state proposals. Direct educator
+  interaction does not transfer these permissions. When direct child
+  interaction is unavailable, relay the same educator session transparently.
 
 The provider-neutral Markdown and topology are authoritative. Native Claude
 and Codex agent files are generated during harness installation.

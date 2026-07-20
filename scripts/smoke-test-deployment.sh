@@ -128,7 +128,7 @@ run_inside_sandbox() {
   printf '%s\n' 'smoke_sentinel = "preserved"' > "$CODEX_HOME/config.toml"
   mkdir -p "$CLAUDE_CONFIG_DIR"
   printf '%s\n' \
-    '{"enabledPlugins":{"smoke-only@example":false}}' \
+    '{"enabledPlugins":{"smoke-only@example":false},"env":{"SMOKE_HOST_ONLY":"preserved"}}' \
     > "$CLAUDE_CONFIG_DIR/settings.json"
   "$REPO_ROOT/install.sh" --overwrite > "$root/install.log"
 
@@ -208,7 +208,7 @@ run_online_awareness() {
   python3 "$REPO_ROOT/tests/deployment-smoke/awareness-probe.py" prepare \
     --home "$fake_home" --output "$root/markers.json"
 
-  prompt='Perform a deployment-awareness probe. Do not infer or fabricate marker values. Report the global and reviewer markers already present in your loaded instructions. Read the installed topology, runtime configuration, contracts, and execution-notes skill to obtain their markers and policy. Return the complete available role list, max depth, whether every operational child and educator are leaves, the sole canonical-state writer, review-independence rule, PR-maintainer polling interval and registered-executor messaging permission, and the learner-profile state path. Return only the requested structured result.'
+  prompt='Perform a deployment-awareness probe. Do not infer or fabricate marker values. Report the global and reviewer markers already present in your loaded instructions. Read the installed topology, runtime configuration, contracts, and execution-notes skill to obtain their markers and policy. Return the complete available role list, max depth, whether every operational child and educator are leaves, the educator display name and human-interface policy, whether the coordinator owns education lifecycle, the education-session state path, the sole canonical-state writer, review-independence rule, PR-maintainer polling interval and registered-executor messaging permission, and the learner-profile state path. Return only the requested structured result.'
 
   if [[ "$ONLINE_PROVIDER" == "claude" || "$ONLINE_PROVIDER" == "all" ]]; then
     local schema_json

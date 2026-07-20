@@ -310,6 +310,7 @@ fi
 # Mutable learner state is initialized once and never managed by place_tree.
 # Migrate the old Claude-only profile directory by copying, without deleting it.
 mkdir -p "$AGENT_HARNESS_HOME/state"
+mkdir -p "$AGENT_HARNESS_HOME/state/education-sessions"
 if [[ ! -e "$AGENT_HARNESS_HOME/state/learner-profiles" ]]; then
   if [[ -d "$CLAUDE_DIR/learner-profiles" ]]; then
     cp -R "$CLAUDE_DIR/learner-profiles" "$AGENT_HARNESS_HOME/state/learner-profiles"

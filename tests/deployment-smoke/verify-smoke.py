@@ -44,6 +44,8 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
 
     claude_settings = json.loads((home / ".claude/settings.json").read_text())
     assert claude_settings["enabledPlugins"]["smoke-only@example"] is False
+    assert claude_settings["env"]["SMOKE_HOST_ONLY"] == "preserved"
+    assert claude_settings["env"]["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] == "1"
 
     config = tomllib.loads((home / ".codex/config.toml").read_text())
     assert config["smoke_sentinel"] == "preserved"
@@ -57,6 +59,7 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
         {"id": "codex", "foundation": "openai"},
     ]
     assert runtime_config["pr_maintenance"]["poll_interval_seconds"] == 600
+    assert (home / ".agent-harness/state/education-sessions").is_dir()
 
     claude_dir = home / ".claude/agents/lei-harness"
     codex_dir = home / ".codex/agents"
@@ -71,12 +74,20 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
         verify_frontmatter(claude_path, name)
         codex_agent = tomllib.loads(codex_path.read_text())
         assert codex_agent["name"] == name
+        assert codex_agent["nickname_candidates"] == [roles[name]["display_name"]]
         assert codex_agent["description"]
         assert codex_agent["developer_instructions"]
         for contract in roles[name].get("contracts", []):
             heading = (repo / "agent-workflows" / contract).read_text().splitlines()[0]
             assert heading in claude_path.read_text()
             assert heading in codex_agent["developer_instructions"]
+
+    educator = tomllib.loads(
+        (codex_dir / "lei-harness-educator.toml").read_text()
+    )
+    assert "Use /agent and select Educator" in educator["developer_instructions"]
+    claude_educator = (claude_dir / "educator.md").read_text()
+    assert "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1" in claude_educator
 
     installed_specs = home / ".agent-harness/specs"
     assert file_hashes(repo / "agent-workflows") == file_hashes(installed_specs)

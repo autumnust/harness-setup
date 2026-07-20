@@ -39,8 +39,14 @@ The offline test verifies:
 - Offline mode denies network access and unsets provider API keys.
 - The installer preserves an existing Codex setting while adding max depth 2.
 - The installer preserves host-only Claude plugin settings while rendering.
+- The installer preserves host-only Claude environment values while enabling
+  agent teams for direct educator interaction.
 - Mutable coordinator configuration is initialized once and survives updates.
 - Provider-neutral specs render as the complete Claude and Codex role sets.
+- The educator renders with a stable display name, provider switch guidance,
+  and the registered direct-human interface policy.
+- Mutable education-session state is initialized separately from learner
+  profiles and survives updates.
 - Each role includes its declared shared contracts.
 - Skills deploy identically to Claude, portable, and Codex locations.
 - `--update` is a no-op and does not replace mutable learner state.

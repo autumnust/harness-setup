@@ -119,6 +119,7 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise SpecError("manifest roles must be a non-empty list")
 
     roles: dict[str, dict[str, Any]] = {}
+    display_names: set[str] = set()
     for role in roles_value:
         if not isinstance(role, dict):
             raise SpecError("every role must be an object")
@@ -127,6 +128,18 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
             raise SpecError("every role needs a non-empty name")
         if name in roles:
             raise SpecError(f"duplicate role name: {name}")
+        display_name = role.get("display_name")
+        if not isinstance(display_name, str) or not display_name:
+            raise SpecError(f"{name}: display_name must be a non-empty string")
+        if display_name in display_names:
+            raise SpecError(f"duplicate role display_name: {display_name}")
+        display_names.add(display_name)
+        if role.get("human_interface") not in {
+            "default",
+            "none",
+            "registered-session",
+        }:
+            raise SpecError(f"{name}: invalid human_interface policy")
         if role.get("kind") not in {"root", "subagent"}:
             raise SpecError(f"{name}: kind must be root or subagent")
         if not isinstance(role.get("description"), str):
@@ -150,6 +163,16 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     roots = [name for name, role in roles.items() if role["kind"] == "root"]
     if roots != ["coordinator"]:
         raise SpecError("coordinator must be the only root role")
+    if roles["coordinator"]["human_interface"] != "default":
+        raise SpecError("coordinator must remain the default human interface")
+    if roles["educator"]["human_interface"] != "registered-session":
+        raise SpecError("educator must use the registered-session human interface")
+    for name, role in roles.items():
+        if (
+            name not in {"coordinator", "educator"}
+            and role["human_interface"] != "none"
+        ):
+            raise SpecError(f"{name}: direct human interaction is not permitted")
 
     for name, role in roles.items():
         children = role.get("allowed_children", [])
@@ -221,12 +244,40 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
                 raise SpecError(
                     f"{provider}: no {reasoning_field} mapping for policy {reasoning_policy!r}"
                 )
+        education_session = adapter.get("education_session")
+        expected_session_keys = {
+            "mode",
+            "human_switch_instruction",
+            "completion_transport",
+            "required_feature",
+        }
+        if (
+            not isinstance(education_session, dict)
+            or set(education_session) != expected_session_keys
+        ):
+            raise SpecError(f"{provider}: invalid education_session adapter")
+        for field in ("mode", "human_switch_instruction", "completion_transport"):
+            if (
+                not isinstance(education_session[field], str)
+                or not education_session[field]
+            ):
+                raise SpecError(
+                    f"{provider}: education_session {field} must be non-empty"
+                )
+        required_feature = education_session["required_feature"]
+        if required_feature is not None and not isinstance(required_feature, str):
+            raise SpecError(f"{provider}: education_session required_feature is invalid")
         adapters[provider] = adapter
 
     return manifest, adapters
 
 
-def role_instructions(source: Path, manifest: dict[str, Any], role: dict[str, Any]) -> str:
+def role_instructions(
+    source: Path,
+    manifest: dict[str, Any],
+    adapter: dict[str, Any],
+    role: dict[str, Any],
+) -> str:
     sections = [source_file(source, role["prompt"]).read_text(encoding="utf-8").strip()]
     for contract in role.get("contracts", []):
         sections.append(source_file(source, contract).read_text(encoding="utf-8").strip())
@@ -241,6 +292,16 @@ def role_instructions(source: Path, manifest: dict[str, Any], role: dict[str, An
         f"{child_text}. Do not spawn any other role. Permitted direct message "
         f"targets: {target_text}. Do not message any other role."
     )
+    if role["name"] == "educator":
+        session = adapter["education_session"]
+        required_feature = session["required_feature"] or "none"
+        sections.append(
+            "# Provider interactive education adapter\n\n"
+            f"Mode: {session['mode']}. Stable display name: {role['display_name']}. "
+            f"Human switch instruction: {session['human_switch_instruction']} "
+            f"Completion transport: {session['completion_transport']}. "
+            f"Required feature: {required_feature}."
+        )
     return "\n\n---\n\n".join(sections) + "\n"
 
 
@@ -274,7 +335,7 @@ def render_claude(
         lines.append("skills:")
         lines.extend(f"  - {skill}" for skill in skills)
     lines.extend(["---", "", "<!-- Generated by scripts/render-agents.py; edit agent-workflows/. -->", ""])
-    return "\n".join(lines) + role_instructions(source, manifest, role)
+    return "\n".join(lines) + role_instructions(source, manifest, adapter, role)
 
 
 def toml_string(value: str) -> str:
@@ -287,13 +348,14 @@ def render_codex(
     adapter: dict[str, Any],
     role: dict[str, Any],
 ) -> str:
-    instructions = role_instructions(source, manifest, role)
+    instructions = role_instructions(source, manifest, adapter, role)
     if '"""' in instructions or "\\" in instructions:
         raise SpecError(f"{role['name']}: prompt contains unsupported TOML multiline text")
     lines = [
         "# Generated by scripts/render-agents.py; edit agent-workflows/.",
         f"name = {toml_string(role['name'])}",
         f"description = {toml_string(role['description'])}",
+        f"nickname_candidates = [{toml_string(role['display_name'])}]",
         f"model = {toml_string(adapter['models'][role['model_policy']])}",
         "model_reasoning_effort = "
         + toml_string(adapter["reasoning_effort"][role["reasoning_policy"]]),

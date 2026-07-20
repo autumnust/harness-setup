@@ -11,6 +11,7 @@ contracts into each tool's native agent format during installation.
 |---|---|
 | `manifest.json` | Harness-specific machine-readable roles, topology, model policies, message targets, and output limits |
 | `runtime-config.*.json` | Schema and initial mutable configuration installed for coordinator confirmation |
+| `education-session.schema.json` | Portable state shape for coordinator-registered interactive educator sessions |
 | `topology.md` | Human-readable orchestration design and depth rules |
 | `roles/` | One provider-neutral prompt per role |
 | `workflows/` | Procedures that coordinate several roles |
@@ -44,3 +45,14 @@ second editable copy of every prompt.
   defensive provider ceiling.
 - Mutable learner profiles and execution history never live here. Installed
   state belongs under `$AGENT_HARNESS_HOME/state/`.
+
+## Interactive education adapters
+
+The educator is the only child with `human_interface: registered-session`.
+Codex renders stable display nicknames and uses `/agent` for the human focus
+switch. Claude Code uses a predictably named agent-team teammate with
+`Shift+Down` or a split pane; installation enables its current experimental
+agent-team feature. The coordinator registers the session, remains active while
+Lei interacts with the educator, and alone closes the session or writes learner
+state. Provider lifecycle-stop events wake the coordinator but never determine
+that a lesson is complete.

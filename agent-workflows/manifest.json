@@ -5,7 +5,9 @@
   "roles": [
     {
       "name": "coordinator",
+      "display_name": "Coordinator",
       "kind": "root",
+      "human_interface": "default",
       "description": "Main-session interface to Lei that scopes work, delegates bounded tasks, and synthesizes results.",
       "prompt": "roles/coordinator.md",
       "model_policy": "fast",
@@ -13,11 +15,13 @@
       "allowed_children": ["exec-env-prepper", "executor", "reviewer", "educator", "pr-maintainer"],
       "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "educator", "pr-maintainer"],
       "required_skills": ["retrospector"],
-      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/education-session.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     },
     {
       "name": "exec-env-prepper",
+      "display_name": "Environment Prepper",
       "kind": "subagent",
+      "human_interface": "none",
       "description": "Prepares an observable, feasible execution environment for large or multi-session work before implementation starts.",
       "prompt": "roles/exec-env-prepper.md",
       "model_policy": "fast",
@@ -29,7 +33,9 @@
     },
     {
       "name": "reviewer",
+      "display_name": "Reviewer",
       "kind": "subagent",
+      "human_interface": "none",
       "description": "Reviews a proposed approach or PR for problem-level soundness, harness alignment, core correctness, compatibility, and missing tests.",
       "prompt": "roles/reviewer.md",
       "model_policy": "deep",
@@ -41,7 +47,9 @@
     },
     {
       "name": "educator",
+      "display_name": "Educator",
       "kind": "subagent",
+      "human_interface": "registered-session",
       "description": "Turns current work into a concise explanation calibrated to Lei's learner profile and returns evidence-backed learning-state proposals.",
       "prompt": "roles/educator.md",
       "model_policy": "deep",
@@ -49,11 +57,13 @@
       "allowed_children": [],
       "allowed_message_targets": ["coordinator"],
       "required_skills": ["quiz"],
-      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/learning-state.md", "contracts/output-limits.md"]
+      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-session.md", "contracts/learning-state.md", "contracts/output-limits.md"]
     },
     {
       "name": "executor",
+      "display_name": "Executor",
       "kind": "subagent",
+      "human_interface": "none",
       "description": "Implements and validates a bounded change with explicit file ownership and evidence.",
       "prompt": "roles/executor.md",
       "model_policy": "capable",
@@ -64,7 +74,9 @@
     },
     {
       "name": "pr-maintainer",
+      "display_name": "PR Maintainer",
       "kind": "subagent",
+      "human_interface": "none",
       "description": "Runs for the coordinator lifetime, monitors every registered PR, and routes actionable state changes to its coordinator or registered executor.",
       "prompt": "roles/pr-maintainer.md",
       "model_policy": "capable",

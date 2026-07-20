@@ -4,6 +4,7 @@ import importlib.util
 import json
 import shutil
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -43,6 +44,18 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertEqual(manifest["max_depth"], 2)
         self.assertEqual(adapters["claude"]["models"]["deep"], "opus")
         self.assertEqual(adapters["codex"]["models"]["deep"], "gpt-5.6-sol")
+        interfaces = {
+            role["name"]: role["human_interface"] for role in manifest["roles"]
+        }
+        self.assertEqual(interfaces["coordinator"], "default")
+        self.assertEqual(interfaces["educator"], "registered-session")
+        self.assertTrue(
+            all(
+                policy == "none"
+                for name, policy in interfaces.items()
+                if name not in {"coordinator", "educator"}
+            )
+        )
 
     def test_rejects_child_spawning(self) -> None:
         manifest = self.manifest()
@@ -59,6 +72,15 @@ class WorkflowSpecTests(unittest.TestCase):
         self.write_manifest(manifest)
         with self.assertRaisesRegex(
             render_agents.SpecError, "pr-maintainer may message only"
+        ):
+            render_agents.validate(self.source)
+
+    def test_rejects_direct_human_interaction_for_operational_child(self) -> None:
+        manifest = self.manifest()
+        self.role(manifest, "executor")["human_interface"] = "registered-session"
+        self.write_manifest(manifest)
+        with self.assertRaisesRegex(
+            render_agents.SpecError, "direct human interaction is not permitted"
         ):
             render_agents.validate(self.source)
 
@@ -112,6 +134,17 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn(
             "Permitted direct message targets: coordinator, executor", pr_maintainer
         )
+        educator_path = output / "codex/lei-harness-educator.toml"
+        educator = tomllib.loads(educator_path.read_text())
+        self.assertEqual(educator["nickname_candidates"], ["Educator"])
+        self.assertIn("Mode: agent-thread", educator["developer_instructions"])
+        self.assertIn(
+            "Use /agent and select Educator", educator["developer_instructions"]
+        )
+
+        claude_educator = (output / "claude/educator.md").read_text()
+        self.assertIn("Mode: agent-team", claude_educator)
+        self.assertIn("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1", claude_educator)
 
 
 if __name__ == "__main__":
