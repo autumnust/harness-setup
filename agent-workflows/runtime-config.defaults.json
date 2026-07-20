@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "configured": false,
+  "execution_root": null,
+  "learner_state_root": null,
+  "review_backends": [],
+  "supporting_review_backend": null,
+  "external_memory_backend": null,
+  "review_independence": "different-foundation",
+  "pr_maintenance": {
+    "poll_interval_seconds": 600
+  }
+}

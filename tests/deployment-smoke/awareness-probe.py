@@ -92,6 +92,11 @@ def verify(provider: str, home: Path, markers_path: Path, response_path: Path) -
     assert set(candidate["available_roles"]) == ROLES
     assert candidate["max_depth"] == 2
     assert candidate["educator_is_leaf"] is True
+    assert candidate["all_operational_children_are_leaves"] is True
+    assert candidate["canonical_state_writer"] == "coordinator"
+    assert candidate["review_independence"] == "different-foundation"
+    assert candidate["pr_maintainer_poll_interval_seconds"] == 600
+    assert candidate["pr_maintainer_can_message_registered_executor"] is True
     expected_state = home / ".agent-harness/state/learner-profiles"
     reported_state = candidate["state_path"]
     accepted_paths = {

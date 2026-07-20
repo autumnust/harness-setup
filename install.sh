@@ -83,6 +83,11 @@ if (( CODEX_PRESENT )); then
     --max-depth 2
 fi
 
+if [[ -f "$AGENT_HARNESS_HOME/config.json" ]]; then
+  python3 "$REPO_ROOT/scripts/render-agents.py" \
+    --validate-runtime-config "$AGENT_HARNESS_HOME/config.json"
+fi
+
 say()  { printf '\033[1;34m>>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m✓\033[0m %s\n' "$*"; }
@@ -279,6 +284,14 @@ say "Installing portable workflow specifications"
 mkdir -p "$AGENT_HARNESS_HOME"
 place_tree "$REPO_ROOT/agent-workflows" "$AGENT_HARNESS_HOME/specs"
 
+# Runtime configuration is mutable, confirmed by the coordinator, and never
+# managed by place_file after initialization.
+if [[ ! -e "$AGENT_HARNESS_HOME/config.json" ]]; then
+  cp "$REPO_ROOT/agent-workflows/runtime-config.defaults.json" \
+    "$AGENT_HARNESS_HOME/config.json"
+  ok "Initialized coordinator runtime configuration"
+fi
+
 say "Installing Claude custom agents"
 mkdir -p "$CLAUDE_DIR/agents/lei-harness"
 for agent_file in "$TEMP_ROOT"/agents/claude/*; do
@@ -379,6 +392,7 @@ printf '\n%s\n' \
   "  $CLAUDE_DIR/skills/*" \
   "  $CLAUDE_DIR/agents/lei-harness/*" \
   "  $AGENT_HARNESS_HOME/specs" \
+  "  $AGENT_HARNESS_HOME/config.json  (initialized once, never overwritten)" \
   "  $AGENT_HARNESS_HOME/state/learner-profiles  (initialized, never overwritten)"
 if (( CODEX_PRESENT )); then
   printf '%s\n' \

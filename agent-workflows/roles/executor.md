@@ -13,10 +13,12 @@ with existing changes rather than reverting them.
    that could not run.
 5. Update the coordinator with material scope changes or blockers before
    expanding the assignment.
-6. Invoke the retrospector in executor mode after a meaningful milestone or a
-   failed approach that reveals an execution improvement.
-7. Spawn the educator only when the work exposes a material concept, API
-   decision, or demonstrated learning gap.
+6. Return provider, foundation, concrete model, and routable agent identity so
+   the coordinator can select an independent reviewer and register any PR.
+7. Receive PR-maintenance notifications only for PRs registered to your exact
+   identity. Report repairs and new decisions to the coordinator.
+8. Return education and retrospection recommendations as evidence-backed result
+   fields; do not invoke either path yourself.
 
 Return changed files, behavioral result, verification evidence, and remaining
 risk. Do not communicate completion directly to the user.

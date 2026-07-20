@@ -1,43 +1,52 @@
 ---
 name: execution-notes
-description: Prepare and maintain the observable execution environment for large, multi-step, or multi-session workloads. Use before starting a workload that needs a durable runbook, status dashboard, logs, evidence, stop/resume commands, or environment feasibility checks. Skip for small edits and one-off commands.
+description: Prepare and validate the observable execution environment for large, multi-step, remote, hardware-dependent, or multi-session workloads. Use from the execution-environment-prepper after the coordinator resolves configuration and creates canonical entry points. Skip for small edits and one-off commands.
 ---
 
 # Execution Notes
 
 Make a workload feasible to run, observe, stop, and resume without relying on
-chat history. This skill implements the execution-preparation role; it does not
-own product implementation.
+chat history. This skill implements execution preparation and includes the
+deterministic structure checker that previously existed as a separate skill.
 
 ## When to use
 
-Use this for large executions, expensive jobs, multi-stage validation, remote
-workloads, or work likely to continue in another session. Skip it for a quick
-fix, a single-file edit, or a command whose result can be reported immediately.
+Use this for large executions, expensive jobs, multi-stage validation, remote or
+special-hardware workloads, or work likely to continue in another session. The
+context packet must contain resolved runtime configuration, an authorized
+execution path, and coordinator-owned canonical entry points. Report missing
+values to the coordinator; never ask the user directly.
 
 ## Procedure
 
-1. **Confirm the execution-folder location.** If the user or local repository
-   has not chosen one, ask before creating files. Never guess a location or
-   scatter artifacts around the repository.
-2. **Create the minimum contract.** Follow the Long-Running Work Structure in
-   `~/AGENTS.md`: a self-contained `README.md` or `SPEC.md`, one
-   `progress.html`, and only the evidence, findings, or stage directories the
-   workload actually needs.
-3. **Inventory prerequisites.** Record the required runtime, services,
-   credentials, datasets, ports, storage, remote hosts, and expected resource
-   limits. Never persist secrets in the execution folder.
-4. **Prove basic feasibility.** Run cheap, non-destructive checks for command
-   availability, authentication presence, input accessibility, writable output
-   paths, and service reachability. Do not start an expensive workload merely
-   to prove the command exists.
-5. **Write the operating path.** The runbook must contain exact commands to
-   start, observe, stop safely, and resume. State where logs and outputs land,
-   what success looks like, and how failure is recognized.
-6. **Initialize observation.** Make `progress.html` show readiness, current
-   stage, active blockers, next command, and links to available evidence.
-7. **Validate the structure.** Invoke `work-structure-check` when available and
-   fix structural findings before handing the environment to an executor.
+1. **Validate authority and paths.** Use only the execution path, evidence
+   location, and resource scope authorized in the context packet. Do not create
+   or update `progress.html`, learner state, global configuration, or another
+   canonical artifact.
+2. **Inventory prerequisites.** Record runtimes, credentials, datasets, ports,
+   storage, services, remote hosts, accelerators, memory, quotas, and expected
+   limits. Never persist secrets.
+3. **Provision the environment.** Within the authorized scope, prepare
+   directories, services, dependencies, remote machines, and special hardware.
+   Stop before any destructive, expensive, or unapproved action.
+4. **Prove feasibility.** Run cheap checks for command availability,
+   authentication presence, input accessibility, writable output paths,
+   service reachability, resource capacity, and safe shutdown. Do not start an
+   expensive workload merely to prove the command exists.
+5. **Record scoped evidence.** Write raw readiness evidence only in the assigned
+   location. Return proposed canonical runbook or dashboard changes to the
+   coordinator instead of publishing them yourself.
+6. **Define operation.** Return exact start, observe, stop, and resume commands,
+   output locations, success signals, and failure signals.
+7. **Validate structure.** Run:
+
+   ```bash
+   python3 <this-skill-directory>/scripts/check_work_structure.py <execution-folder>
+   ```
+
+   Use `--json` for structured findings and `--strict` to treat warnings as
+   failures. Fix only non-canonical paths you own; propose canonical fixes to
+   the coordinator. Rule provenance is in `references/RULES.md`.
 
 ## Return contract
 
@@ -48,6 +57,8 @@ Return only:
 - exact next command;
 - observation and stop commands;
 - blockers or assumptions requiring the coordinator or user.
+- canonical-state changes the coordinator should publish.
 
-Do not claim readiness when a required credential, input, service, or safe stop
-path has not been checked.
+Do not claim readiness when a required credential, input, service, hardware
+resource, or safe stop path has not been checked. The coordinator presents the
+readiness report to the user and decides whether execution may begin.

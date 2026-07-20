@@ -77,6 +77,7 @@ Pick one of:
 | `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/lei-harness/*.md` and, when Codex is present, `~/.codex/agents/lei-harness-*.toml` |
 | workflow depth setting | `agents.max_depth = 2` merged into `~/.codex/config.toml` when Codex is present |
+| mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
 | mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates) |
 | *(cloned at install)* | `~/Documents/kumo-skills-catalog/` (from `kumo-ai/kumo-skills-catalog`) |
 
@@ -89,17 +90,21 @@ subagent levels.
 
 ```text
 coordinator
-├── exec-env-prepper ─┐
-├── executor ─────────┤
-├── reviewer ─────────┼── educator
-├── pr-maintainer ────┘
-└── educator
+|-- exec-env-prepper (leaf)
+|-- executor (leaf)
+|-- reviewer (leaf, different model foundation from executor)
+|-- pr-maintainer (leaf, coordinator-lifetime PR queue monitor)
+`-- educator (leaf)
 ```
 
-`retrospector` is a skill used in executor or educator mode. CodeRabbit is an
-optional supporting review tool, not a role that owns material review
-judgment. See [`agent-workflows/`](./agent-workflows/) for the complete
-contracts and routing rules.
+Only the coordinator spawns agents, writes canonical state, or invokes the
+`retrospector` skill. The PR maintainer may message the exact executor identity
+registered for a PR, with coordinator fallback. Supporting review tools are
+selected through runtime configuration and never own material review judgment.
+The provider limit remains depth two as a defensive ceiling even though the
+current topology uses only depth-one leaves. See
+[`agent-workflows/`](./agent-workflows/) for the complete contracts and routing
+rules.
 
 ## What the settings.json controls
 
@@ -139,9 +144,10 @@ Re-running `install.sh` is safe: the default mode refuses conflicts, while
   Gmail, Notion, Figma, …) — those re-authenticate interactively on
   first use of each.
 - Project-level `AGENTS.md` files and project `.claude/` directories.
-- Mutable learner profiles and execution history. The installer initializes a
-  local state directory but never checks its contents into this repository or
-  overwrites it during updates.
+- Mutable runtime configuration, learner profiles, PR queues, and execution
+  history. The installer initializes local configuration and state directories
+  but never checks their contents into this repository or overwrites them during
+  updates.
 
 ## Keeping a machine in sync after the repo changes (repo → `~/`)
 

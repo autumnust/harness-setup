@@ -11,7 +11,9 @@
       "model_policy": "fast",
       "reasoning_policy": "medium",
       "allowed_children": ["exec-env-prepper", "executor", "reviewer", "educator", "pr-maintainer"],
-      "contracts": ["contracts/handoff.md", "contracts/output-limits.md"]
+      "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "educator", "pr-maintainer"],
+      "required_skills": ["retrospector"],
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     },
     {
       "name": "exec-env-prepper",
@@ -20,31 +22,34 @@
       "prompt": "roles/exec-env-prepper.md",
       "model_policy": "fast",
       "reasoning_policy": "low",
-      "allowed_children": ["educator"],
+      "allowed_children": [],
+      "allowed_message_targets": ["coordinator"],
       "required_skills": ["execution-notes"],
-      "contracts": ["contracts/handoff.md", "contracts/output-limits.md"]
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/output-limits.md"]
     },
     {
       "name": "reviewer",
       "kind": "subagent",
       "description": "Reviews a proposed approach or PR for problem-level soundness, harness alignment, core correctness, compatibility, and missing tests.",
       "prompt": "roles/reviewer.md",
-      "model_policy": "strongest-review",
+      "model_policy": "deep",
       "reasoning_policy": "high",
       "sandbox_policy": "read-only",
-      "allowed_children": ["educator"],
-      "contracts": ["contracts/handoff.md", "contracts/review-routing.md", "contracts/output-limits.md"]
+      "allowed_children": [],
+      "allowed_message_targets": ["coordinator"],
+      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/review-routing.md", "contracts/review-independence.md", "contracts/education-routing.md", "contracts/output-limits.md"]
     },
     {
       "name": "educator",
       "kind": "subagent",
-      "description": "Turns current work into a concise explanation calibrated to Lei's learner profile and maintains learning state when evidence supports an update.",
+      "description": "Turns current work into a concise explanation calibrated to Lei's learner profile and returns evidence-backed learning-state proposals.",
       "prompt": "roles/educator.md",
-      "model_policy": "strongest-review",
+      "model_policy": "deep",
       "reasoning_policy": "high",
       "allowed_children": [],
-      "required_skills": ["quiz", "retrospector"],
-      "contracts": ["contracts/handoff.md", "contracts/learning-state.md", "contracts/output-limits.md"]
+      "allowed_message_targets": ["coordinator"],
+      "required_skills": ["quiz"],
+      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/learning-state.md", "contracts/output-limits.md"]
     },
     {
       "name": "executor",
@@ -53,20 +58,20 @@
       "prompt": "roles/executor.md",
       "model_policy": "capable",
       "reasoning_policy": "high",
-      "allowed_children": ["educator"],
-      "required_skills": ["retrospector"],
-      "contracts": ["contracts/handoff.md", "contracts/output-limits.md"]
+      "allowed_children": [],
+      "allowed_message_targets": ["coordinator"],
+      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/output-limits.md"]
     },
     {
       "name": "pr-maintainer",
       "kind": "subagent",
-      "description": "Maintains an existing PR by resolving conflicts, fixing CI failures, and addressing a known set of review comments.",
+      "description": "Runs for the coordinator lifetime, monitors every registered PR, and routes actionable state changes to its coordinator or registered executor.",
       "prompt": "roles/pr-maintainer.md",
       "model_policy": "capable",
       "reasoning_policy": "high",
-      "allowed_children": ["educator"],
-      "required_skills": ["retrospector"],
-      "contracts": ["contracts/handoff.md", "contracts/output-limits.md"]
+      "allowed_children": [],
+      "allowed_message_targets": ["coordinator", "executor"],
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     }
   ]
 }

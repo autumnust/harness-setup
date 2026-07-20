@@ -317,28 +317,39 @@ everything. It is not limited by the Communication-style scope note above.
 For work that materially benefits from isolated context, parallel reading,
 specialized review, or a different model policy, the main session acts as the
 **coordinator**. It remains the sole default interface to Lei, owns decisions
-and final synthesis, and delegates bounded assignments using the installed
-workflow specification at `$AGENT_HARNESS_HOME/specs/`, defaulting
-`AGENT_HARNESS_HOME` to `~/.agent-harness`.
+and canonical mutable state, and delegates bounded assignments using the
+installed workflow specification at `$AGENT_HARNESS_HOME/specs/`, defaulting
+`AGENT_HARNESS_HOME` to `~/.agent-harness`. Before spawning a child, read
+`$AGENT_HARNESS_HOME/config.json`; when it is unconfirmed, batch the unresolved
+choices into one configuration request to Lei and persist the answers there.
 
 - Keep small or tightly coupled work in the main session; do not create an
   agent team merely because roles are available.
-- Use at most two levels of subagents below the coordinator. Depth-two agents
-  are leaves and must not spawn another agent.
+- Only the coordinator spawns agents. Current operational children are
+  depth-one leaves. Keep the installed maximum depth of two as a defensive
+  provider ceiling, not as permission for children to spawn.
 - Give every child a complete context packet: goal, user intent, scope,
   constraints, current state, artifact links, open questions, and return
   contract. Conversation inheritance is an optimization, not a substitute.
 - Parallel writers must own different files. Serialize work that touches the
   same files or depends on an earlier result.
-- Use `exec-env-prepper` before large execution work, `executor` for bounded
-  implementation, `reviewer` for problem-level and core-code review,
-  `pr-maintainer` for recurrent PR repair, and `educator` only when the work has
+- Use `exec-env-prepper` before large execution work, then present readiness to
+  Lei and wait for confirmation before implementation. Use `executor` for
+  bounded implementation, an independent-foundation `reviewer` for
+  problem-level and core-code review, and `educator` only when the work has
   material learning value.
-- `retrospector` is a skill used by executors and educators, not another agent.
-  CodeRabbit is an optional reviewer tool; the reviewer must verify its
-  findings and retain responsibility for material judgment.
+- Start one `pr-maintainer` for the coordinator lifetime. Register every PR with
+  its responsible executor identity. The maintainer polls the configured queue
+  and may message only the coordinator or that exact executor.
+- `retrospector` is a coordinator-invoked skill, not another agent. It proposes
+  changes and never applies them. Supporting review tools are selected from
+  runtime configuration rather than hardcoded; the primary reviewer verifies
+  their findings and remains responsible for material judgment.
 - Child results are summaries with evidence links. Keep verbose exploration,
   logs, and scans out of the main conversation.
+- Only the coordinator writes runtime configuration, learner state,
+  communication conventions, `progress.html`, or accepted retrospective
+  changes. Children return evidence-backed state proposals.
 
 The provider-neutral Markdown and topology are authoritative. Native Claude
 and Codex agent files are generated during harness installation.
@@ -379,6 +390,9 @@ so the work stays auditable as it goes:
 - **Use one progress entry point.** Prefer one visual dashboard as the status
   entry point; avoid multiple competing trackers that answer the same "where are
   we?" question.
+- **Keep one publisher.** The coordinator is the only writer of the canonical
+  `progress.html`. Environment and execution agents write only assigned raw
+  evidence and return proposed dashboard changes to the coordinator.
 - **Keep generated dashboards and specs self-contained.** Another developer
   should understand the goal and current state without reading chat history.
   Links can point to PRs, issues, source files, stage evidence, or logs, but the
@@ -403,6 +417,6 @@ recite definitions), infer where I stand (solid fundamentals / partial concepts 
 gaps / likely misconceptions), and calibrate later explanations to that.
 
 In Claude Code or Codex CLI (both support Agent Skills), this is the `quiz`
-skill (`/quiz`) — that's the full protocol and where the learner profile gets
-persisted. In a tool without skill support, follow the outline above
-directly.
+skill (`/quiz`). It returns an evidence-backed learner-profile proposal; the
+coordinator is the only agent that persists it at the configured location. In
+a tool without skill support, follow the outline above directly.

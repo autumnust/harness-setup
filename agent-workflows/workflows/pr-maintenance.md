@@ -1,11 +1,18 @@
 # PR maintenance workflow
 
-1. Resume the existing PR-maintainer agent when supported; otherwise provide
-   its latest item ledger in a new context packet.
-2. Refresh merge state, CI state, and unresolved review comments.
-3. Resolve conflicts before debugging failures caused by the conflicted tree.
-4. Address known comments in dependency order and keep item status explicit.
-5. Re-run the narrow failing checks, then the broader checks required by the
-   changed behavior.
-6. Ask the coordinator for decisions that change scope or public behavior.
-7. Close with an updated ledger and executor-mode retrospective.
+1. The coordinator starts one maintainer and keeps its identity until the
+   coordinator terminates.
+2. Whenever the execution creates a PR, the coordinator sends a registration
+   containing the PR and responsible executor's routable identity.
+3. The maintainer persists the queue and polls all nonterminal items every
+   configured interval, defaulting to ten minutes.
+4. It compares merge state, CI, upstream conflicts, and unresolved review items
+   with the prior snapshot and deduplicates unchanged notifications.
+5. It messages the registered executor for repairable failures and the
+   coordinator for decisions, cross-PR issues, terminal state, or failed direct
+   delivery.
+6. The executor reports repairs to the coordinator; the maintainer verifies the
+   next observed state rather than trusting a completion claim.
+7. On runtimes without durable background children, the coordinator resumes the
+   same maintainer and persisted queue on schedule.
+8. The maintainer stops when the coordinator terminates.

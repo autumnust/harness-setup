@@ -132,6 +132,26 @@ run_inside_sandbox() {
     > "$CLAUDE_CONFIG_DIR/settings.json"
   "$REPO_ROOT/install.sh" --overwrite > "$root/install.log"
 
+  [[ -f "$AGENT_HARNESS_HOME/config.json" ]] || {
+    echo "error: installer did not initialize runtime configuration" >&2
+    return 1
+  }
+  printf '%s\n' \
+    '{' \
+    '  "version": 1,' \
+    '  "configured": true,' \
+    '  "execution_root": null,' \
+    '  "learner_state_root": "$AGENT_HARNESS_HOME/state/learner-profiles",' \
+    '  "review_backends": [' \
+    '    {"id": "claude", "foundation": "anthropic"},' \
+    '    {"id": "codex", "foundation": "openai"}' \
+    '  ],' \
+    '  "supporting_review_backend": null,' \
+    '  "external_memory_backend": null,' \
+    '  "review_independence": "different-foundation",' \
+    '  "pr_maintenance": {"poll_interval_seconds": 600}' \
+    '}' \
+    > "$AGENT_HARNESS_HOME/config.json"
   printf '%s\n' '# Smoke learner profile' 'must survive update' \
     > "$AGENT_HARNESS_HOME/state/learner-profiles/smoke.md"
   "$REPO_ROOT/install.sh" --update > "$root/update.log"
@@ -188,7 +208,7 @@ run_online_awareness() {
   python3 "$REPO_ROOT/tests/deployment-smoke/awareness-probe.py" prepare \
     --home "$fake_home" --output "$root/markers.json"
 
-  prompt='Perform a deployment-awareness probe. Do not infer or fabricate marker values. Report the global and reviewer markers already present in your loaded instructions. Read the installed topology specification and execution-notes skill to obtain their markers. Return the complete available role list, max depth, whether educator is a leaf, and the learner-profile state path. Return only the requested structured result.'
+  prompt='Perform a deployment-awareness probe. Do not infer or fabricate marker values. Report the global and reviewer markers already present in your loaded instructions. Read the installed topology, runtime configuration, contracts, and execution-notes skill to obtain their markers and policy. Return the complete available role list, max depth, whether every operational child and educator are leaves, the sole canonical-state writer, review-independence rule, PR-maintainer polling interval and registered-executor messaging permission, and the learner-profile state path. Return only the requested structured result.'
 
   if [[ "$ONLINE_PROVIDER" == "claude" || "$ONLINE_PROVIDER" == "all" ]]; then
     local schema_json

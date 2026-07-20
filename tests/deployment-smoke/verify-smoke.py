@@ -49,6 +49,15 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     assert config["smoke_sentinel"] == "preserved"
     assert config["agents"]["max_depth"] == manifest["max_depth"] == 2
 
+    runtime_config = json.loads((home / ".agent-harness/config.json").read_text())
+    assert runtime_config["configured"] is True
+    assert runtime_config["review_independence"] == "different-foundation"
+    assert runtime_config["review_backends"] == [
+        {"id": "claude", "foundation": "anthropic"},
+        {"id": "codex", "foundation": "openai"},
+    ]
+    assert runtime_config["pr_maintenance"]["poll_interval_seconds"] == 600
+
     claude_dir = home / ".claude/agents/lei-harness"
     codex_dir = home / ".codex/agents"
     assert {path.stem for path in claude_dir.glob("*.md")} == subagents

@@ -40,13 +40,79 @@ def source_file(source: Path, relative: str) -> Path:
     return path
 
 
+def validate_runtime_config_document(config: dict[str, Any], label: str) -> None:
+    expected = {
+        "version",
+        "configured",
+        "execution_root",
+        "learner_state_root",
+        "review_backends",
+        "supporting_review_backend",
+        "external_memory_backend",
+        "review_independence",
+        "pr_maintenance",
+    }
+    if set(config) != expected:
+        raise SpecError(f"{label}: runtime-config keys differ from the schema")
+    if config.get("version") != 1 or not isinstance(config.get("configured"), bool):
+        raise SpecError(f"{label}: runtime-config needs version 1 and configured boolean")
+    for field in ("execution_root", "learner_state_root"):
+        if config[field] is not None and not isinstance(config[field], str):
+            raise SpecError(f"{label}: {field} must be a string or null")
+    review_backends = config["review_backends"]
+    if not isinstance(review_backends, list):
+        raise SpecError(f"{label}: review_backends must be a list")
+    backend_pairs: list[tuple[str, str]] = []
+    for backend in review_backends:
+        if not isinstance(backend, dict) or set(backend) != {"id", "foundation"}:
+            raise SpecError(f"{label}: each review backend needs only id and foundation")
+        backend_id = backend["id"]
+        foundation = backend["foundation"]
+        if not isinstance(backend_id, str) or not backend_id:
+            raise SpecError(f"{label}: review backend id must be a non-empty string")
+        if not isinstance(foundation, str) or not foundation:
+            raise SpecError(f"{label}: review foundation must be a non-empty string")
+        backend_pairs.append((backend_id, foundation))
+    backend_ids = [backend_id for backend_id, _foundation in backend_pairs]
+    if len(backend_ids) != len(set(backend_ids)):
+        raise SpecError(f"{label}: review backend ids must be unique")
+    for field in ("supporting_review_backend", "external_memory_backend"):
+        if config[field] is not None and not isinstance(config[field], str):
+            raise SpecError(f"{label}: {field} must be a string or null")
+    if config.get("review_independence") != "different-foundation":
+        raise SpecError(f"{label}: runtime-config must require different-foundation review")
+    maintenance = config.get("pr_maintenance")
+    if not isinstance(maintenance, dict) or set(maintenance) != {
+        "poll_interval_seconds"
+    }:
+        raise SpecError(f"{label}: pr_maintenance has an invalid shape")
+    interval = maintenance["poll_interval_seconds"]
+    if not isinstance(interval, int) or isinstance(interval, bool) or interval < 60:
+        raise SpecError(f"{label}: PR polling interval must be at least 60 seconds")
+
+
+def validate_runtime_config(source: Path) -> None:
+    defaults = load_json(source / "runtime-config.defaults.json")
+    schema = load_json(source / "runtime-config.schema.json")
+    required = schema.get("required")
+    properties = schema.get("properties")
+    if not isinstance(required, list) or not isinstance(properties, dict):
+        raise SpecError("runtime-config schema needs required and properties")
+    if set(defaults) != set(required) or set(defaults) != set(properties):
+        raise SpecError("runtime-config defaults, required keys, and properties differ")
+    validate_runtime_config_document(defaults, "runtime-config defaults")
+    if defaults["configured"] is not False:
+        raise SpecError("runtime-config defaults must start unconfigured")
+
+
 def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     manifest = load_json(source / "manifest.json")
     if manifest.get("version") != 1:
         raise SpecError("manifest version must be 1")
     max_depth = manifest.get("max_depth")
-    if not isinstance(max_depth, int) or max_depth < 1:
-        raise SpecError("max_depth must be a positive integer")
+    if max_depth != 2:
+        raise SpecError("max_depth must remain the defensive provider ceiling of 2")
+    validate_runtime_config(source)
 
     roles_value = manifest.get("roles")
     if not isinstance(roles_value, list) or not roles_value:
@@ -89,11 +155,40 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         children = role.get("allowed_children", [])
         if not isinstance(children, list) or any(not isinstance(c, str) for c in children):
             raise SpecError(f"{name}: allowed_children must be a string list")
+        if len(children) != len(set(children)):
+            raise SpecError(f"{name}: allowed_children contains duplicates")
         unknown = sorted(set(children) - roles.keys())
         if unknown:
             raise SpecError(f"{name}: unknown child roles: {', '.join(unknown)}")
         if any(roles[child]["kind"] == "root" for child in children):
             raise SpecError(f"{name}: a root role cannot be a child")
+        if role["kind"] == "subagent" and children:
+            raise SpecError(f"{name}: every current subagent must be a leaf")
+
+        targets = role.get("allowed_message_targets", [])
+        if not isinstance(targets, list) or any(not isinstance(t, str) for t in targets):
+            raise SpecError(f"{name}: allowed_message_targets must be a string list")
+        if len(targets) != len(set(targets)):
+            raise SpecError(f"{name}: allowed_message_targets contains duplicates")
+        unknown_targets = sorted(set(targets) - roles.keys())
+        if unknown_targets:
+            raise SpecError(
+                f"{name}: unknown message targets: {', '.join(unknown_targets)}"
+            )
+
+    subagents = {name for name, role in roles.items() if role["kind"] == "subagent"}
+    if set(roles["coordinator"]["allowed_children"]) != subagents:
+        raise SpecError("coordinator must be able to spawn every subagent role")
+    if set(roles["coordinator"]["allowed_message_targets"]) != subagents:
+        raise SpecError("coordinator must be able to message every subagent role")
+    for name in subagents - {"pr-maintainer"}:
+        if roles[name]["allowed_message_targets"] != ["coordinator"]:
+            raise SpecError(f"{name}: may message only the coordinator")
+    if set(roles["pr-maintainer"]["allowed_message_targets"]) != {
+        "coordinator",
+        "executor",
+    }:
+        raise SpecError("pr-maintainer may message only coordinator and executor")
 
     def walk(name: str, depth: int, path: tuple[str, ...]) -> None:
         if depth > max_depth:
@@ -137,11 +232,14 @@ def role_instructions(source: Path, manifest: dict[str, Any], role: dict[str, An
         sections.append(source_file(source, contract).read_text(encoding="utf-8").strip())
     children = role.get("allowed_children", [])
     child_text = ", ".join(children) if children else "none"
+    targets = role.get("allowed_message_targets", [])
+    target_text = ", ".join(targets) if targets else "none"
     sections.append(
         "# Installed topology limits\n\n"
         f"The root session starts at depth zero and nesting must not exceed "
         f"depth {manifest['max_depth']}. Permitted child roles from this role: "
-        f"{child_text}. Do not spawn any other role."
+        f"{child_text}. Do not spawn any other role. Permitted direct message "
+        f"targets: {target_text}. Do not message any other role."
     )
     return "\n\n---\n\n".join(sections) + "\n"
 
@@ -238,20 +336,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--validate-runtime-config", type=Path)
     args = parser.parse_args(argv)
+    if not args.out and not args.check and not args.validate_runtime_config:
+        parser.error("provide --out, --check, or --validate-runtime-config")
     try:
         manifest, adapters = validate(args.source)
         if args.out:
             count = render(args.source, args.out, manifest, adapters)
             print(f"rendered {count} subagent roles for Claude and Codex into {args.out}")
-        elif not args.check:
-            parser.error("provide --out or --check")
         if args.check:
             check_rendering(args.source, manifest, adapters)
             print(
                 f"OK: {len(manifest['roles'])} roles, max depth {manifest['max_depth']}, "
                 "Claude and Codex adapters valid"
             )
+        if args.validate_runtime_config:
+            config = load_json(args.validate_runtime_config)
+            validate_runtime_config_document(config, str(args.validate_runtime_config))
+            print(f"OK: runtime configuration valid: {args.validate_runtime_config}")
     except SpecError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

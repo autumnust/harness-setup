@@ -13,7 +13,8 @@ requires it.
 | Current `progress.html` narrative | 1,500 words |
 | Topic learner profile | 2,000 words |
 
-Link to evidence rather than copying verbose logs. Put older teaching material
-under `evidence/education/archive/` when it remains useful; keep
-`evidence/education/index.html` focused on the current mental model. Output caps
-do not justify omitting a blocker, correctness issue, or user decision.
+Link to evidence rather than copying verbose logs. The coordinator publishes
+current and archived teaching material in the configured canonical locations;
+the educator returns bounded payloads instead of writing those locations.
+Output caps do not justify omitting a blocker, correctness issue, or user
+decision.

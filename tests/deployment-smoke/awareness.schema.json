@@ -26,6 +26,11 @@
     },
     "max_depth": {"type": "integer"},
     "educator_is_leaf": {"type": "boolean"},
+    "all_operational_children_are_leaves": {"type": "boolean"},
+    "canonical_state_writer": {"type": "string", "const": "coordinator"},
+    "review_independence": {"type": "string", "const": "different-foundation"},
+    "pr_maintainer_poll_interval_seconds": {"type": "integer", "const": 600},
+    "pr_maintainer_can_message_registered_executor": {"type": "boolean"},
     "state_path": {"type": "string"}
   },
   "required": [
@@ -37,6 +42,11 @@
     "available_roles",
     "max_depth",
     "educator_is_leaf",
+    "all_operational_children_are_leaves",
+    "canonical_state_writer",
+    "review_independence",
+    "pr_maintainer_poll_interval_seconds",
+    "pr_maintainer_can_message_registered_executor",
     "state_path"
   ]
 }

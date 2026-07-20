@@ -39,6 +39,7 @@ The offline test verifies:
 - Offline mode denies network access and unsets provider API keys.
 - The installer preserves an existing Codex setting while adding max depth 2.
 - The installer preserves host-only Claude plugin settings while rendering.
+- Mutable coordinator configuration is initialized once and survives updates.
 - Provider-neutral specs render as the complete Claude and Codex role sets.
 - Each role includes its declared shared contracts.
 - Skills deploy identically to Claude, portable, and Codex locations.
@@ -48,16 +49,18 @@ The offline test verifies:
   offline mode.
 
 The online probe adds unpredictable markers after installation. Each CLI must
-return those markers plus the declared roles, topology, and learner-state path
-in schema-validated JSON. This distinguishes reading deployed instructions from
+return those markers plus the declared roles, leaf topology, canonical-state
+authority, independent-review rule, PR-monitor policy, and learner-state path in
+schema-validated JSON. This distinguishes reading deployed instructions from
 answering from general knowledge.
 
 ## CI
 
 `.github/workflows/deployment-smoke.yml` runs the offline test on every pull
 request, every push to `main` (including merges), and manual dispatch. The job
-installs current published CLI versions, so it also detects provider CLI format
-or discovery changes. CI does not receive or persist provider credentials.
+also rejects authority-policy drift before installing current published CLI
+versions, so it detects both topology regressions and provider CLI format or
+discovery changes. CI does not receive or persist provider credentials.
 
 ## Boundary
 

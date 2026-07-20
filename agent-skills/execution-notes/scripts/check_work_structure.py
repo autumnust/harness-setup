@@ -3,10 +3,10 @@
 
 Source of truth: ~/AGENTS.md (home/AGENTS.md in the harness-setup repo),
 section "Long-Running Work Structure". The S1-S5 rules below are a deterministic
-*interpretation* of that prose, not the rule itself. RULES.md (next to this
-file in the skill directory) records, rule by rule, which sentence each check
-was deduced from and what judgment was applied — read it before changing a
-check or the prose.
+*interpretation* of that prose, not the rule itself. `references/RULES.md` in
+the execution-notes skill records, rule by rule, which sentence each check was
+deduced from and what judgment was applied. Read it before changing a check or
+the prose.
 
 This is a STRUCTURE-only linter. It inspects the folder layout — which files and
 directories exist and where — and nothing about file *contents*. No model calls,

@@ -9,7 +9,8 @@ contracts into each tool's native agent format during installation.
 
 | Path | Purpose |
 |---|---|
-| `manifest.json` | Machine-readable roles, topology, model policies, and output limits |
+| `manifest.json` | Harness-specific machine-readable roles, topology, model policies, message targets, and output limits |
+| `runtime-config.*.json` | Schema and initial mutable configuration installed for coordinator confirmation |
 | `topology.md` | Human-readable orchestration design and depth rules |
 | `roles/` | One provider-neutral prompt per role |
 | `workflows/` | Procedures that coordinate several roles |
@@ -32,10 +33,14 @@ second editable copy of every prompt.
 
 - Put provider-neutral behavior in Markdown and provider-specific fields in an
   adapter.
+- `manifest.json` is this harness's validated schema, not a provider or industry
+  standard. Keep detailed responsibility in roles and cross-role sequence in
+  workflows rather than duplicating prose in the manifest.
 - Keep the root `coordinator` in the manifest, but do not render it as a child
   agent. The main session performs that role through the global prompt.
 - Every permitted child edge must fit within `max_depth`.
-- A role with no permitted children is rendered without the ability to spawn
-  another agent where the provider supports that restriction.
+- Every current child is a leaf and is rendered without agent-spawning ability
+  where the provider supports that restriction. `max_depth = 2` remains a
+  defensive provider ceiling.
 - Mutable learner profiles and execution history never live here. Installed
   state belongs under `$AGENT_HARNESS_HOME/state/`.

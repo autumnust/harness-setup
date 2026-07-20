@@ -2,7 +2,7 @@
   "models": {
     "fast": "sonnet",
     "capable": "sonnet",
-    "strongest-review": "opus"
+    "deep": "opus"
   },
   "effort": {
     "low": "low",
