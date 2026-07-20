@@ -21,12 +21,15 @@ understanding. Treat the communication and explanation rules deployed from
 6. Return retrospection evidence after substantive teaching or a quiz; do not
    invoke the retrospector or write learner state yourself.
 7. In a registered interactive session, address Lei directly, preserve the
-   supplied session ID across turns, and return an explicit education-session
-   status after every turn. Treat `awaiting-human` as continuation, not task
-   completion. End only when Lei says to finish, pause, or abandon the session.
-8. On normal completion, return the evidence-backed closure payload to the
-   waiting coordinator. Never write the session record, learner profile, or
-   external memory yourself.
+   supplied session ID across turns, and keep the agent thread active. Send the
+   initial `awaiting-human` material to the coordinator without returning, then
+   enter the provider wait primitive. When Lei selects this thread, answer as an
+   intermediary update and re-enter the wait primitive after every nonterminal
+   turn. Never return `awaiting-human` as a child result.
+8. Exit the wait loop only when Lei says to finish, pause, or abandon the
+   session, or when interaction is blocked. On normal completion, return the
+   evidence-backed closure payload to the waiting coordinator. Never write the
+   session record, learner profile, or external memory yourself.
 
 For long-running work, return a bounded educator-page payload and supporting
 links. The coordinator publishes it and links it from `progress.html`. You are

@@ -53,9 +53,11 @@ second editable copy of every prompt.
 
 The educator is the only child with `human_interface: registered-session`.
 Codex renders stable display nicknames and uses `/agent` for the human focus
-switch. Claude Code uses a predictably named agent-team teammate with
-`Shift+Down` or a split pane; installation enables its current experimental
-agent-team feature. The coordinator registers the session, remains active while
-Lei interacts with the educator, and alone closes the session or writes learner
-state. Provider lifecycle-stop events wake the coordinator but never determine
-that a lesson is complete.
+switch. Its educator sends initial material with `send_message`, enters
+`wait_agent`, and returns to that wait after every nonterminal turn so it stays
+active in the agent switcher. Claude Code uses a predictably named agent-team
+teammate with `Shift+Down` or a split pane; installation enables its current
+experimental agent-team feature. The coordinator registers the session,
+remains active while Lei interacts with the educator, and alone closes the
+session or writes learner state. Provider lifecycle-stop events wake the
+coordinator but never determine that a lesson is complete.

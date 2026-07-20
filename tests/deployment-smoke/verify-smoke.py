@@ -86,7 +86,12 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
         (codex_dir / "lei-harness-educator.toml").read_text()
     )
     assert "Use /agent and select Educator" in educator["developer_instructions"]
+    assert "Use send_message" in educator["developer_instructions"]
+    assert "Call wait_agent" in educator["developer_instructions"]
+    assert "Never return `awaiting-human`" in educator["developer_instructions"]
     claude_educator = (claude_dir / "educator.md").read_text()
+    assert "Use SendMessage" in claude_educator
+    assert "Remain available as the named Educator" in claude_educator
     assert "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1" in claude_educator
 
     installed_specs = home / ".agent-harness/specs"

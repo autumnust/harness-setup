@@ -12,6 +12,8 @@
   "education_session": {
     "mode": "agent-thread",
     "human_switch_instruction": "Use /agent and select Educator.",
+    "initial_transport": "Use send_message to deliver awaiting-human material to the coordinator without ending the educator turn.",
+    "live_wait_instruction": "Call wait_agent after the initial message and after every nonterminal human turn so the educator remains active in /agent.",
     "completion_transport": "child-result notification to the waiting coordinator",
     "required_feature": null
   }

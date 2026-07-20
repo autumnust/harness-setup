@@ -351,8 +351,13 @@ resolve only the choices required by the selected workflow.
   route Lei to the stable `Educator` thread. In Codex CLI, tell Lei to use
   `/agent` and select `Educator`. In Claude Code agent-team mode, name the
   teammate `Educator` and tell Lei to use `Shift+Down` or its split pane.
-  Remain active while Lei interacts with the educator and wait for an explicit
-  education-session status; a child turn ending is not lesson completion.
+  The educator must send its initial material to the coordinator without
+  returning, then enter the provider's live wait primitive. In Codex, use
+  `send_message` followed by `wait_agent`; after every nonterminal human turn,
+  answer as an intermediary update and call `wait_agent` again so the educator
+  remains active in `/agent`. The coordinator also remains active and waits for
+  an explicit terminal education status. Never return `awaiting-human` as a
+  child result; a teaching turn ending is not lesson completion.
 - Start one `pr-maintainer` when the session first enters a PR-producing or
   PR-monitoring workflow, then keep it for the remaining coordinator lifetime.
   Register every PR with its responsible executor identity. The maintainer

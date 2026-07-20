@@ -85,6 +85,12 @@ class WorkflowSpecTests(unittest.TestCase):
         )
         self.assertIn("invoke `educator` directly", workflow)
 
+    def test_interactive_educator_waits_instead_of_returning(self) -> None:
+        contract = (self.source / "contracts/education-session.md").read_text()
+        self.assertIn("Never return it as the\n  child result", contract)
+        self.assertIn("re-enter the provider wait primitive", contract)
+        self.assertIn("intermediary update", contract)
+
     def test_rejects_broad_pr_maintainer_messaging(self) -> None:
         manifest = self.manifest()
         self.role(manifest, "pr-maintainer")["allowed_message_targets"].append(
@@ -162,9 +168,16 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn(
             "Use /agent and select Educator", educator["developer_instructions"]
         )
+        self.assertIn("Use send_message", educator["developer_instructions"])
+        self.assertIn("Call wait_agent", educator["developer_instructions"])
+        self.assertIn(
+            "Never return `awaiting-human`", educator["developer_instructions"]
+        )
 
         claude_educator = (output / "claude/educator.md").read_text()
         self.assertIn("Mode: agent-team", claude_educator)
+        self.assertIn("Use SendMessage", claude_educator)
+        self.assertIn("Remain available as the named Educator", claude_educator)
         self.assertIn("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1", claude_educator)
 
 

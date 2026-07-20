@@ -261,6 +261,8 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         expected_session_keys = {
             "mode",
             "human_switch_instruction",
+            "initial_transport",
+            "live_wait_instruction",
             "completion_transport",
             "required_feature",
         }
@@ -269,7 +271,13 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
             or set(education_session) != expected_session_keys
         ):
             raise SpecError(f"{provider}: invalid education_session adapter")
-        for field in ("mode", "human_switch_instruction", "completion_transport"):
+        for field in (
+            "mode",
+            "human_switch_instruction",
+            "initial_transport",
+            "live_wait_instruction",
+            "completion_transport",
+        ):
             if (
                 not isinstance(education_session[field], str)
                 or not education_session[field]
@@ -312,6 +320,8 @@ def role_instructions(
             "# Provider interactive education adapter\n\n"
             f"Mode: {session['mode']}. Stable display name: {role['display_name']}. "
             f"Human switch instruction: {session['human_switch_instruction']} "
+            f"Initial transport: {session['initial_transport']} "
+            f"Live wait: {session['live_wait_instruction']} "
             f"Completion transport: {session['completion_transport']}. "
             f"Required feature: {required_feature}."
         )
