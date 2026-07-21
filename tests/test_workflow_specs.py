@@ -44,57 +44,60 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertEqual(manifest["max_depth"], 2)
         self.assertEqual(adapters["claude"]["models"]["deep"], "opus")
         self.assertEqual(adapters["codex"]["models"]["deep"], "gpt-5.6-sol")
+        claude_settings = json.loads((REPO_ROOT / "claude/settings.json").read_text())
+        self.assertEqual(claude_settings["model"], adapters["claude"]["models"]["fast"])
+        self.assertEqual(
+            claude_settings["effortLevel"], adapters["claude"]["effort"]["medium"]
+        )
         self.assertEqual(
             set(manifest["workflows"]),
-            {"default", "education-only", "pr-maintenance", "pr-review"},
+            {"default", "education-mode", "pr-maintenance", "pr-review"},
         )
         interfaces = {
             role["name"]: role["human_interface"] for role in manifest["roles"]
         }
         self.assertEqual(interfaces["coordinator"], "default")
-        self.assertEqual(interfaces["educator"], "registered-session")
+        self.assertEqual(
+            self.role(manifest, "coordinator")["model_policy"], "fast"
+        )
+        self.assertNotIn("educator", interfaces)
         self.assertTrue(
             all(
                 policy == "none"
                 for name, policy in interfaces.items()
-                if name not in {"coordinator", "educator"}
+                if name != "coordinator"
             )
         )
 
     def test_rejects_child_spawning(self) -> None:
         manifest = self.manifest()
-        self.role(manifest, "executor")["allowed_children"] = ["educator"]
+        self.role(manifest, "executor")["allowed_children"] = ["reviewer"]
         self.write_manifest(manifest)
         with self.assertRaisesRegex(render_agents.SpecError, "must be a leaf"):
             render_agents.validate(self.source)
 
-    def test_requires_education_only_workflow(self) -> None:
+    def test_requires_education_mode_workflow(self) -> None:
         manifest = self.manifest()
-        del manifest["workflows"]["education-only"]
+        del manifest["workflows"]["education-mode"]
         self.write_manifest(manifest)
         with self.assertRaisesRegex(render_agents.SpecError, "complete workflow set"):
             render_agents.validate(self.source)
 
-    def test_education_only_workflow_bypasses_execution_roles(self) -> None:
+    def test_education_mode_is_owned_by_coordinator(self) -> None:
         workflow = (self.source / "workflows/education.md").read_text()
-        self.assertIn("Education is a first-class goal", workflow)
-        self.assertIn("Do not create an execution folder", workflow)
-        self.assertIn(
-            "Do not invoke `exec-env-prepper`, `executor`, `reviewer`, or `pr-maintainer`",
-            workflow,
-        )
-        self.assertIn("invoke `educator` directly", workflow)
-
-    def test_interactive_educator_supports_direct_and_relay_modes(self) -> None:
-        contract = (self.source / "contracts/education-session.md").read_text()
-        self.assertIn("Direct-thread mode", contract)
-        self.assertIn("Coordinator-relay mode", contract)
-        self.assertIn("resumes the exact same educator identity", contract)
+        self.assertIn("not a separate agent", workflow)
+        self.assertIn("A single ordinary question stays in the current", workflow)
+        self.assertIn("coordinator teaches Lei directly", workflow)
+        self.assertIn("existing fast model policy", workflow)
+        self.assertIn("existing child or spawn a new child", workflow)
+        self.assertIn("By default, create no execution folder", workflow)
+        self.assertIn("Outside education mode, do not load learner profiles", workflow)
+        self.assertIn("A missing policy means `ask`", workflow)
 
     def test_rejects_broad_pr_maintainer_messaging(self) -> None:
         manifest = self.manifest()
         self.role(manifest, "pr-maintainer")["allowed_message_targets"].append(
-            "educator"
+            "reviewer"
         )
         self.write_manifest(manifest)
         with self.assertRaisesRegex(
@@ -104,7 +107,7 @@ class WorkflowSpecTests(unittest.TestCase):
 
     def test_rejects_direct_human_interaction_for_operational_child(self) -> None:
         manifest = self.manifest()
-        self.role(manifest, "executor")["human_interface"] = "registered-session"
+        self.role(manifest, "executor")["human_interface"] = "default"
         self.write_manifest(manifest)
         with self.assertRaisesRegex(
             render_agents.SpecError, "direct human interaction is not permitted"
@@ -131,6 +134,14 @@ class WorkflowSpecTests(unittest.TestCase):
             {"id": "codex", "foundation": "openai"},
         ]
         render_agents.validate_runtime_config_document(config, "test")
+
+        del config["learner_profile_update_policy"]
+        render_agents.validate_runtime_config_document(config, "legacy test")
+
+        config["learner_profile_update_policy"] = "sometimes"
+        with self.assertRaisesRegex(render_agents.SpecError, "must be ask, auto, or off"):
+            render_agents.validate_runtime_config_document(config, "test")
+        config["learner_profile_update_policy"] = "ask"
 
         config["review_backends"][1]["foundation"] = ""
         with self.assertRaisesRegex(render_agents.SpecError, "non-empty string"):
@@ -161,25 +172,8 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn(
             "Permitted direct message targets: coordinator, executor", pr_maintainer
         )
-        educator_path = output / "codex/lei-harness-educator.toml"
-        educator = tomllib.loads(educator_path.read_text())
-        self.assertEqual(educator["nickname_candidates"], ["Educator"])
-        self.assertIn("Mode: coordinator-relay", educator["developer_instructions"])
-        self.assertIn(
-            "Do not direct Lei to /agent", educator["developer_instructions"]
-        )
-        self.assertIn(
-            "Do not wait across human turns", educator["developer_instructions"]
-        )
-        self.assertIn(
-            "resume the same educator identity", educator["developer_instructions"]
-        )
-
-        claude_educator = (output / "claude/educator.md").read_text()
-        self.assertIn("Mode: agent-team", claude_educator)
-        self.assertIn("Use SendMessage", claude_educator)
-        self.assertIn("Remain available as the named Educator", claude_educator)
-        self.assertIn("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1", claude_educator)
+        self.assertFalse((output / "codex/lei-harness-educator.toml").exists())
+        self.assertFalse((output / "claude/educator.md").exists())
 
 
 if __name__ == "__main__":

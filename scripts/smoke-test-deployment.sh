@@ -128,7 +128,7 @@ run_inside_sandbox() {
   printf '%s\n' 'smoke_sentinel = "preserved"' > "$CODEX_HOME/config.toml"
   mkdir -p "$CLAUDE_CONFIG_DIR"
   printf '%s\n' \
-    '{"enabledPlugins":{"smoke-only@example":false},"env":{"SMOKE_HOST_ONLY":"preserved"}}' \
+    '{"enabledPlugins":{"smoke-only@example":false},"env":{"SMOKE_HOST_ONLY":"preserved","CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS":"1"}}' \
     > "$CLAUDE_CONFIG_DIR/settings.json"
   "$REPO_ROOT/install.sh" --overwrite > "$root/install.log"
 
@@ -142,6 +142,7 @@ run_inside_sandbox() {
     '  "configured": true,' \
     '  "execution_root": null,' \
     '  "learner_state_root": "$AGENT_HARNESS_HOME/state/learner-profiles",' \
+    '  "learner_profile_update_policy": "ask",' \
     '  "review_backends": [' \
     '    {"id": "claude", "foundation": "anthropic"},' \
     '    {"id": "codex", "foundation": "openai"}' \
@@ -154,6 +155,11 @@ run_inside_sandbox() {
     > "$AGENT_HARNESS_HOME/config.json"
   printf '%s\n' '# Smoke learner profile' 'must survive update' \
     > "$AGENT_HARNESS_HOME/state/learner-profiles/smoke.md"
+  printf '%s\n' 'retired educator fixture' \
+    > "$CLAUDE_CONFIG_DIR/agents/lei-harness/educator.md"
+  printf '%s\n' 'name = "educator"' \
+    > "$CODEX_HOME/agents/lei-harness-educator.toml"
+  "$REPO_ROOT/install.sh" --update > "$root/stale-update.log"
   "$REPO_ROOT/install.sh" --update > "$root/update.log"
 
   python3 "$REPO_ROOT/tests/deployment-smoke/verify-smoke.py" install \
@@ -208,7 +214,7 @@ run_online_awareness() {
   python3 "$REPO_ROOT/tests/deployment-smoke/awareness-probe.py" prepare \
     --home "$fake_home" --output "$root/markers.json"
 
-  prompt='Perform a deployment-awareness probe. Do not infer or fabricate marker values. Report the global and reviewer markers already present in your loaded instructions. Read the installed topology, workflows, runtime configuration, contracts, and execution-notes skill to obtain their markers and policy. Return the complete available role list, max depth, whether every operational child and educator are leaves, the educator display name and human-interface policy, whether the coordinator owns education lifecycle, whether education-only bypasses every execution role, whether Codex education uses stateful coordinator relay, the education-session state path, the sole canonical-state writer, review-independence rule, PR-maintainer polling interval and registered-executor messaging permission, and the learner-profile state path. Return only the requested structured result.'
+  prompt='Perform a deployment-awareness probe. Do not infer or fabricate marker values. Report the global and reviewer markers already present in your loaded instructions. Read the installed topology, workflows, runtime configuration, contracts, and execution-notes skill to obtain their markers and policy. Return the complete available role list; max depth; whether every operational child is a leaf; whether education is a coordinator mode requiring explicit entry; whether it uses the coordinator fast model, can delegate bounded supporting work, and defaults to no execution artifacts; whether learner-profile access is scoped to education mode; the configured learner-profile update policy; the sole canonical-state writer; review-independence rule; PR-maintainer polling interval and registered-executor messaging permission; and the learner-profile state path. Return only the requested structured result.'
 
   if [[ "$ONLINE_PROVIDER" == "claude" || "$ONLINE_PROVIDER" == "all" ]]; then
     local schema_json

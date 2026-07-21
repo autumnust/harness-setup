@@ -41,7 +41,7 @@ def source_file(source: Path, relative: str) -> Path:
 
 
 def validate_runtime_config_document(config: dict[str, Any], label: str) -> None:
-    expected = {
+    required = {
         "version",
         "configured",
         "execution_root",
@@ -52,13 +52,19 @@ def validate_runtime_config_document(config: dict[str, Any], label: str) -> None
         "review_independence",
         "pr_maintenance",
     }
-    if set(config) != expected:
+    optional = {"learner_profile_update_policy"}
+    if not required <= set(config) or not set(config) <= required | optional:
         raise SpecError(f"{label}: runtime-config keys differ from the schema")
     if config.get("version") != 1 or not isinstance(config.get("configured"), bool):
         raise SpecError(f"{label}: runtime-config needs version 1 and configured boolean")
     for field in ("execution_root", "learner_state_root"):
         if config[field] is not None and not isinstance(config[field], str):
             raise SpecError(f"{label}: {field} must be a string or null")
+    update_policy = config.get("learner_profile_update_policy", "ask")
+    if update_policy not in {"ask", "auto", "off"}:
+        raise SpecError(
+            f"{label}: learner_profile_update_policy must be ask, auto, or off"
+        )
     review_backends = config["review_backends"]
     if not isinstance(review_backends, list):
         raise SpecError(f"{label}: review_backends must be a list")
@@ -98,8 +104,8 @@ def validate_runtime_config(source: Path) -> None:
     properties = schema.get("properties")
     if not isinstance(required, list) or not isinstance(properties, dict):
         raise SpecError("runtime-config schema needs required and properties")
-    if set(defaults) != set(required) or set(defaults) != set(properties):
-        raise SpecError("runtime-config defaults, required keys, and properties differ")
+    if set(defaults) != set(properties) or not set(required) <= set(defaults):
+        raise SpecError("runtime-config defaults and schema properties differ")
     validate_runtime_config_document(defaults, "runtime-config defaults")
     if defaults["configured"] is not False:
         raise SpecError("runtime-config defaults must start unconfigured")
@@ -115,7 +121,7 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     workflows = manifest.get("workflows")
     required_workflows = {
         "default",
-        "education-only",
+        "education-mode",
         "pr-maintenance",
         "pr-review",
     }
@@ -147,11 +153,7 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         if display_name in display_names:
             raise SpecError(f"duplicate role display_name: {display_name}")
         display_names.add(display_name)
-        if role.get("human_interface") not in {
-            "default",
-            "none",
-            "registered-session",
-        }:
+        if role.get("human_interface") not in {"default", "none"}:
             raise SpecError(f"{name}: invalid human_interface policy")
         if role.get("kind") not in {"root", "subagent"}:
             raise SpecError(f"{name}: kind must be root or subagent")
@@ -178,13 +180,10 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise SpecError("coordinator must be the only root role")
     if roles["coordinator"]["human_interface"] != "default":
         raise SpecError("coordinator must remain the default human interface")
-    if roles["educator"]["human_interface"] != "registered-session":
-        raise SpecError("educator must use the registered-session human interface")
+    if roles["coordinator"].get("model_policy") != "fast":
+        raise SpecError("coordinator must use the fast model policy")
     for name, role in roles.items():
-        if (
-            name not in {"coordinator", "educator"}
-            and role["human_interface"] != "none"
-        ):
+        if name != "coordinator" and role["human_interface"] != "none":
             raise SpecError(f"{name}: direct human interaction is not permitted")
 
     for name, role in roles.items():
@@ -257,37 +256,6 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
                 raise SpecError(
                     f"{provider}: no {reasoning_field} mapping for policy {reasoning_policy!r}"
                 )
-        education_session = adapter.get("education_session")
-        expected_session_keys = {
-            "mode",
-            "human_switch_instruction",
-            "initial_transport",
-            "live_wait_instruction",
-            "completion_transport",
-            "required_feature",
-        }
-        if (
-            not isinstance(education_session, dict)
-            or set(education_session) != expected_session_keys
-        ):
-            raise SpecError(f"{provider}: invalid education_session adapter")
-        for field in (
-            "mode",
-            "human_switch_instruction",
-            "initial_transport",
-            "live_wait_instruction",
-            "completion_transport",
-        ):
-            if (
-                not isinstance(education_session[field], str)
-                or not education_session[field]
-            ):
-                raise SpecError(
-                    f"{provider}: education_session {field} must be non-empty"
-                )
-        required_feature = education_session["required_feature"]
-        if required_feature is not None and not isinstance(required_feature, str):
-            raise SpecError(f"{provider}: education_session required_feature is invalid")
         adapters[provider] = adapter
 
     return manifest, adapters
@@ -313,18 +281,6 @@ def role_instructions(
         f"{child_text}. Do not spawn any other role. Permitted direct message "
         f"targets: {target_text}. Do not message any other role."
     )
-    if role["name"] == "educator":
-        session = adapter["education_session"]
-        required_feature = session["required_feature"] or "none"
-        sections.append(
-            "# Provider interactive education adapter\n\n"
-            f"Mode: {session['mode']}. Stable display name: {role['display_name']}. "
-            f"Human switch instruction: {session['human_switch_instruction']} "
-            f"Initial transport: {session['initial_transport']} "
-            f"Live wait: {session['live_wait_instruction']} "
-            f"Completion transport: {session['completion_transport']}. "
-            f"Required feature: {required_feature}."
-        )
     return "\n\n---\n\n".join(sections) + "\n"
 
 

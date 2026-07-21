@@ -8,13 +8,5 @@
     "low": "low",
     "medium": "medium",
     "high": "high"
-  },
-  "education_session": {
-    "mode": "agent-team",
-    "human_switch_instruction": "Use Shift+Down to select Educator, or open the Educator split pane.",
-    "initial_transport": "Use SendMessage to deliver awaiting-human material to the team lead without ending the educator session.",
-    "live_wait_instruction": "Remain available as the named Educator teammate after every nonterminal human turn.",
-    "completion_transport": "direct message and teammate idle notification",
-    "required_feature": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"
   }
 }

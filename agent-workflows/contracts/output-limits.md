@@ -15,6 +15,6 @@ requires it.
 
 Link to evidence rather than copying verbose logs. The coordinator publishes
 current and archived teaching material in the configured canonical locations;
-the educator returns bounded payloads instead of writing those locations.
+supporting children return bounded payloads instead of writing those locations.
 Output caps do not justify omitting a blocker, correctness issue, or user
 decision.

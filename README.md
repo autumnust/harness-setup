@@ -76,25 +76,24 @@ Pick one of:
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
 | `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/lei-harness/*.md` and, when Codex is present, `~/.codex/agents/lei-harness-*.toml` |
-| workflow depth setting | `agents.max_depth = 2` merged into `~/.codex/config.toml` when Codex is present |
+| coordinator model and workflow depth | Provider fast model plus medium effort in Claude settings and Codex config; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
 | mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates) |
 | *(cloned at install)* | `~/Documents/kumo-skills-catalog/` (from `kumo-ai/kumo-skills-catalog`) |
 
 ## Portable agent workflow
 
-The main session is the coordinator. It can delegate environment preparation,
-implementation, review, PR maintenance, and education while keeping user
-decisions and final synthesis in the main context. Nesting stops after two
-subagent levels.
+The main session is the coordinator. It owns interactive education and can
+delegate environment preparation, implementation, review, PR maintenance, and
+bounded teaching support while keeping user decisions and final synthesis in
+the main context. Nesting stops after two subagent levels.
 
 ```text
 coordinator
 |-- exec-env-prepper (leaf)
 |-- executor (leaf)
 |-- reviewer (leaf, different model foundation from executor)
-|-- pr-maintainer (leaf, coordinator-lifetime PR queue monitor)
-`-- educator (leaf)
+`-- pr-maintainer (leaf, coordinator-lifetime PR queue monitor)
 ```
 
 Only the coordinator spawns agents, writes canonical state, or invokes the
@@ -105,6 +104,12 @@ The provider limit remains depth two as a defensive ceiling even though the
 current topology uses only depth-one leaves. See
 [`agent-workflows/`](./agent-workflows/) for the complete contracts and routing
 rules.
+
+Education mode runs directly in the coordinator on its fast model policy. It is
+entered only by explicit request or after Lei accepts a suggestion prompted by
+repeated connected questions. Learner state is loaded on entry and considered
+for an evidence-based update on exit. Supporting children may produce data,
+experiments, or visualizations without becoming the teaching interface.
 
 ## What the settings.json controls
 
@@ -118,7 +123,8 @@ rules.
     "crit@crit": true
   },
   "extraKnownMarketplaces": { ... github sources for each ... },
-  "effortLevel": "xhigh",
+  "model": "sonnet",
+  "effortLevel": "medium",
   "skipDangerousModePermissionPrompt": true,
   "agentPushNotifEnabled": true
 }

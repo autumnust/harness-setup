@@ -325,14 +325,17 @@ resolve only the choices required by the selected workflow.
 
 - Keep small or tightly coupled work in the main session; do not create an
   agent team merely because roles are available.
-- Treat a request to learn, understand, discuss, walk through, or be quizzed as
-  an education-only goal when it requests no implementation. Follow
-  `$AGENT_HARNESS_HOME/specs/workflows/education.md`: invoke `educator` directly
-  and do not create an execution folder, execution-notes files,
-  `progress.html`, environment-preparation artifacts, review work, or a PR
-  queue. Do not invoke `exec-env-prepper`, `executor`, `reviewer`, or
-  `pr-maintainer`. Unresolved execution and review configuration must not delay
-  the lesson; use the portable learner-state fallback.
+- Enter education mode only when Lei explicitly asks to enter it, be taught, or
+  be quizzed on a sustained topic. Do not enter it for one ordinary question.
+  After repeated connected questions, suggest education mode and wait for Lei
+  to accept. Follow `$AGENT_HARNESS_HOME/specs/workflows/education.md` and teach
+  directly in the coordinator session.
+- On education-mode entry, load only the relevant learner profile, using the
+  portable learner-state fallback when configuration is unresolved. Outside
+  education mode, do not load or update learner profiles unless Lei explicitly
+  requests that state operation. On exit, propose an update only from
+  demonstrated understanding and apply the configured `ask`, `auto`, or `off`
+  policy; a missing policy means `ask`.
 - Only the coordinator spawns agents. Current operational children are
   depth-one leaves. Keep the installed maximum depth of two as a defensive
   provider ceiling, not as permission for children to spawn.
@@ -343,19 +346,16 @@ resolve only the choices required by the selected workflow.
   same files or depends on an earlier result.
 - Use `exec-env-prepper` before large execution work, then present readiness to
   Lei and wait for confirmation before implementation. Use `executor` for
-  bounded implementation, an independent-foundation `reviewer` for
-  problem-level and core-code review, and `educator` only when the work has
-  material learning value.
-- The coordinator is Lei's default interface. For interactive teaching, it may
-  register one direct educator session, show the educator's first turn, and
-  route Lei according to the provider adapter. Current Codex CLI uses
-  coordinator relay because an active coordinator wait keeps the TUI in
-  `Working` and prevents `/agent` interaction: return one `awaiting-human` turn,
-  release the UI, then resume the same educator identity with Lei's next
-  response. Do not spawn a new educator per turn. Claude Code agent-team mode
-  may use direct interaction: name the teammate `Educator`, tell Lei to use
-  `Shift+Down` or its split pane, and keep that teammate available. Only an
-  explicit terminal education status closes either mode.
+  bounded implementation and an independent-foundation `reviewer` for
+  problem-level and core-code review.
+- The coordinator uses its fast model policy for education mode; entering the
+  mode does not require a provider-specific model switch or fast-service
+  toggle. It may resume a relevant existing child or spawn a new child for
+  bounded data collection, experiments, inspection, or teaching artifacts.
+  Children return material to the coordinator and retain their task-specific
+  model policies; they do not take over the teaching conversation. Education
+  creates no execution folder or execution-notes artifacts by default, while
+  large or multi-session experiments still follow execution-preparation rules.
 - Start one `pr-maintainer` when the session first enters a PR-producing or
   PR-monitoring workflow, then keep it for the remaining coordinator lifetime.
   Register every PR with its responsible executor identity. The maintainer
@@ -369,9 +369,8 @@ resolve only the choices required by the selected workflow.
   logs, and scans out of the main conversation.
 - Only the coordinator writes runtime configuration, learner state,
   communication conventions, `progress.html`, or accepted retrospective
-  changes. Children return evidence-backed state proposals. Direct educator
-  interaction does not transfer these permissions. When direct child
-  interaction is unavailable, relay the same educator session transparently.
+  changes. Children return evidence-backed state proposals and never interact
+  with Lei directly.
 
 The provider-neutral Markdown and topology are authoritative. Native Claude
 and Codex agent files are generated during harness installation.

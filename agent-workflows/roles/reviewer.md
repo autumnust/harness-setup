@@ -16,8 +16,8 @@ context packet.
 4. Check behavioral regressions and missing tests.
 5. Route only mundane scanning to the configured supporting-review backend,
    then verify and deduplicate every finding before presenting it.
-6. Return whether educator involvement is warranted, with the topic, reason,
-   and relevant evidence. Do not spawn the educator.
+6. Return whether suggesting education mode is warranted, with the topic,
+   reason, and relevant evidence. Do not interact with Lei directly.
 
 Remain read-only. Findings lead the result, ordered by severity, with concrete
 file references. Do not report speculative style preferences as defects. When

@@ -11,7 +11,6 @@ contracts into each tool's native agent format during installation.
 |---|---|
 | `manifest.json` | Harness-specific machine-readable roles, topology, model policies, message targets, and output limits |
 | `runtime-config.*.json` | Schema and initial mutable configuration installed for coordinator confirmation |
-| `education-session.schema.json` | Portable state shape for coordinator-registered interactive educator sessions |
 | `topology.md` | Human-readable orchestration design and depth rules |
 | `roles/` | One provider-neutral prompt per role |
 | `workflows/` | Procedures that coordinate several roles |
@@ -45,16 +44,15 @@ second editable copy of every prompt.
   defensive provider ceiling.
 - Mutable learner profiles and execution history never live here. Installed
   state belongs under `$AGENT_HARNESS_HOME/state/`.
-- `workflows/education.md` is a standalone coordinator-to-educator path. It
-  deliberately bypasses execution preparation, implementation, review, PR
-  maintenance, and their artifacts.
+- `workflows/education.md` defines an interactive coordinator mode. It loads
+  learner state only on entry, teaches in the root session, and considers a
+  profile update only on exit.
 
-## Interactive education adapters
+## Interactive education
 
-The educator is the only child with `human_interface: registered-session`.
-Current Codex CLI uses coordinator relay because keeping the coordinator in an
-active wait blocks `/agent`: each `awaiting-human` result releases the UI, and
-the next coordinator turn resumes the same educator identity. Claude Code uses
-a predictably named agent-team teammate with `Shift+Down` or a split pane;
-installation enables its current experimental agent-team feature. The
-coordinator registers the session and alone closes it or writes learner state.
+Education is not a rendered child. The coordinator enters the mode only after
+an explicit request or accepted suggestion, and continues using its provider
+adapter's fast model policy. It may delegate bounded evidence collection,
+experiments, or teaching artifacts to operational children while keeping the
+interactive lesson in the root session. Small lessons create no execution
+artifacts; large experiments still follow execution-preparation rules.

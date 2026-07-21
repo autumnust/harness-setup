@@ -8,7 +8,7 @@
 4. Give public interfaces, new features, and changed core logic to the primary
    reviewer. Use the configured supporting backend only for eligible scanning.
 5. Verify supporting-tool findings and deduplicate them against primary review.
-6. Return an educator recommendation and the actual reviewer provenance to the
-   coordinator; the reviewer does not spawn another agent.
+6. Return an education-mode recommendation and the actual reviewer provenance
+   to the coordinator; the reviewer does not spawn another agent.
 7. Return findings first, ordered by severity, then open questions and residual
    test risk. Do not manufacture findings to fill a category.

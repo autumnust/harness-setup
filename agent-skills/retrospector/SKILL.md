@@ -27,7 +27,7 @@ executor result contains retrospection evidence.
 Return at most five items, each with evidence, impact, and the smallest proposed
 change.
 
-## Educator mode
+## Education mode
 
 Use after a substantive explanation, scenario exercise, or quiz.
 

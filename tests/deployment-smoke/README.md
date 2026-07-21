@@ -38,21 +38,22 @@ The offline test verifies:
 - Seatbelt permits writes only below a uniquely created temporary root.
 - Offline mode denies network access and unsets provider API keys.
 - The installer preserves an existing Codex setting while adding max depth 2.
+- Both root sessions receive the provider adapter's fast coordinator model and
+  medium reasoning policy.
 - The installer preserves host-only Claude plugin settings while rendering.
-- The installer preserves host-only Claude environment values while enabling
-  agent teams for direct educator interaction.
+- The installer preserves host-only Claude environment values while removing
+  the retired agent-team flag previously used for direct education.
 - Mutable coordinator configuration is initialized once and survives updates.
 - Provider-neutral specs render as the complete Claude and Codex role sets.
-- The educator renders with a stable display name, provider switch guidance,
-  and the registered direct-human interface policy.
-- Codex educator instructions use stateful coordinator relay: each
-  `awaiting-human` result releases the CLI input, and the next turn resumes the
-  same educator identity instead of spawning a replacement.
-- The installed education-only workflow invokes the educator directly and
-  explicitly bypasses execution folders, preparation, execution, review, and
-  PR maintenance.
-- Mutable education-session state is initialized separately from learner
-  profiles and survives updates.
+- No Educator custom agent renders for either provider, and an update retires
+  previously generated Educator files from provider discovery.
+- The installed education workflow keeps teaching in Coordinator, requires
+  explicit entry, uses the coordinator fast model policy, and allows bounded
+  supporting delegation.
+- Learner profiles are loaded only in education mode and considered for update
+  only on exit. The default update policy is `ask`.
+- Education creates no execution artifacts by default, while large experiments
+  retain the normal preparation requirements.
 - Each role includes its declared shared contracts.
 - Skills deploy identically to Claude, portable, and Codex locations.
 - `--update` is a no-op and does not replace mutable learner state.
@@ -61,8 +62,9 @@ The offline test verifies:
   offline mode.
 
 The online probe adds unpredictable markers after installation. Each CLI must
-return those markers plus the declared roles, leaf topology, canonical-state
-authority, independent-review rule, PR-monitor policy, and learner-state path in
+return those markers plus the declared roles, leaf topology, coordinator-owned
+education policy, learner-state lifecycle, canonical-state authority,
+independent-review rule, PR-monitor policy, and learner-state path in
 schema-validated JSON. This distinguishes reading deployed instructions from
 answering from general knowledge.
 

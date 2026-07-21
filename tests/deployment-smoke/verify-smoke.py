@@ -35,6 +35,12 @@ def verify_frontmatter(path: Path, expected_name: str) -> None:
 
 def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     manifest = json.loads((repo / "agent-workflows/manifest.json").read_text())
+    claude_adapter = json.loads(
+        (repo / "agent-workflows/adapters/claude.json").read_text()
+    )
+    codex_adapter = json.loads(
+        (repo / "agent-workflows/adapters/codex.json").read_text()
+    )
     roles = {role["name"]: role for role in manifest["roles"]}
     subagents = {name for name, role in roles.items() if role["kind"] == "subagent"}
 
@@ -45,21 +51,26 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     claude_settings = json.loads((home / ".claude/settings.json").read_text())
     assert claude_settings["enabledPlugins"]["smoke-only@example"] is False
     assert claude_settings["env"]["SMOKE_HOST_ONLY"] == "preserved"
-    assert claude_settings["env"]["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] == "1"
+    assert "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" not in claude_settings["env"]
+    assert claude_settings["model"] == claude_adapter["models"]["fast"]
+    assert claude_settings["effortLevel"] == claude_adapter["effort"]["medium"]
 
     config = tomllib.loads((home / ".codex/config.toml").read_text())
     assert config["smoke_sentinel"] == "preserved"
+    assert config["model"] == codex_adapter["models"]["fast"]
+    assert config["model_reasoning_effort"] == codex_adapter["reasoning_effort"]["medium"]
     assert config["agents"]["max_depth"] == manifest["max_depth"] == 2
 
     runtime_config = json.loads((home / ".agent-harness/config.json").read_text())
     assert runtime_config["configured"] is True
+    assert runtime_config["learner_profile_update_policy"] == "ask"
     assert runtime_config["review_independence"] == "different-foundation"
     assert runtime_config["review_backends"] == [
         {"id": "claude", "foundation": "anthropic"},
         {"id": "codex", "foundation": "openai"},
     ]
     assert runtime_config["pr_maintenance"]["poll_interval_seconds"] == 600
-    assert (home / ".agent-harness/state/education-sessions").is_dir()
+    assert not (home / ".agent-harness/state/education-sessions").exists()
 
     claude_dir = home / ".claude/agents/lei-harness"
     codex_dir = home / ".codex/agents"
@@ -82,25 +93,20 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
             assert heading in claude_path.read_text()
             assert heading in codex_agent["developer_instructions"]
 
-    educator = tomllib.loads(
-        (codex_dir / "lei-harness-educator.toml").read_text()
-    )
-    assert "Mode: coordinator-relay" in educator["developer_instructions"]
-    assert "Do not direct Lei to /agent" in educator["developer_instructions"]
-    assert "Do not wait across human turns" in educator["developer_instructions"]
-    assert "resume the same educator identity" in educator["developer_instructions"]
-    claude_educator = (claude_dir / "educator.md").read_text()
-    assert "Use SendMessage" in claude_educator
-    assert "Remain available as the named Educator" in claude_educator
-    assert "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1" in claude_educator
+    assert not (codex_dir / "lei-harness-educator.toml").exists()
+    assert not (claude_dir / "educator.md").exists()
+    assert list(codex_dir.glob("lei-harness-educator.toml.bak.*"))
+    assert list(claude_dir.glob("educator.md.bak.*"))
 
     installed_specs = home / ".agent-harness/specs"
     assert file_hashes(repo / "agent-workflows") == file_hashes(installed_specs)
     education_workflow = (
         installed_specs / "workflows/education.md"
     ).read_text(encoding="utf-8")
-    assert "Do not create an execution folder" in education_workflow
-    assert "invoke `educator` directly" in education_workflow
+    assert "not a separate agent" in education_workflow
+    assert "coordinator teaches Lei directly" in education_workflow
+    assert "existing child or spawn a new child" in education_workflow
+    assert "Outside education mode, do not load learner profiles" in education_workflow
 
     skill_names = {
         path.parent.name for path in (repo / "agent-skills").glob("*/SKILL.md")

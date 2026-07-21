@@ -1,7 +1,9 @@
 # Default workflow
 
-1. The coordinator classifies the goal. Education-only requests leave this
-   workflow immediately and use `workflows/education.md`.
+1. The coordinator classifies the goal. Explicit education requests enter the
+   coordinator mode in `workflows/education.md`. One ordinary question does not
+   change modes; after repeated connected questions, suggest the mode and wait
+   for Lei to accept.
 2. For operational work, the coordinator resolves the required runtime
    configuration and decides whether delegation materially improves the task.
 3. For long-running execution, the coordinator creates canonical entry points
@@ -14,9 +16,7 @@
    background PR maintainer for its remaining lifetime. It registers created
    PRs and selects a reviewer from a different model foundation. A plan-level
    review may run earlier for a risky design under the same independence rule.
-7. Operational roles may recommend educator or retrospective work. Only the
-   coordinator decides and invokes those paths. For interactive education, the
-   coordinator registers one stable educator session, presents its first turn,
-   routes Lei to the direct thread, and waits for explicit completion.
+7. Operational roles may recommend education mode or retrospective work. Only
+   the coordinator suggests or enters education mode and invokes retrospector.
 8. The coordinator reconciles results, applies permitted canonical-state
    updates, and reports the outcome to Lei.

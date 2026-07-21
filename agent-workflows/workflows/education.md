@@ -1,27 +1,51 @@
-# Education-only workflow
+# Coordinator education mode
 
-Use this path when Lei asks to learn, understand, discuss, walk through, or be
-quizzed on a topic without asking for implementation or another operational
-change. Education is a first-class goal; it does not require an executor result
-or an operational role's recommendation.
+Education mode is an interactive coordinator lifecycle, not a separate agent.
+Enter it only when Lei explicitly asks to enter education mode, be taught, or be
+quizzed on a sustained topic. A single ordinary question stays in the current
+workflow. After a series of connected questions, the coordinator may suggest
+education mode but must wait for Lei to accept before entering it.
 
-1. The coordinator classifies the request as education-only before resolving
+## Entry
+
+1. Identify the topic and learning objective. Do not resolve unrelated
    execution, review, or PR-maintenance configuration.
-2. Read the current learner profile from the configured learner-state root. If
-   that setting is unresolved, use the portable
-   `$AGENT_HARNESS_HOME/state/learner-profiles/` fallback without delaying the
-   session for unrelated configuration questions.
-3. Do not create an execution folder, `progress.html`, execution-notes files,
-   environment-preparation artifacts, a PR queue, or implementation evidence.
-   Do not invoke `exec-env-prepper`, `executor`, `reviewer`, or `pr-maintainer`.
-4. Register one education session and invoke `educator` directly with the
-   topic, learner context, relevant source material, and desired interaction
-   mode.
-5. Present the educator's initial turn, route Lei to the stable direct thread
-   when supported, and wait under the interactive education-session contract.
-6. At completion, record the session result and apply only approved,
-   evidence-backed learner-state changes. Do not run execution retrospection
-   unless the session itself produced meaningful teaching-process evidence.
-7. If Lei requests implementation during the lesson, pause or complete the
-   education session, return control to the coordinator, and reclassify the new
-   request under the default workflow. The educator never becomes an executor.
+2. Read only the relevant learner profile from the configured learner-state
+   root. If that setting is unresolved, use
+   `$AGENT_HARNESS_HOME/state/learner-profiles/` without delaying the lesson.
+   Outside education mode, do not load learner profiles unless Lei explicitly
+   asks to read or update one.
+3. Use the coordinator's existing fast model policy. Do not require a
+   provider-specific model or fast-service toggle when the mode starts.
+
+## Interactive loop
+
+1. The coordinator teaches Lei directly and follows the global communication
+   and explanation rules. Use the `quiz` skill for explicit quiz requests.
+2. Track demonstrated understanding in the current conversation. Agreement,
+   silence, or receiving an explanation is not evidence of understanding.
+3. By default, create no execution folder, `progress.html`, execution-notes
+   files, environment-preparation artifacts, review work, or PR queue.
+4. When concrete material would improve the lesson, the coordinator may resume
+   a relevant existing child or spawn a new child for a bounded task such as
+   collecting data, running an experiment, inspecting a prior implementation,
+   or producing a visualization script. Children return evidence or artifacts
+   to the coordinator and never take over the teaching conversation.
+5. Supporting work that is small remains artifact-light. Large, remote,
+   hardware-dependent, or multi-session experiments follow the normal
+   execution-preparation rules, including user confirmation and the configured
+   execution folder.
+
+## Exit
+
+1. Exit when Lei explicitly finishes or pauses education mode, or confirms a
+   transition to another workflow. A request for product implementation exits
+   education mode; producing a bounded teaching artifact does not.
+2. Decide whether the conversation contains durable evidence for a learner
+   profile change. When it does, prepare a concise replacement-snapshot proposal
+   under the learning-state contract. When it does not, make no proposal.
+3. Apply the configured learner-profile update policy: `ask` requires Lei's
+   approval, `auto` applies well-supported changes, and `off` discards the
+   proposal. A missing policy means `ask`.
+4. Discard temporary learning observations after exit. Invoke retrospector only
+   when the lesson produced meaningful evidence about the teaching process.

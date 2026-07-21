@@ -4,7 +4,7 @@
   "default_result_word_limit": 800,
   "workflows": {
     "default": "workflows/default.md",
-    "education-only": "workflows/education.md",
+    "education-mode": "workflows/education.md",
     "pr-maintenance": "workflows/pr-maintenance.md",
     "pr-review": "workflows/pr-review.md"
   },
@@ -14,14 +14,14 @@
       "display_name": "Coordinator",
       "kind": "root",
       "human_interface": "default",
-      "description": "Main-session interface to Lei that scopes work, delegates bounded tasks, and synthesizes results.",
+      "description": "Main-session interface to Lei that scopes work, teaches interactively, delegates bounded tasks, and synthesizes results.",
       "prompt": "roles/coordinator.md",
       "model_policy": "fast",
       "reasoning_policy": "medium",
-      "allowed_children": ["exec-env-prepper", "executor", "reviewer", "educator", "pr-maintainer"],
-      "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "educator", "pr-maintainer"],
-      "required_skills": ["retrospector"],
-      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/education-session.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
+      "allowed_children": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
+      "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
+      "required_skills": ["quiz", "retrospector"],
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/learning-state.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     },
     {
       "name": "exec-env-prepper",
@@ -50,20 +50,6 @@
       "allowed_children": [],
       "allowed_message_targets": ["coordinator"],
       "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/review-routing.md", "contracts/review-independence.md", "contracts/education-routing.md", "contracts/output-limits.md"]
-    },
-    {
-      "name": "educator",
-      "display_name": "Educator",
-      "kind": "subagent",
-      "human_interface": "registered-session",
-      "description": "Turns current work into a concise explanation calibrated to Lei's learner profile and returns evidence-backed learning-state proposals.",
-      "prompt": "roles/educator.md",
-      "model_policy": "deep",
-      "reasoning_policy": "high",
-      "allowed_children": [],
-      "allowed_message_targets": ["coordinator"],
-      "required_skills": ["quiz"],
-      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-session.md", "contracts/learning-state.md", "contracts/output-limits.md"]
     },
     {
       "name": "executor",

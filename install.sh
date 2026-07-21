@@ -77,10 +77,18 @@ python3 "$REPO_ROOT/scripts/render-agents.py" \
   --out "$TEMP_ROOT/agents"
 
 if (( CODEX_PRESENT )); then
-  python3 "$REPO_ROOT/scripts/set-codex-agent-limits.py" \
+  CODEX_COORDINATOR_MODEL="$(python3 -c \
+    'import json, sys; print(json.load(open(sys.argv[1]))["models"]["fast"])' \
+    "$REPO_ROOT/agent-workflows/adapters/codex.json")"
+  CODEX_COORDINATOR_EFFORT="$(python3 -c \
+    'import json, sys; print(json.load(open(sys.argv[1]))["reasoning_effort"]["medium"])' \
+    "$REPO_ROOT/agent-workflows/adapters/codex.json")"
+  python3 "$REPO_ROOT/scripts/render-codex-config.py" \
     --input "$CODEX_DIR/config.toml" \
     --output "$TEMP_ROOT/codex-config.toml" \
-    --max-depth 2
+    --max-depth 2 \
+    --model "$CODEX_COORDINATOR_MODEL" \
+    --reasoning-effort "$CODEX_COORDINATOR_EFFORT"
 fi
 
 if [[ -f "$AGENT_HARNESS_HOME/config.json" ]]; then
@@ -107,11 +115,17 @@ record_conflict "$AGENT_HARNESS_HOME/specs"
 for agent_file in "$TEMP_ROOT"/agents/claude/*; do
   record_conflict "$CLAUDE_DIR/agents/lei-harness/$(basename "$agent_file")"
 done
+for agent_file in "$CLAUDE_DIR"/agents/lei-harness/*.md; do
+  [[ -e "$agent_file" ]] && record_conflict "$agent_file"
+done
 if (( CODEX_PRESENT )); then
   record_conflict "$CODEX_DIR/AGENTS.md"
   record_conflict "$CODEX_DIR/config.toml"
   for agent_file in "$TEMP_ROOT"/agents/codex/*; do
     record_conflict "$CODEX_DIR/agents/$(basename "$agent_file")"
+  done
+  for agent_file in "$CODEX_DIR"/agents/lei-harness-*.toml; do
+    [[ -e "$agent_file" ]] && record_conflict "$agent_file"
   done
 fi
 for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
@@ -227,6 +241,35 @@ place_symlink() {
   fi
 }
 
+# Remove a generated custom-agent file whose role no longer exists. Backups use
+# a non-agent extension so providers stop discovering the retired role.
+remove_stale_agent() {
+  local target="$1"
+  case "$MODE" in
+    backup|update)
+      mv "$target" "$target.bak.$TS"
+      warn "retired generated agent → $target.bak.$TS"
+      [[ "$MODE" == "update" ]] && UPDATED=$((UPDATED + 1))
+      ;;
+    overwrite)
+      rm -f "$target"
+      ok "Removed retired generated agent: $target"
+      ;;
+    skip)
+      warn "Keeping retired generated agent in --skip-existing mode: $target"
+      ;;
+  esac
+}
+
+prune_stale_agents() {
+  local installed_dir="$1" rendered_dir="$2" pattern="$3" target
+  for target in "$installed_dir"/$pattern; do
+    [[ -e "$target" ]] || continue
+    [[ -e "$rendered_dir/$(basename "$target")" ]] && continue
+    remove_stale_agent "$target"
+  done
+}
+
 # --- 1. AGENTS.md + CLAUDE.md symlink ---------------------------------------
 say "Installing ~/AGENTS.md (global instructions)"
 place_file "$REPO_ROOT/home/AGENTS.md" "$HOME/AGENTS.md"
@@ -294,6 +337,8 @@ fi
 
 say "Installing Claude custom agents"
 mkdir -p "$CLAUDE_DIR/agents/lei-harness"
+prune_stale_agents \
+  "$CLAUDE_DIR/agents/lei-harness" "$TEMP_ROOT/agents/claude" '*.md'
 for agent_file in "$TEMP_ROOT"/agents/claude/*; do
   place_file "$agent_file" "$CLAUDE_DIR/agents/lei-harness/$(basename "$agent_file")"
 done
@@ -301,6 +346,8 @@ done
 if (( CODEX_PRESENT )); then
   say "Installing Codex custom agents and max_depth=2"
   mkdir -p "$CODEX_DIR/agents"
+  prune_stale_agents "$CODEX_DIR/agents" "$TEMP_ROOT/agents/codex" \
+    'lei-harness-*.toml'
   for agent_file in "$TEMP_ROOT"/agents/codex/*; do
     place_file "$agent_file" "$CODEX_DIR/agents/$(basename "$agent_file")"
   done
@@ -310,7 +357,9 @@ fi
 # Mutable learner state is initialized once and never managed by place_tree.
 # Migrate the old Claude-only profile directory by copying, without deleting it.
 mkdir -p "$AGENT_HARNESS_HOME/state"
-mkdir -p "$AGENT_HARNESS_HOME/state/education-sessions"
+# Remove the retired session-state directory only when no historical records
+# remain. Mutable records are never deleted by installation.
+rmdir "$AGENT_HARNESS_HOME/state/education-sessions" 2>/dev/null || true
 if [[ ! -e "$AGENT_HARNESS_HOME/state/learner-profiles" ]]; then
   if [[ -d "$CLAUDE_DIR/learner-profiles" ]]; then
     cp -R "$CLAUDE_DIR/learner-profiles" "$AGENT_HARNESS_HOME/state/learner-profiles"

@@ -18,6 +18,10 @@
     "configured": {"type": "boolean"},
     "execution_root": {"type": ["string", "null"]},
     "learner_state_root": {"type": ["string", "null"]},
+    "learner_profile_update_policy": {
+      "type": "string",
+      "enum": ["ask", "auto", "off"]
+    },
     "review_backends": {
       "type": "array",
       "items": {

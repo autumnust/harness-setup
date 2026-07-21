@@ -16,7 +16,7 @@ SPEC.loader.exec_module(render_claude_settings)
 
 
 class RenderClaudeSettingsTests(unittest.TestCase):
-    def test_preserves_host_environment_and_enables_agent_teams(self) -> None:
+    def test_preserves_host_environment_and_removes_retired_agent_teams_flag(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             existing = Path(temp) / "settings.json"
             existing.write_text(
@@ -37,9 +37,7 @@ class RenderClaudeSettingsTests(unittest.TestCase):
             )
 
         self.assertEqual(rendered["env"]["HOST_ONLY"], "preserved")
-        self.assertEqual(
-            rendered["env"]["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"], "1"
-        )
+        self.assertNotIn("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", rendered["env"])
 
 
 if __name__ == "__main__":

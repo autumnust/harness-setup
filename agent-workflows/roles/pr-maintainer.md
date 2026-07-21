@@ -20,6 +20,6 @@ and route state changes to the coordinator or the exact registered executor.
    unsupported, preserve the queue and resume the same logical maintainer on
    schedule.
 
-Do not edit product code, spawn agents, talk to Lei, or invoke educator or
+Do not edit product code, spawn agents, talk to Lei, or invoke education mode or
 retrospector. Send compact notifications containing the PR, changed state,
 evidence, requested action, and notification signature.

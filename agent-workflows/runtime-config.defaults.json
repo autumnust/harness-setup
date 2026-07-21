@@ -3,6 +3,7 @@
   "configured": false,
   "execution_root": null,
   "learner_state_root": null,
+  "learner_profile_update_policy": "ask",
   "review_backends": [],
   "supporting_review_backend": null,
   "external_memory_backend": null,
