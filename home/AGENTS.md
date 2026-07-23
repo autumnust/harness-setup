@@ -402,6 +402,11 @@ so the work stays auditable as it goes:
 - **Keep one publisher.** The coordinator is the only writer of the canonical
   `progress.html`. Environment and execution agents write only assigned raw
   evidence and return proposed dashboard changes to the coordinator.
+- **Style HTML for human reading.** Every coordinator-published HTML artifact
+  follows
+  `$AGENT_HARNESS_HOME/specs/contracts/human-readable-html.md`, including
+  responsive layout, readable typography, status text, descriptive links, and
+  browser verification when tooling is available.
 - **Keep generated dashboards and specs self-contained.** Another developer
   should understand the goal and current state without reading chat history.
   Links can point to PRs, issues, source files, stage evidence, or logs, but the

@@ -225,6 +225,38 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn("Outside education mode, do not load learner profiles", workflow)
         self.assertIn("A missing policy means `ask`", workflow)
 
+    def test_coordinator_owns_human_readable_html_contract(self) -> None:
+        manifest, _adapters = render_agents.validate(self.source)
+        coordinator = self.role(manifest, "coordinator")
+        self.assertIn(
+            "contracts/human-readable-html.md", coordinator["contracts"]
+        )
+
+        contract = (
+            self.source / "contracts/human-readable-html.md"
+        ).read_text()
+        for requirement in (
+            "self-contained",
+            "responsive",
+            "status color with text",
+            "desktop width and one narrow width",
+        ):
+            self.assertIn(requirement, contract)
+
+        template = (
+            self.source / "templates/education-brief.html"
+        ).read_text()
+        for marker in (
+            '<meta name="viewport"',
+            "font-size: 16px",
+            "line-height: 1.6",
+            "@media (max-width: 560px)",
+            "@media print",
+            'class="skip-link"',
+            "overflow-x: auto",
+        ):
+            self.assertIn(marker, template)
+
     def test_other_workflow_semantics_are_not_redefined_in_roles_or_contracts(
         self,
     ) -> None:
