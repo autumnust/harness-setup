@@ -23,7 +23,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 REMOTE_DIR="${REMOTE_DIR:-harness-setup}"
-SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=8)
+SSH_OPTS=(
+  -o BatchMode=yes
+  -o ConnectTimeout=8
+  -o ClearAllForwardings=yes
+)
 
 say()  { printf '\033[1;34m>>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*"; }
