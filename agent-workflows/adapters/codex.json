@@ -1,0 +1,21 @@
+{
+  "models": {
+    "coordinator": "gpt-5.6-terra",
+    "fast": "gpt-5.6-luna",
+    "executor": "gpt-5.6-sol",
+    "capable": "gpt-5.6-terra",
+    "deep": "gpt-5.6-sol"
+  },
+  "reasoning_effort": {
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+    "highest": "max"
+  },
+  "review_bridge": {
+    "backend": "claude-code",
+    "caller": "codex",
+    "model": "opus",
+    "effort": "max"
+  }
+}

@@ -39,7 +39,8 @@
       }
     }
   },
-  "effortLevel": "xhigh",
+  "model": "sonnet",
+  "effortLevel": "medium",
   "skipDangerousModePermissionPrompt": true,
   "agentPushNotifEnabled": true
 }

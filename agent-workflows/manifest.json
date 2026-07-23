@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "max_depth": 2,
+  "default_result_word_limit": 800,
+  "workflows": {
+    "default": "workflows/default.md",
+    "education-mode": "workflows/education.md",
+    "pr-maintenance": "workflows/pr-maintenance.md",
+    "pr-review": "workflows/pr-review.md"
+  },
+  "roles": [
+    {
+      "name": "coordinator",
+      "display_name": "Coordinator",
+      "kind": "root",
+      "human_interface": "default",
+      "description": "Main-session interface to the human user that scopes work, teaches interactively, delegates bounded tasks, and synthesizes results.",
+      "prompt": "roles/coordinator.md",
+      "model_policy": "coordinator",
+      "reasoning_policy": "medium",
+      "allowed_children": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
+      "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
+      "required_skills": ["quiz", "retrospector"],
+      "required_workflows": ["default", "education-mode", "pr-maintenance", "pr-review"],
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/learning-state.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
+    },
+    {
+      "name": "exec-env-prepper",
+      "display_name": "Environment Prepper",
+      "kind": "subagent",
+      "human_interface": "none",
+      "description": "Prepares an observable, feasible execution environment for large or multi-session work before implementation starts.",
+      "prompt": "roles/exec-env-prepper.md",
+      "model_policy": "fast",
+      "reasoning_policy": "low",
+      "allowed_children": [],
+      "allowed_message_targets": ["coordinator"],
+      "required_skills": ["execution-notes"],
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/output-limits.md"]
+    },
+    {
+      "name": "reviewer",
+      "display_name": "Reviewer",
+      "kind": "subagent",
+      "human_interface": "none",
+      "description": "Reviews a proposed approach or PR for problem-level soundness, harness alignment, core correctness, compatibility, and missing tests.",
+      "prompt": "roles/reviewer.md",
+      "model_policy": "executor",
+      "reasoning_policy": "highest",
+      "sandbox_policy": "read-only",
+      "allowed_children": [],
+      "allowed_message_targets": ["coordinator"],
+      "required_skills": ["cross-provider-review"],
+      "required_workflows": ["pr-review"],
+      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/review-routing.md", "contracts/review-independence.md", "contracts/education-routing.md", "contracts/output-limits.md"]
+    },
+    {
+      "name": "executor",
+      "display_name": "Executor",
+      "kind": "subagent",
+      "human_interface": "none",
+      "description": "Implements and validates a bounded change with explicit file ownership and evidence.",
+      "prompt": "roles/executor.md",
+      "model_policy": "executor",
+      "reasoning_policy": "high",
+      "allowed_children": [],
+      "allowed_message_targets": ["coordinator"],
+      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/output-limits.md"]
+    },
+    {
+      "name": "pr-maintainer",
+      "display_name": "PR Maintainer",
+      "kind": "subagent",
+      "human_interface": "none",
+      "description": "Owns a private PR queue and reports observed state changes through its permitted message targets.",
+      "prompt": "roles/pr-maintainer.md",
+      "model_policy": "capable",
+      "reasoning_policy": "high",
+      "allowed_children": [],
+      "allowed_message_targets": ["coordinator", "executor"],
+      "required_workflows": ["pr-maintenance"],
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
+    }
+  ]
+}

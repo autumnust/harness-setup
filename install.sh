@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Installs Lei's global coding-agent harness onto this machine
-# (tool-agnostic ~/AGENTS.md + Claude Code integration: settings, skills,
-# plugins). Skills also install into ~/.codex/skills/ when Codex CLI is
-# already present on the machine (Codex uses the same SKILL.md convention).
+# Installs the global coding-agent harness onto this machine
+# (tool-agnostic ~/AGENTS.md + native Claude/Codex integration: settings,
+# skills, custom agents, and workflow specifications).
 #
 # Usage:
 #   ./install.sh                  # Refuses to clobber any existing global
@@ -22,16 +21,18 @@
 set -euo pipefail
 
 MODE="prompt"
+PRESERVE_RELEASE=1
 for arg in "$@"; do
   case "$arg" in
     --backup)         MODE="backup" ;;
     --overwrite)      MODE="overwrite" ;;
     --skip-existing)  MODE="skip" ;;
     --update)         MODE="update" ;;
+    --no-release)     PRESERVE_RELEASE=0 ;;
     -h|--help)
       cat <<'HELP'
-Installs Lei's global coding-agent harness onto this machine
-(tool-agnostic ~/AGENTS.md + Claude Code integration: settings, skills, plugins).
+Installs the global coding-agent harness onto this machine
+(tool-agnostic core + native Claude Code and Codex integration).
 
 Usage:
   ./install.sh                  Refuses to clobber any existing global
@@ -58,12 +59,53 @@ done
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CODEX_DIR="${CODEX_CONFIG_DIR:-$HOME/.codex}"
-# Codex CLI creates ~/.codex on first run. Its presence is our signal that
-# this machine also uses Codex, so skills get materialized there too —
-# no separate opt-in flag.
+AGENT_HARNESS_HOME="${AGENT_HARNESS_HOME:-$HOME/.agent-harness}"
+PORTABLE_SKILLS_DIR="${AGENT_SKILLS_DIR:-$HOME/.agents/skills}"
+# A config directory or installed binary signals that this machine uses Codex;
+# no separate opt-in flag is required, including before Codex's first launch.
 CODEX_PRESENT=0
-[[ -d "$CODEX_DIR" ]] && CODEX_PRESENT=1
+if [[ -d "$CODEX_DIR" ]] || command -v codex >/dev/null 2>&1; then
+  CODEX_PRESENT=1
+fi
 TS="$(date +%Y%m%dT%H%M%S)"
+TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/harness-install.XXXXXX")"
+cleanup() { rm -rf "$TEMP_ROOT"; }
+trap cleanup EXIT
+
+RELEASE_STAGED="$TEMP_ROOT/release"
+RELEASE_ID=""
+if (( PRESERVE_RELEASE )); then
+  RELEASE_ID="$(python3 "$REPO_ROOT/scripts/harness-release.py" \
+    --home "$AGENT_HARNESS_HOME" prepare \
+    --source "$REPO_ROOT" \
+    --destination "$RELEASE_STAGED")"
+fi
+
+# Validate the provider-neutral topology and render provider-native agent files
+# before conflict detection, so install remains all-or-nothing on invalid specs.
+python3 "$REPO_ROOT/scripts/render-agents.py" \
+  --source "$REPO_ROOT/agent-workflows" \
+  --out "$TEMP_ROOT/agents"
+
+if (( CODEX_PRESENT )); then
+  CODEX_COORDINATOR_MODEL="$(python3 -c \
+    'import json, sys; print(json.load(open(sys.argv[1]))["models"]["coordinator"])' \
+    "$REPO_ROOT/agent-workflows/adapters/codex.json")"
+  CODEX_COORDINATOR_EFFORT="$(python3 -c \
+    'import json, sys; print(json.load(open(sys.argv[1]))["reasoning_effort"]["medium"])' \
+    "$REPO_ROOT/agent-workflows/adapters/codex.json")"
+  python3 "$REPO_ROOT/scripts/render-codex-config.py" \
+    --input "$CODEX_DIR/config.toml" \
+    --output "$TEMP_ROOT/codex-config.toml" \
+    --max-depth 2 \
+    --model "$CODEX_COORDINATOR_MODEL" \
+    --reasoning-effort "$CODEX_COORDINATOR_EFFORT"
+fi
+
+if [[ -f "$AGENT_HARNESS_HOME/config.json" ]]; then
+  python3 "$REPO_ROOT/scripts/render-agents.py" \
+    --validate-runtime-config "$AGENT_HARNESS_HOME/config.json"
+fi
 
 say()  { printf '\033[1;34m>>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*"; }
@@ -80,13 +122,40 @@ record_conflict() {
 record_conflict "$HOME/AGENTS.md"
 record_conflict "$CLAUDE_DIR/CLAUDE.md"
 record_conflict "$CLAUDE_DIR/settings.json"
+record_conflict "$AGENT_HARNESS_HOME/specs"
+record_conflict "$AGENT_HARNESS_HOME/bin/harness-release"
+for agent_file in "$TEMP_ROOT"/agents/claude/*; do
+  record_conflict "$CLAUDE_DIR/agents/agent-harness/$(basename "$agent_file")"
+done
+for agent_file in "$CLAUDE_DIR"/agents/agent-harness/*.md; do
+  [[ -e "$agent_file" ]] && record_conflict "$agent_file"
+done
+for agent_file in "$CLAUDE_DIR"/agents/lei-harness/*.md; do
+  [[ -e "$agent_file" ]] && record_conflict "$agent_file"
+done
+if (( CODEX_PRESENT )); then
+  record_conflict "$CODEX_DIR/AGENTS.md"
+  record_conflict "$CODEX_DIR/config.toml"
+  for agent_file in "$TEMP_ROOT"/agents/codex/*; do
+    record_conflict "$CODEX_DIR/agents/$(basename "$agent_file")"
+  done
+  for agent_file in "$CODEX_DIR"/agents/agent-harness-*.toml; do
+    [[ -e "$agent_file" ]] && record_conflict "$agent_file"
+  done
+  for agent_file in "$CODEX_DIR"/agents/lei-harness-*.toml; do
+    [[ -e "$agent_file" ]] && record_conflict "$agent_file"
+  done
+fi
 for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
   record_conflict "$CLAUDE_DIR/skills/$(basename "$skill_dir")"
-  (( CODEX_PRESENT )) && record_conflict "$CODEX_DIR/skills/$(basename "$skill_dir")"
+  if (( CODEX_PRESENT )); then
+    record_conflict "$PORTABLE_SKILLS_DIR/$(basename "$skill_dir")"
+    record_conflict "$CODEX_DIR/skills/$(basename "$skill_dir")"
+  fi
 done
 
 if (( ${#CONFLICTS[@]} > 0 )) && [[ "$MODE" == "prompt" ]]; then
-  warn "Existing global Claude Code setup detected on this device:"
+  warn "Existing global agent setup detected on this device:"
   for c in "${CONFLICTS[@]}"; do printf '    %s\n' "$c" >&2; done
   cat >&2 <<EOF
 
@@ -173,6 +242,52 @@ place_tree() {
   if handle_existing "$dst"; then cp -R "$src" "$dst"; ok "Installed skill: $(basename "$dst")"; fi
 }
 
+# place_symlink TARGET LINK — install one stable link honoring MODE.
+place_symlink() {
+  local target="$1" link="$2"
+  if [[ "$MODE" == "update" ]]; then
+    if [[ -L "$link" && "$(readlink "$link")" == "$target" ]]; then
+      ok "in sync: $link (symlink)"; UNCHANGED=$((UNCHANGED + 1)); return 0
+    fi
+    if [[ -e "$link" || -L "$link" ]]; then
+      mv "$link" "$link.bak.${TS}"; warn "backed up prior → $link.bak.${TS}"
+    fi
+    ln -s "$target" "$link"; ok "synced $link (symlink)"; UPDATED=$((UPDATED + 1)); return 0
+  fi
+  if handle_existing "$link"; then
+    ln -s "$target" "$link"; ok "Symlink in place: $link → $target"
+  fi
+}
+
+# Remove a generated custom-agent file whose role no longer exists. Backups use
+# a non-agent extension so providers stop discovering the retired role.
+remove_stale_agent() {
+  local target="$1"
+  case "$MODE" in
+    backup|update)
+      mv "$target" "$target.bak.$TS"
+      warn "retired generated agent → $target.bak.$TS"
+      [[ "$MODE" == "update" ]] && UPDATED=$((UPDATED + 1))
+      ;;
+    overwrite)
+      rm -f "$target"
+      ok "Removed retired generated agent: $target"
+      ;;
+    skip)
+      warn "Keeping retired generated agent in --skip-existing mode: $target"
+      ;;
+  esac
+}
+
+prune_stale_agents() {
+  local installed_dir="$1" rendered_dir="$2" pattern="$3" target
+  for target in "$installed_dir"/$pattern; do
+    [[ -e "$target" ]] || continue
+    [[ -e "$rendered_dir/$(basename "$target")" ]] && continue
+    remove_stale_agent "$target"
+  done
+}
+
 # --- 1. AGENTS.md + CLAUDE.md symlink ---------------------------------------
 say "Installing ~/AGENTS.md (global instructions)"
 place_file "$REPO_ROOT/home/AGENTS.md" "$HOME/AGENTS.md"
@@ -181,18 +296,12 @@ say "Ensuring $CLAUDE_DIR exists"
 mkdir -p "$CLAUDE_DIR"
 
 say "Linking $CLAUDE_DIR/CLAUDE.md → $HOME/AGENTS.md"
-if [[ "$MODE" == "update" ]]; then
-  # The link target is content-stable; only (re)create it if it's wrong/missing.
-  if [[ -L "$CLAUDE_DIR/CLAUDE.md" && "$(readlink "$CLAUDE_DIR/CLAUDE.md")" == "$HOME/AGENTS.md" ]]; then
-    ok "in sync: $CLAUDE_DIR/CLAUDE.md (symlink)"
-  else
-    [[ -e "$CLAUDE_DIR/CLAUDE.md" || -L "$CLAUDE_DIR/CLAUDE.md" ]] && mv "$CLAUDE_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md.bak.${TS}"
-    ln -s "$HOME/AGENTS.md" "$CLAUDE_DIR/CLAUDE.md"
-    ok "Symlink (re)created"
-  fi
-elif handle_existing "$CLAUDE_DIR/CLAUDE.md"; then
-  ln -s "$HOME/AGENTS.md" "$CLAUDE_DIR/CLAUDE.md"
-  ok "Symlink in place"
+place_symlink "$HOME/AGENTS.md" "$CLAUDE_DIR/CLAUDE.md"
+
+if (( CODEX_PRESENT )); then
+  say "Ensuring $CODEX_DIR exists and linking its global instructions"
+  mkdir -p "$CODEX_DIR"
+  place_symlink "$HOME/AGENTS.md" "$CODEX_DIR/AGENTS.md"
 fi
 
 # --- 2. settings.json (with node path patched for this device) --------------
@@ -223,54 +332,105 @@ say "Pinning statusline node binary to: $NODE_BIN"
 # The render is ADDITIVE for plugins: it patches the node path and forces the
 # repo's baseline keys, but unions enabledPlugins / extraKnownMarketplaces with
 # whatever this machine already has, so host-specific plugins are never dropped.
-RENDERED_SETTINGS="$(mktemp)"
-trap 'rm -f "$RENDERED_SETTINGS"' EXIT
-python3 - "$REPO_ROOT/claude/settings.json" "$RENDERED_SETTINGS" "$NODE_BIN" "$CLAUDE_DIR/settings.json" <<'PY'
-import json, sys, re, os
-src, dst, node_bin, existing = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
-with open(src) as f:
-    cfg = json.load(f)
-sl = cfg.get("statusLine", {})
-cmd = sl.get("command", "")
-# Replace any "/.../node" literal inside the embedded `exec "<path>" ...` call.
-cmd = re.sub(r'exec\s+"[^"]*/node"', f'exec "{node_bin}"', cmd)
-sl["command"] = cmd
-cfg["statusLine"] = sl
-# Additive merge: keep plugins/marketplaces this machine already enabled.
-# Repo values win on key conflicts; host-only entries are preserved.
-if os.path.exists(existing):
-    try:
-        with open(existing) as f:
-            cur = json.load(f)
-    except (ValueError, OSError):
-        cur = {}
-    for field in ("enabledPlugins", "extraKnownMarketplaces"):
-        merged = dict(cur.get(field, {}))   # host entries first (stable order)
-        merged.update(cfg.get(field, {}))   # repo entries win on conflict
-        if merged:
-            cfg[field] = merged
-with open(dst, "w") as f:
-    json.dump(cfg, f, indent=2)
-PY
+RENDERED_SETTINGS="$TEMP_ROOT/claude-settings.json"
+python3 "$REPO_ROOT/scripts/render-claude-settings.py" \
+  --source "$REPO_ROOT/claude/settings.json" \
+  --output "$RENDERED_SETTINGS" \
+  --node-bin "$NODE_BIN" \
+  --existing "$CLAUDE_DIR/settings.json"
 place_file "$RENDERED_SETTINGS" "$CLAUDE_DIR/settings.json"
 
-# --- 3. Global skills (agent-skills/<name> → every tool this machine has) ---
+# --- 3. Portable workflow specs + native custom agents ---------------------
+say "Installing portable workflow specifications"
+mkdir -p "$AGENT_HARNESS_HOME"
+place_tree "$REPO_ROOT/agent-workflows" "$AGENT_HARNESS_HOME/specs"
+mkdir -p "$AGENT_HARNESS_HOME/bin"
+place_file \
+  "$REPO_ROOT/scripts/harness-release.py" \
+  "$AGENT_HARNESS_HOME/bin/harness-release"
+
+# Runtime configuration is mutable, confirmed by the coordinator, and never
+# managed by place_file after initialization.
+if [[ ! -e "$AGENT_HARNESS_HOME/config.json" ]]; then
+  cp "$REPO_ROOT/agent-workflows/runtime-config.defaults.json" \
+    "$AGENT_HARNESS_HOME/config.json"
+  ok "Initialized coordinator runtime configuration"
+fi
+
+say "Installing Claude custom agents"
+for agent_file in "$CLAUDE_DIR"/agents/lei-harness/*.md; do
+  [[ -e "$agent_file" ]] && remove_stale_agent "$agent_file"
+done
+mkdir -p "$CLAUDE_DIR/agents/agent-harness"
+prune_stale_agents \
+  "$CLAUDE_DIR/agents/agent-harness" "$TEMP_ROOT/agents/claude" '*.md'
+for agent_file in "$TEMP_ROOT"/agents/claude/*; do
+  place_file "$agent_file" "$CLAUDE_DIR/agents/agent-harness/$(basename "$agent_file")"
+done
+
+if (( CODEX_PRESENT )); then
+  say "Installing Codex custom agents and max_depth=2"
+  mkdir -p "$CODEX_DIR/agents"
+  for agent_file in "$CODEX_DIR"/agents/lei-harness-*.toml; do
+    [[ -e "$agent_file" ]] && remove_stale_agent "$agent_file"
+  done
+  prune_stale_agents "$CODEX_DIR/agents" "$TEMP_ROOT/agents/codex" \
+    'agent-harness-*.toml'
+  for agent_file in "$TEMP_ROOT"/agents/codex/*; do
+    place_file "$agent_file" "$CODEX_DIR/agents/$(basename "$agent_file")"
+  done
+  place_file "$TEMP_ROOT/codex-config.toml" "$CODEX_DIR/config.toml"
+fi
+
+# Mutable learner state is initialized once and never managed by place_tree.
+# Migrate the old Claude-only profile directory by copying, without deleting it.
+mkdir -p "$AGENT_HARNESS_HOME/state"
+# Remove the retired session-state directory only when no historical records
+# remain. Mutable records are never deleted by installation.
+rmdir "$AGENT_HARNESS_HOME/state/education-sessions" 2>/dev/null || true
+if [[ ! -e "$AGENT_HARNESS_HOME/state/learner-profiles" ]]; then
+  if [[ -d "$CLAUDE_DIR/learner-profiles" ]]; then
+    cp -R "$CLAUDE_DIR/learner-profiles" "$AGENT_HARNESS_HOME/state/learner-profiles"
+    ok "Copied legacy learner profiles into portable state (originals retained)"
+  else
+    mkdir -p "$AGENT_HARNESS_HOME/state/learner-profiles"
+  fi
+fi
+
+# --- 4. Global skills (agent-skills/<name> → every tool this machine has) ---
 # agent-skills/ is the tool-agnostic source of truth. Claude Code and Codex
 # CLI both use the same on-disk convention (a directory per skill holding
 # SKILL.md), so each skill is installed as-is into every target present.
 say "Installing global skills into $CLAUDE_DIR/skills/"
 mkdir -p "$CLAUDE_DIR/skills"
 if (( CODEX_PRESENT )); then
-  say "Codex CLI detected ($CODEX_DIR) — also installing into $CODEX_DIR/skills/"
+  say "Codex CLI detected — installing into $PORTABLE_SKILLS_DIR/"
+  say "Also retaining the legacy-compatible $CODEX_DIR/skills/ copy"
+  mkdir -p "$PORTABLE_SKILLS_DIR"
   mkdir -p "$CODEX_DIR/skills"
 fi
 for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
   name="$(basename "$skill_dir")"
   place_tree "$skill_dir" "$CLAUDE_DIR/skills/$name"
-  (( CODEX_PRESENT )) && place_tree "$skill_dir" "$CODEX_DIR/skills/$name"
+  if (( CODEX_PRESENT )); then
+    place_tree "$skill_dir" "$PORTABLE_SKILLS_DIR/$name"
+    place_tree "$skill_dir" "$CODEX_DIR/skills/$name"
+  fi
 done
 
-# --- 4. Clone kumo-skills-catalog (referenced by AGENTS.md) -----------------
+# Register only after every managed target has been installed successfully.
+if (( PRESERVE_RELEASE )); then
+  REGISTERED_RELEASE="$(python3 "$REPO_ROOT/scripts/harness-release.py" \
+    --home "$AGENT_HARNESS_HOME" register \
+    --staged "$RELEASE_STAGED")"
+  [[ "$REGISTERED_RELEASE" == "$RELEASE_ID" ]] || {
+    echo "error: staged and registered release IDs differ" >&2
+    exit 1
+  }
+  ok "Active harness release: $REGISTERED_RELEASE"
+fi
+
+# --- 5. Clone kumo-skills-catalog (referenced by AGENTS.md) -----------------
 CATALOG_DIR="$HOME/Documents/kumo-skills-catalog"
 if [[ -d "$CATALOG_DIR/.git" ]]; then
   ok "kumo-skills-catalog already present at $CATALOG_DIR — skipping clone"
@@ -287,48 +447,56 @@ else
   fi
 fi
 
-# --- 5. Final report --------------------------------------------------------
+# --- 6. Final report --------------------------------------------------------
 if [[ "$MODE" == "update" ]]; then
-  cat <<EOF
-
-$(ok "Harness sync complete: $UPDATED updated, $UNCHANGED already in sync.")
-
-EOF
+  printf '\n'
+  ok "Harness sync complete: $UPDATED updated, $UNCHANGED already in sync."
+  printf '\n'
   if (( UPDATED > 0 )); then
-    cat <<EOF
-Prior contents of any changed file were saved as <path>.bak.${TS}.
-Restart Claude Code so it re-reads the updated global config.
-EOF
+    printf '%s\n' \
+      "Prior contents of any changed file were saved as <path>.bak.${TS}." \
+      "Restart active Claude Code or Codex sessions so they re-read updated config."
   fi
   exit 0
 fi
 
-cat <<EOF
-
-$(ok "Global Claude Code harness installed.")
-
-Next steps:
-  1. Launch Claude Code in any directory. On first launch it will:
-       - Read $CLAUDE_DIR/settings.json
-       - See the four enabled plugins (claude-hud, understand-anything,
-         frontend-design, crit) and their marketplaces
-       - Install them automatically into $CLAUDE_DIR/plugins/cache/
-  2. If a plugin does not auto-install, run inside Claude Code:
-         /plugin
-       and enable from the four entries listed in settings.json.
-  3. Verify the statusline renders. If not, check node path in
-       $CLAUDE_DIR/settings.json  (statusLine.command embeds it literally).
-
-Files this run created or replaced (with .bak.${TS} for any prior contents):
-  $HOME/AGENTS.md
-  $CLAUDE_DIR/CLAUDE.md       (symlink → $HOME/AGENTS.md)
-  $CLAUDE_DIR/settings.json
-  $CLAUDE_DIR/skills/*
-$(if (( CODEX_PRESENT )); then echo "  $CODEX_DIR/skills/*         (Codex CLI detected on this machine)"; fi)
-
-Not migrated (intentionally — these are per-project or per-session):
-  $CLAUDE_DIR/projects/   $CLAUDE_DIR/sessions/   $CLAUDE_DIR/tasks/
-  $CLAUDE_DIR/plugins/cache/   $CLAUDE_DIR/history.jsonl
-  Any project-local .claude/ directories (bench-ec2, gpu-ec2, ship, learn, …)
-
-EOF
+printf '\n'
+ok "Global coding-agent harness installed."
+printf '\n%s\n' \
+  "Next steps:" \
+  "  1. Launch Claude Code in any directory. On first launch it will:" \
+  "       - Read $CLAUDE_DIR/settings.json" \
+  "       - See the enabled plugins and their marketplaces, including the" \
+  "         OpenAI Codex plugin used by the Claude Reviewer" \
+  "       - Install them automatically into $CLAUDE_DIR/plugins/cache/" \
+  "  2. If a plugin does not auto-install, run inside Claude Code:" \
+  "         /plugin" \
+  "       and enable it from the entries listed in settings.json." \
+  "  3. Verify the statusline renders. If not, check node path in" \
+  "       $CLAUDE_DIR/settings.json  (statusLine.command embeds it literally)." \
+  "" \
+  "Files this run created or replaced (with .bak.${TS} for any prior contents):" \
+  "  $HOME/AGENTS.md" \
+  "  $CLAUDE_DIR/CLAUDE.md       (symlink -> $HOME/AGENTS.md)" \
+  "  $CLAUDE_DIR/settings.json" \
+  "  $CLAUDE_DIR/skills/*" \
+  "  $CLAUDE_DIR/agents/agent-harness/*" \
+  "  $AGENT_HARNESS_HOME/specs" \
+  "  $AGENT_HARNESS_HOME/releases/* and current" \
+  "  $AGENT_HARNESS_HOME/bin/harness-release" \
+  "  $AGENT_HARNESS_HOME/config.json  (initialized once, never overwritten)" \
+  "  $AGENT_HARNESS_HOME/state/learner-profiles  (initialized, never overwritten)"
+if (( CODEX_PRESENT )); then
+  printf '%s\n' \
+    "  $CODEX_DIR/AGENTS.md        (symlink -> $HOME/AGENTS.md)" \
+    "  $CODEX_DIR/config.toml      (agents.max_depth = 2)" \
+    "  $CODEX_DIR/agents/agent-harness-*.toml" \
+    "  $PORTABLE_SKILLS_DIR/*" \
+    "  $CODEX_DIR/skills/*         (legacy-compatible copy)"
+fi
+printf '\n%s\n' \
+  "Not migrated (intentionally - these are per-project or per-session):" \
+  "  $CLAUDE_DIR/projects/   $CLAUDE_DIR/sessions/   $CLAUDE_DIR/tasks/" \
+  "  $CLAUDE_DIR/plugins/cache/   $CLAUDE_DIR/history.jsonl" \
+  "  Any project-local .claude/ directories (bench-ec2, gpu-ec2, ship, learn, ...)" \
+  ""

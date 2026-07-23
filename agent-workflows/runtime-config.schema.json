@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "configured",
+    "execution_root",
+    "learner_state_root",
+    "review_backends",
+    "supporting_review_backend",
+    "external_memory_backend",
+    "review_independence",
+    "pr_maintenance"
+  ],
+  "properties": {
+    "version": {"const": 1},
+    "configured": {"type": "boolean"},
+    "execution_root": {"type": ["string", "null"]},
+    "learner_state_root": {"type": ["string", "null"]},
+    "learner_profile_update_policy": {
+      "type": "string",
+      "enum": ["ask", "auto", "off"]
+    },
+    "review_backends": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "foundation"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "foundation": {"type": "string", "minLength": 1}
+        }
+      },
+      "uniqueItems": true
+    },
+    "supporting_review_backend": {"type": ["string", "null"]},
+    "external_memory_backend": {"type": ["string", "null"]},
+    "review_independence": {"const": "different-foundation"},
+    "pr_maintenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["poll_interval_seconds"],
+      "properties": {
+        "poll_interval_seconds": {"type": "integer", "minimum": 60}
+      }
+    }
+  }
+}

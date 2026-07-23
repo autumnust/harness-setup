@@ -1,0 +1,21 @@
+{
+  "models": {
+    "coordinator": "sonnet",
+    "fast": "sonnet",
+    "executor": "sonnet",
+    "capable": "sonnet",
+    "deep": "opus"
+  },
+  "effort": {
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+    "highest": "max"
+  },
+  "review_bridge": {
+    "backend": "codex-plugin-native-review",
+    "caller": "claude",
+    "model": "gpt-5.6-sol",
+    "effort": "provider-default"
+  }
+}

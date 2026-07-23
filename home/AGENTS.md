@@ -7,6 +7,7 @@
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
 - [Banned words](#banned-words)
+- [Agent Workflow](#agent-workflow)
 - [Long-Running Work Structure](#long-running-work-structure)
 - [Learning Calibration Mode](#learning-calibration-mode-quiz)
 
@@ -311,6 +312,57 @@ everything. It is not limited by the Communication-style scope note above.
   refactor along". "the seam between the two modules" → "the interface
   between the two modules".
 
+# Agent Workflow
+
+For work that materially benefits from isolated context, parallel reading,
+specialized review, or a different model policy, the main session acts as the
+**coordinator**. It remains the sole default interface to the human user, owns
+decisions and canonical mutable state, and delegates bounded assignments using
+the installed workflow specification at `$AGENT_HARNESS_HOME/specs/`,
+defaulting `AGENT_HARNESS_HOME` to `~/.agent-harness`. Read runtime
+configuration only as directed by the selected workflow.
+
+- Keep small or tightly coupled work in the main session; do not create an
+  agent team merely because roles are available.
+- Follow `$AGENT_HARNESS_HOME/specs/workflows/default.md` for goal
+  classification and operational sequencing.
+- Follow `$AGENT_HARNESS_HOME/specs/workflows/education.md` as the sole source
+  for education entry, interactive teaching, supporting work, learner-profile
+  access, and exit behavior.
+- Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-maintenance.md` as the sole
+  source for Maintainer lifecycle, polling, notification routing, and stop
+  behavior.
+- Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-review.md` as the sole source
+  for review ordering, reconciliation, result classification, and coordinator
+  routing.
+- Only the coordinator spawns agents. Current operational children are
+  depth-one leaves. Keep the installed maximum depth of two as a defensive
+  provider ceiling, not as permission for children to spawn.
+- Give every child a complete context packet: goal, user intent, scope,
+  constraints, current state, artifact links, open questions, and return
+  contract. Conversation inheritance is an optimization, not a substitute.
+- Parallel writers must own different files. Serialize work that touches the
+  same files or depends on an earlier result.
+- Use each role's provider-adapter model policy. Under Codex, Executor uses
+  `gpt-5.6-sol` at high effort; Reviewer uses the same model at the highest
+  configured effort.
+- Reviewer is the only role permitted to invoke the cross-provider review
+  route. Under Codex, it invokes Claude Code with the current `opus` alias and
+  `max` effort. Under Claude Code, it invokes the installed OpenAI Codex
+  plugin's native review runtime. The coordinator and other children never
+  invoke the cross-provider route as a substitute.
+- `retrospector` is a coordinator-invoked skill, not another agent. It proposes
+  changes and never applies them.
+- Child results are summaries with evidence links. Keep verbose exploration,
+  logs, and scans out of the main conversation.
+- Only the coordinator writes runtime configuration, learner state,
+  communication conventions, `progress.html`, or accepted retrospective
+  changes. Children return evidence-backed state proposals and never interact
+  with the human user directly.
+
+The provider-neutral Markdown and topology are authoritative. Native Claude
+and Codex agent files are generated during harness installation.
+
 # Long-Running Work Structure
 
 This applies only to **large, multi-step** executions — a multi-part feature, a
@@ -347,6 +399,9 @@ so the work stays auditable as it goes:
 - **Use one progress entry point.** Prefer one visual dashboard as the status
   entry point; avoid multiple competing trackers that answer the same "where are
   we?" question.
+- **Keep one publisher.** The coordinator is the only writer of the canonical
+  `progress.html`. Environment and execution agents write only assigned raw
+  evidence and return proposed dashboard changes to the coordinator.
 - **Keep generated dashboards and specs self-contained.** Another developer
   should understand the goal and current state without reading chat history.
   Links can point to PRs, issues, source files, stage evidence, or logs, but the
@@ -371,6 +426,6 @@ recite definitions), infer where I stand (solid fundamentals / partial concepts 
 gaps / likely misconceptions), and calibrate later explanations to that.
 
 In Claude Code or Codex CLI (both support Agent Skills), this is the `quiz`
-skill (`/quiz`) — that's the full protocol and where the learner profile gets
-persisted. In a tool without skill support, follow the outline above
-directly.
+skill (`/quiz`). It returns an evidence-backed learner-profile proposal; the
+coordinator is the only agent that persists it at the configured location. In
+a tool without skill support, follow the outline above directly.
