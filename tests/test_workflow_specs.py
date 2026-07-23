@@ -49,6 +49,15 @@ class WorkflowSpecTests(unittest.TestCase):
             self.role(manifest, "executor")["reasoning_policy"], "high"
         )
         self.assertEqual(
+            self.role(manifest, "reviewer")["model_policy"],
+            self.role(manifest, "executor")["model_policy"],
+        )
+        self.assertEqual(
+            self.role(manifest, "reviewer")["reasoning_policy"], "highest"
+        )
+        self.assertEqual(adapters["codex"]["reasoning_effort"]["highest"], "max")
+        self.assertEqual(adapters["claude"]["effort"]["highest"], "max")
+        self.assertEqual(
             adapters["codex"]["review_bridge"],
             {
                 "backend": "claude-code",
@@ -107,6 +116,26 @@ class WorkflowSpecTests(unittest.TestCase):
         with self.assertRaisesRegex(
             render_agents.SpecError,
             "sole cross-provider review invoker",
+        ):
+            render_agents.validate(self.source)
+
+    def test_reviewer_must_match_executor_model_at_highest_effort(self) -> None:
+        manifest = self.manifest()
+        reviewer = self.role(manifest, "reviewer")
+        reviewer["model_policy"] = "fast"
+        self.write_manifest(manifest)
+        with self.assertRaisesRegex(
+            render_agents.SpecError,
+            "same model policy",
+        ):
+            render_agents.validate(self.source)
+
+        reviewer["model_policy"] = self.role(manifest, "executor")["model_policy"]
+        reviewer["reasoning_policy"] = "high"
+        self.write_manifest(manifest)
+        with self.assertRaisesRegex(
+            render_agents.SpecError,
+            "highest reasoning policy",
         ):
             render_agents.validate(self.source)
 
@@ -210,14 +239,20 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertFalse((output / "claude/educator.md").exists())
 
         reviewer = (output / "codex/agent-harness-reviewer.toml").read_text()
-        self.assertIn('model = "gpt-5.6-luna"', reviewer)
-        self.assertIn('model_reasoning_effort = "low"', reviewer)
+        self.assertIn('model = "gpt-5.6-sol"', reviewer)
+        self.assertIn('model_reasoning_effort = "max"', reviewer)
         self.assertIn("External backend: claude-code", reviewer)
         self.assertIn("External model: opus", reviewer)
         self.assertIn("External effort: max", reviewer)
         self.assertIn("--caller codex", reviewer)
+        self.assertIn("wait for its complete opinion", reviewer)
+        self.assertIn("Suggested action items", reviewer)
+        self.assertIn("Disagreements", reviewer)
+        self.assertIn("ask the human user to assess", reviewer)
 
         claude_reviewer = (output / "claude/reviewer.md").read_text()
+        self.assertIn("model: sonnet", claude_reviewer)
+        self.assertIn("effort: max", claude_reviewer)
         self.assertIn("  - cross-provider-review", claude_reviewer)
         self.assertIn("External backend: codex-plugin-native-review", claude_reviewer)
         self.assertIn("External model: gpt-5.6-sol", claude_reviewer)

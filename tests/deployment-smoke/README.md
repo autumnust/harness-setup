@@ -41,9 +41,11 @@ The offline test verifies:
 - Both root sessions receive the provider adapter's fast coordinator model and
   medium reasoning policy.
 - Codex Executor renders with `gpt-5.6-sol` and high reasoning effort.
-- Reviewer is a low-latency router whose dry-run command selects Claude
-  `opus` with `max` effort from Codex, and the installed OpenAI Codex plugin's
-  native review runtime from Claude Code.
+- Reviewer renders with Executor's model at `max` effort. Its dry-run command
+  selects Claude `opus` with `max` effort from Codex, and the installed OpenAI
+  Codex plugin's native review runtime from Claude Code. Its installed prompt
+  requires waiting, adversarial comparison, agreed suggested actions, and
+  human assessment of disagreements.
 - The installer preserves host-only Claude plugin settings while rendering.
 - The installer preserves host-only Claude environment values while removing
   the retired agent-team flag previously used for direct education.

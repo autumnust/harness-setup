@@ -108,8 +108,13 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     reviewer = tomllib.loads(
         (codex_dir / "agent-harness-reviewer.toml").read_text()
     )
-    assert reviewer["model_reasoning_effort"] == "low"
+    assert reviewer["model"] == executor["model"] == "gpt-5.6-sol"
+    assert reviewer["model_reasoning_effort"] == "max"
     assert "only role permitted" in reviewer["developer_instructions"]
+    assert "wait for its complete opinion" in reviewer["developer_instructions"]
+    assert "Suggested action items" in reviewer["developer_instructions"]
+    assert "Disagreements" in reviewer["developer_instructions"]
+    assert "ask the human user to assess" in reviewer["developer_instructions"]
 
     legacy_claude_dir = home / ".claude/agents/lei-harness"
     assert not (codex_dir / "lei-harness-educator.toml").exists()

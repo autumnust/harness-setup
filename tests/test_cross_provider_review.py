@@ -43,6 +43,7 @@ class CrossProviderReviewTests(unittest.TestCase):
             command, provenance = invoke_review.build_command(args("codex", repo))
 
         self.assertEqual(command[0:2], ["claude", "-p"])
+        self.assertIn("independent read-only code-review opinion", command[2])
         self.assertEqual(command[command.index("--model") + 1], "opus")
         self.assertEqual(command[command.index("--effort") + 1], "max")
         self.assertEqual(command[command.index("--permission-mode") + 1], "plan")

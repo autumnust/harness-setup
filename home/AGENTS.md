@@ -350,7 +350,8 @@ selected workflow.
   the human user and wait for confirmation before implementation. Use
   `executor` for bounded implementation at the provider adapter's high effort.
   Under Codex, Executor uses `gpt-5.6-sol`. Use `reviewer` for problem-level and
-  core-code review.
+  core-code review. Reviewer uses the same provider model as Executor at the
+  highest configured effort.
 - The coordinator uses its fast model policy for education mode; entering the
   mode does not require a provider-specific model switch or fast-service
   toggle. It may resume a relevant existing child or spawn a new child for
@@ -364,12 +365,16 @@ selected workflow.
   Register every PR with its responsible executor identity. The maintainer
   polls the configured queue and may message only the coordinator or that exact
   executor.
-- Reviewer is the only role permitted to invoke the cross-provider primary
-  review route. Under Codex, it invokes Claude Code with the current `opus`
-  alias and `max` effort. Under Claude Code, it invokes the installed OpenAI
-  Codex plugin's native review runtime. The coordinator and other children
-  never invoke those routes as a substitute. Supporting scanners remain
-  optional and do not replace the primary review.
+- Reviewer is the only role permitted to invoke the cross-provider review
+  route. Under Codex, it invokes Claude Code with the current `opus` alias and
+  `max` effort. Under Claude Code, it invokes the installed OpenAI Codex
+  plugin's native review runtime. Reviewer waits for that opinion, then tries
+  to disprove each finding and performs its own full review. Findings accepted
+  by both judgments become **Suggested action items** for the coordinator to
+  assign to an executor. Findings accepted by only one become
+  **Disagreements**; the coordinator asks the human user to assess them before
+  assigning work. The coordinator and other children never invoke the
+  cross-provider route as a substitute. Supporting scanners remain optional.
 - `retrospector` is a coordinator-invoked skill, not another agent. It proposes
   changes and never applies them.
 - Child results are summaries with evidence links. Keep verbose exploration,

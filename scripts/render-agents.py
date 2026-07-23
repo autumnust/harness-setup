@@ -184,6 +184,12 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise SpecError("coordinator must use the fast model policy")
     if roles["reviewer"].get("required_skills") != ["cross-provider-review"]:
         raise SpecError("reviewer must be the sole cross-provider review invoker")
+    if roles["reviewer"].get("model_policy") != roles["executor"].get(
+        "model_policy"
+    ):
+        raise SpecError("reviewer and executor must use the same model policy")
+    if roles["reviewer"].get("reasoning_policy") != "highest":
+        raise SpecError("reviewer must use the highest reasoning policy")
     for name, role in roles.items():
         if name != "coordinator" and role["human_interface"] != "none":
             raise SpecError(f"{name}: direct human interaction is not permitted")
@@ -311,8 +317,11 @@ def role_instructions(
             f"{bridge['backend']}. External model: {bridge['model']}. "
             f"External effort: {bridge['effort']}.\n\n"
             "Load the installed `cross-provider-review` skill and invoke its "
-            f"helper with `--caller {bridge['caller']}` exactly once. You are "
-            "the only role permitted to invoke this review route. If it fails, "
+            f"helper with `--caller {bridge['caller']}` exactly once, then wait "
+            "for its complete opinion. You are the only role permitted to "
+            "invoke this review route. After it returns, challenge its findings "
+            "with your own full review and reconcile agreement and disagreement "
+            "according to the installed review contract. If invocation fails, "
             "return a blocked result; do not ask the coordinator or another "
             "child to invoke it."
         )

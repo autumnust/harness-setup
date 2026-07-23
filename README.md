@@ -94,17 +94,20 @@ the main context. Nesting stops after two subagent levels.
 coordinator
 |-- exec-env-prepper (leaf)
 |-- executor (leaf, high effort; Codex maps this role to gpt-5.6-sol)
-|-- reviewer (leaf, sole caller of the cross-provider review route)
+|-- reviewer (leaf, Executor model at maximum effort; sole cross-provider caller)
 `-- pr-maintainer (leaf, coordinator-lifetime PR queue monitor)
 ```
 
 Only the coordinator spawns agents, writes canonical state, or invokes the
 `retrospector` skill. The PR maintainer may message the exact executor identity
-registered for a PR, with coordinator fallback. In Codex, Reviewer invokes
-Claude Code with the current `opus` alias at `max` effort. In Claude Code,
-Reviewer invokes the installed OpenAI Codex plugin's native review runtime.
-No other harness role may invoke these primary review routes. Optional
-supporting scanners do not replace the cross-provider review.
+registered for a PR, with coordinator fallback. Reviewer uses the same model as
+Executor at `max` effort. It first waits for the other foundation's opinion:
+in Codex, Claude Code with the current `opus` alias at `max` effort; in Claude
+Code, the installed OpenAI Codex plugin's native review runtime. Reviewer then
+challenges that opinion and performs its own full review. Agreed findings
+become suggested actions for an executor. Disagreements go through the
+coordinator to the human user before implementation. No other harness role may
+invoke the cross-provider route.
 The provider limit remains depth two as a defensive ceiling even though the
 current topology uses only depth-one leaves. See
 [`agent-workflows/`](./agent-workflows/) for the complete contracts and routing

@@ -8,8 +8,8 @@ allowed-tools: Bash(python3 *)
 # Cross-provider review
 
 Only the harness Reviewer role may use this skill. It invokes exactly one
-read-only primary review from the model foundation different from the active
-coordinator and executor.
+read-only opinion from the model foundation different from the active
+coordinator and executor, and waits for that opinion to finish.
 
 ## Claude Code caller
 
@@ -34,4 +34,5 @@ python3 "${AGENT_SKILLS_DIR:-$HOME/.agents/skills}/cross-provider-review/scripts
 
 Use `--scope working-tree` when reviewing local changes without a base branch.
 Return the external review output with its provider, model, effort, and command
-status. Do not perform a second primary review, edit files, or apply findings.
+status. Treat it as evidence for the Reviewer's later adversarial judgment. Do
+not edit files or apply findings.

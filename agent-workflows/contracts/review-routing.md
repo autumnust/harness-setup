@@ -1,17 +1,29 @@
 # Review routing contract
 
-The configured cross-provider backend performs the material primary review.
-The Reviewer is the sole owner of invoking it and returning its findings
-faithfully. The Reviewer may verify evidence and remove exact duplicates, but
-its low-latency router model must not replace the external review judgment.
+The configured cross-provider backend returns the first review opinion. The
+Reviewer is the sole owner of invoking it, waiting for completion, and then
+challenging it with a full review from the executor's model foundation at the
+highest configured effort.
 
-## Primary cross-provider review
+## Both judgments cover
 
 - problem framing and whether the approach is sound;
 - public API, protocol, schema, and compatibility changes;
 - new user-visible behavior;
 - architecture, security, concurrency, and data correctness;
 - changed core logic, regressions, and missing behavioral tests.
+
+## Reconciliation
+
+- Agreement means both judgments accept the same finding as valid and
+  actionable. Return it under **Suggested action items** with severity,
+  evidence, and expected correction. The coordinator selects an executor.
+- Disagreement means only one judgment accepts a finding, including a finding
+  discovered only by Reviewer. Return it under **Disagreements** with both
+  positions, their evidence, and the decision required. The coordinator asks
+  the human user to assess it before implementation.
+- Absence from one opinion is not automatic disagreement until Reviewer checks
+  the claim explicitly.
 
 ## Optional supporting-scanner work
 
@@ -20,6 +32,6 @@ its low-latency router model must not replace the external review judgment.
 - generated-file or dependency noise;
 - broad low-risk scans that the reviewer subsequently verifies.
 
-The primary backend comes from the provider adapter. A supporting scanner may
-come from runtime configuration. Supporting scans never satisfy the
-cross-provider primary-review requirement.
+The external backend comes from the provider adapter. A supporting scanner may
+come from runtime configuration. Its findings follow the same reconciliation
+rule and never replace either full judgment.

@@ -15,7 +15,7 @@ The configuration resolves:
   `ask` when absent from an older installation;
 - declared review-provider availability, each with a stable id and model
   foundation, plus an optional supporting scanner. The provider adapter fixes
-  the primary cross-provider route; this list does not let the coordinator
+  the cross-provider opinion route; this list does not let the coordinator
   select a different route;
 - the PR-maintenance polling interval.
 

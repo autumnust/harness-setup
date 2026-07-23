@@ -57,11 +57,12 @@ def build_command(args: argparse.Namespace) -> tuple[list[str], dict[str, str]]:
     repo = str(Path(args.repo).resolve())
     if args.caller == "codex":
         prompt = (
-            "Perform a read-only code review. Start at the problem and approach "
-            "level, then inspect correctness, regressions, compatibility, and "
+            "Provide an independent read-only code-review opinion. Start at the "
+            "problem and approach level, then inspect correctness, regressions, "
+            "compatibility, and "
             f"missing tests. {review_target(args.scope, args.base)} "
             "Return findings first, ordered by severity, with file references. "
-            "Do not edit files."
+            "State when evidence is uncertain. Do not edit files."
         )
         command = [
             os.environ.get("HARNESS_REVIEW_CLAUDE_BIN", "claude"),

@@ -2,14 +2,14 @@
   "models": {
     "fast": "sonnet",
     "executor": "sonnet",
-    "review-router": "sonnet",
     "capable": "sonnet",
     "deep": "opus"
   },
   "effort": {
     "low": "low",
     "medium": "medium",
-    "high": "high"
+    "high": "high",
+    "highest": "max"
   },
   "review_bridge": {
     "backend": "codex-plugin-native-review",
