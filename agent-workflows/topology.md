@@ -29,16 +29,16 @@ flowchart TB
 
     subgraph Review["Reviewer reconciliation"]
         Opinion(["Cross-provider opinion<br/>invoked only by Reviewer"])
-        Agreement["Agreement<br/>Suggested action items"]
-        Disagreement["Disagreement<br/>Both positions and evidence"]
+        Agreement["Agreed result"]
+        Contested["Contested result<br/>Both positions and evidence"]
     end
 
     Reviewer -->|invoke exactly once and wait| Opinion
     Opinion -->|independent findings| Reviewer
     Reviewer -->|both judgments accept| Agreement
-    Reviewer -->|only one judgment accepts| Disagreement
+    Reviewer -->|only one judgment accepts| Contested
     Agreement -->|return| Coordinator
-    Disagreement -->|return for human assessment| Coordinator
+    Contested -->|return for human assessment| Coordinator
     Coordinator -->|assign accepted work| Executor
     Coordinator -->|ask for assessment| Human
 

@@ -55,6 +55,9 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertEqual(
             self.role(manifest, "reviewer")["reasoning_policy"], "highest"
         )
+        self.assertEqual(
+            self.role(manifest, "reviewer")["required_workflows"], ["pr-review"]
+        )
         self.assertEqual(adapters["codex"]["reasoning_effort"]["highest"], "max")
         self.assertEqual(adapters["claude"]["effort"]["highest"], "max")
         self.assertEqual(
@@ -138,6 +141,31 @@ class WorkflowSpecTests(unittest.TestCase):
             "highest reasoning policy",
         ):
             render_agents.validate(self.source)
+
+    def test_reviewer_must_include_pr_review_workflow(self) -> None:
+        manifest = self.manifest()
+        self.role(manifest, "reviewer")["required_workflows"] = []
+        self.write_manifest(manifest)
+        with self.assertRaisesRegex(
+            render_agents.SpecError,
+            "include the PR-review workflow",
+        ):
+            render_agents.validate(self.source)
+
+    def test_reviewer_result_categories_have_one_authoritative_definition(
+        self,
+    ) -> None:
+        workflow = (self.source / "workflows/pr-review.md").read_text()
+        self.assertEqual(workflow.count("**Suggested action item:**"), 1)
+        self.assertEqual(workflow.count("**Disagreement:**"), 1)
+        for relative in (
+            "roles/reviewer.md",
+            "contracts/review-routing.md",
+            "contracts/result.md",
+        ):
+            text = (self.source / relative).read_text()
+            self.assertNotIn("**Suggested action item:**", text)
+            self.assertNotIn("**Disagreement:**", text)
 
     def test_requires_education_mode_workflow(self) -> None:
         manifest = self.manifest()
@@ -245,10 +273,11 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn("External model: opus", reviewer)
         self.assertIn("External effort: max", reviewer)
         self.assertIn("--caller codex", reviewer)
-        self.assertIn("wait for its complete opinion", reviewer)
-        self.assertIn("Suggested action items", reviewer)
-        self.assertIn("Disagreements", reviewer)
-        self.assertIn("ask the human user to assess", reviewer)
+        self.assertIn("# PR review workflow", reviewer)
+        self.assertIn("waits for its opinion", reviewer)
+        self.assertEqual(reviewer.count("**Suggested action item:**"), 1)
+        self.assertEqual(reviewer.count("**Disagreement:**"), 1)
+        self.assertIn("asks the human user", reviewer)
 
         claude_reviewer = (output / "claude/reviewer.md").read_text()
         self.assertIn("model: sonnet", claude_reviewer)
@@ -257,6 +286,7 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn("External backend: codex-plugin-native-review", claude_reviewer)
         self.assertIn("External model: gpt-5.6-sol", claude_reviewer)
         self.assertIn("--caller claude", claude_reviewer)
+        self.assertIn("# PR review workflow", claude_reviewer)
 
 
 if __name__ == "__main__":

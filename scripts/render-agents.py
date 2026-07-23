@@ -167,6 +167,19 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
             raise SpecError(f"{name}: contracts must be a string list")
         for contract in contracts:
             source_file(source, contract)
+        role_workflows = role.get("required_workflows", [])
+        if not isinstance(role_workflows, list) or any(
+            not isinstance(workflow, str) for workflow in role_workflows
+        ):
+            raise SpecError(f"{name}: required_workflows must be a string list")
+        if len(role_workflows) != len(set(role_workflows)):
+            raise SpecError(f"{name}: required_workflows contains duplicates")
+        unknown_workflows = sorted(set(role_workflows) - workflows.keys())
+        if unknown_workflows:
+            raise SpecError(
+                f"{name}: unknown required workflows: "
+                f"{', '.join(unknown_workflows)}"
+            )
         skills = role.get("required_skills", [])
         if not isinstance(skills, list) or any(not isinstance(s, str) for s in skills):
             raise SpecError(f"{name}: required_skills must be a string list")
@@ -184,6 +197,8 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise SpecError("coordinator must use the fast model policy")
     if roles["reviewer"].get("required_skills") != ["cross-provider-review"]:
         raise SpecError("reviewer must be the sole cross-provider review invoker")
+    if roles["reviewer"].get("required_workflows") != ["pr-review"]:
+        raise SpecError("reviewer must include the PR-review workflow")
     if roles["reviewer"].get("model_policy") != roles["executor"].get(
         "model_policy"
     ):
@@ -296,6 +311,11 @@ def role_instructions(
     role: dict[str, Any],
 ) -> str:
     sections = [source_file(source, role["prompt"]).read_text(encoding="utf-8").strip()]
+    for workflow in role.get("required_workflows", []):
+        relative_path = manifest["workflows"][workflow]
+        sections.append(
+            source_file(source, relative_path).read_text(encoding="utf-8").strip()
+        )
     for contract in role.get("contracts", []):
         sections.append(source_file(source, contract).read_text(encoding="utf-8").strip())
     children = role.get("allowed_children", [])
@@ -317,13 +337,11 @@ def role_instructions(
             f"{bridge['backend']}. External model: {bridge['model']}. "
             f"External effort: {bridge['effort']}.\n\n"
             "Load the installed `cross-provider-review` skill and invoke its "
-            f"helper with `--caller {bridge['caller']}` exactly once, then wait "
-            "for its complete opinion. You are the only role permitted to "
-            "invoke this review route. After it returns, challenge its findings "
-            "with your own full review and reconcile agreement and disagreement "
-            "according to the installed review contract. If invocation fails, "
-            "return a blocked result; do not ask the coordinator or another "
-            "child to invoke it."
+            f"helper with `--caller {bridge['caller']}` when directed by the "
+            "installed PR-review workflow. You are the only role permitted to "
+            "invoke this review route. Follow that workflow for ordering and "
+            "result routing. If invocation fails, return a blocked result; do "
+            "not ask the coordinator or another child to invoke it."
         )
     return "\n\n---\n\n".join(sections) + "\n"
 

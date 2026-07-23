@@ -33,6 +33,10 @@ second editable copy of every prompt.
 
 - Put provider-neutral behavior in Markdown and provider-specific fields in an
   adapter.
+- Declare a role's `required_workflows` in the manifest when generated native
+  agent instructions must include a workflow. Keep ordered multi-role process
+  and result-category definitions in that workflow rather than repeating them
+  in the role prompt.
 - `manifest.json` is this harness's validated schema, not a provider or industry
   standard. Keep detailed responsibility in roles and cross-role sequence in
   workflows rather than duplicating prose in the manifest.

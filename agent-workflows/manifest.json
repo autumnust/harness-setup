@@ -50,6 +50,7 @@
       "allowed_children": [],
       "allowed_message_targets": ["coordinator"],
       "required_skills": ["cross-provider-review"],
+      "required_workflows": ["pr-review"],
       "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/review-routing.md", "contracts/review-independence.md", "contracts/education-routing.md", "contracts/output-limits.md"]
     },
     {

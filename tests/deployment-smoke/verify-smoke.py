@@ -111,10 +111,13 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     assert reviewer["model"] == executor["model"] == "gpt-5.6-sol"
     assert reviewer["model_reasoning_effort"] == "max"
     assert "only role permitted" in reviewer["developer_instructions"]
-    assert "wait for its complete opinion" in reviewer["developer_instructions"]
-    assert "Suggested action items" in reviewer["developer_instructions"]
-    assert "Disagreements" in reviewer["developer_instructions"]
-    assert "ask the human user to assess" in reviewer["developer_instructions"]
+    assert "# PR review workflow" in reviewer["developer_instructions"]
+    assert "waits for its opinion" in reviewer["developer_instructions"]
+    assert (
+        reviewer["developer_instructions"].count("**Suggested action item:**") == 1
+    )
+    assert reviewer["developer_instructions"].count("**Disagreement:**") == 1
+    assert "asks the human user" in reviewer["developer_instructions"]
 
     legacy_claude_dir = home / ".claude/agents/lei-harness"
     assert not (codex_dir / "lei-harness-educator.toml").exists()

@@ -17,9 +17,8 @@
    background PR maintainer for its remaining lifetime. It registers created
    PRs and starts Reviewer. Reviewer alone invokes the adapter's cross-provider
    opinion, waits for it, and then challenges it with a full review. The
-   coordinator assigns agreed suggested actions to an executor and asks the
-   human user to assess disagreements. A plan-level review may run earlier for
-   a risky design under the same two-judgment rule.
+   coordinator follows the PR-review workflow's result routing. A plan-level
+   review may run earlier for a risky design under the same two-judgment rule.
 7. Operational roles may recommend education mode or retrospective work. Only
    the coordinator suggests or enters education mode and invokes retrospector.
 8. The coordinator reconciles results, applies permitted canonical-state

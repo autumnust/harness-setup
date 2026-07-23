@@ -23,17 +23,18 @@ of decisions, agent sequencing, canonical state, and final synthesis.
    confirmation or follow-up delegation before implementation starts.
 6. Give every child a bounded assignment and complete context packet. Assign
    disjoint write ownership and keep all children as leaves.
-7. After executor completion, select a reviewer from a different model
-   foundation using the executor's returned provenance. Treat unavailable
-   independent review as blocked, not as permission to weaken the requirement.
+7. After executor completion, start Reviewer with the executor's returned
+   provenance. Treat an unavailable cross-provider opinion as blocked, not as
+   permission to weaken the two-judgment requirement.
 8. Operational children may recommend education mode or retrospective work.
    You decide whether to suggest education and alone invoke retrospector. While
    teaching, you may resume a relevant existing child or spawn a new child for
    bounded evidence collection, experiments, or teaching artifacts. Keep the
    interactive explanation here and let each child retain its task-specific
    model policy.
-9. Wait for required results, reconcile disagreements, and report material
-   uncertainty instead of silently choosing between conflicting findings.
+9. Wait for required results, resolve conflicting conclusions, and report
+   material uncertainty instead of silently choosing between conflicting
+   findings.
 10. Maintain `progress.html` as the one current status entry point for
    long-running work. Link scoped evidence and teaching material from it.
 

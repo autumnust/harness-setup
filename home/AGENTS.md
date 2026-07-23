@@ -368,13 +368,11 @@ selected workflow.
 - Reviewer is the only role permitted to invoke the cross-provider review
   route. Under Codex, it invokes Claude Code with the current `opus` alias and
   `max` effort. Under Claude Code, it invokes the installed OpenAI Codex
-  plugin's native review runtime. Reviewer waits for that opinion, then tries
-  to disprove each finding and performs its own full review. Findings accepted
-  by both judgments become **Suggested action items** for the coordinator to
-  assign to an executor. Findings accepted by only one become
-  **Disagreements**; the coordinator asks the human user to assess them before
-  assigning work. The coordinator and other children never invoke the
-  cross-provider route as a substitute. Supporting scanners remain optional.
+  plugin's native review runtime. Reviewer follows
+  `$AGENT_HARNESS_HOME/specs/workflows/pr-review.md` for ordering,
+  reconciliation, and result routing. The coordinator and other children never
+  invoke the cross-provider route as a substitute. Supporting scanners remain
+  optional.
 - `retrospector` is a coordinator-invoked skill, not another agent. It proposes
   changes and never applies them.
 - Child results are summaries with evidence links. Keep verbose exploration,

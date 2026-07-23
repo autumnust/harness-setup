@@ -111,10 +111,10 @@ flowchart TB
 
     Reviewer -->|invoke and wait| Opinion(["Cross-provider opinion"])
     Opinion -->|findings and evidence| Reviewer
-    Reviewer -->|agreed: suggested actions| Coordinator
-    Reviewer -->|disagreed: both positions| Coordinator
+    Reviewer -->|agreed result| Coordinator
+    Reviewer -->|contested result| Coordinator
     Coordinator -->|assign agreed actions| Executor
-    Coordinator -->|request disagreement assessment| Human
+    Coordinator -->|request human assessment| Human
 
     Coordinator -.->|invoke| Retrospector(["Retrospector skill"])
 ```
@@ -125,10 +125,10 @@ registered for a PR, with coordinator fallback. Reviewer uses the same model as
 Executor at `max` effort. It first waits for the other foundation's opinion:
 in Codex, Claude Code with the current `opus` alias at `max` effort; in Claude
 Code, the installed OpenAI Codex plugin's native review runtime. Reviewer then
-challenges that opinion and performs its own full review. Agreed findings
-become suggested actions for an executor. Disagreements go through the
-coordinator to the human user before implementation. No other harness role may
-invoke the cross-provider route.
+challenges that opinion and performs its own full review. The
+[PR-review workflow](./agent-workflows/workflows/pr-review.md) is the single
+source for result classification and coordinator routing. No other harness
+role may invoke the cross-provider route.
 The provider limit remains depth two as a defensive ceiling even though the
 current topology uses only depth-one leaves. See
 [`agent-workflows/`](./agent-workflows/) for the complete contracts and routing
