@@ -89,7 +89,7 @@ python3 "$REPO_ROOT/scripts/render-agents.py" \
 
 if (( CODEX_PRESENT )); then
   CODEX_COORDINATOR_MODEL="$(python3 -c \
-    'import json, sys; print(json.load(open(sys.argv[1]))["models"]["fast"])' \
+    'import json, sys; print(json.load(open(sys.argv[1]))["models"]["coordinator"])' \
     "$REPO_ROOT/agent-workflows/adapters/codex.json")"
   CODEX_COORDINATOR_EFFORT="$(python3 -c \
     'import json, sys; print(json.load(open(sys.argv[1]))["reasoning_effort"]["medium"])' \

@@ -16,7 +16,7 @@
       "human_interface": "default",
       "description": "Main-session interface to the human user that scopes work, teaches interactively, delegates bounded tasks, and synthesizes results.",
       "prompt": "roles/coordinator.md",
-      "model_policy": "fast",
+      "model_policy": "coordinator",
       "reasoning_policy": "medium",
       "allowed_children": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
       "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],

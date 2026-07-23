@@ -19,7 +19,7 @@ transition; a mechanical repair alone does not warrant a suggestion.
    `$AGENT_HARNESS_HOME/state/learner-profiles/` without delaying the lesson.
    Outside education mode, do not load learner profiles unless the human user
    explicitly asks to read or update one.
-3. Use the coordinator's existing fast model policy. Do not require a
+3. Use the coordinator's existing model policy. Do not require a
    provider-specific model or fast-service toggle when the mode starts.
 
 ## Interactive loop

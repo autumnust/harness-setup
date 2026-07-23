@@ -44,6 +44,10 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertEqual(manifest["max_depth"], 2)
         self.assertEqual(adapters["claude"]["models"]["deep"], "opus")
         self.assertEqual(adapters["codex"]["models"]["deep"], "gpt-5.6-sol")
+        self.assertEqual(adapters["claude"]["models"]["coordinator"], "sonnet")
+        self.assertEqual(
+            adapters["codex"]["models"]["coordinator"], "gpt-5.6-terra"
+        )
         self.assertEqual(adapters["codex"]["models"]["executor"], "gpt-5.6-sol")
         self.assertEqual(
             self.role(manifest, "executor")["reasoning_policy"], "high"
@@ -87,7 +91,9 @@ class WorkflowSpecTests(unittest.TestCase):
             },
         )
         claude_settings = json.loads((REPO_ROOT / "claude/settings.json").read_text())
-        self.assertEqual(claude_settings["model"], adapters["claude"]["models"]["fast"])
+        self.assertEqual(
+            claude_settings["model"], adapters["claude"]["models"]["coordinator"]
+        )
         self.assertEqual(
             claude_settings["effortLevel"], adapters["claude"]["effort"]["medium"]
         )
@@ -100,7 +106,7 @@ class WorkflowSpecTests(unittest.TestCase):
         }
         self.assertEqual(interfaces["coordinator"], "default")
         self.assertEqual(
-            self.role(manifest, "coordinator")["model_policy"], "fast"
+            self.role(manifest, "coordinator")["model_policy"], "coordinator"
         )
         self.assertNotIn("educator", interfaces)
         self.assertTrue(
@@ -213,7 +219,7 @@ class WorkflowSpecTests(unittest.TestCase):
             normalized,
         )
         self.assertIn("Coordinator teaches the human user directly", workflow)
-        self.assertIn("existing fast model policy", workflow)
+        self.assertIn("existing model policy", workflow)
         self.assertIn("existing child or spawn a new child", workflow)
         self.assertIn("By default, create no execution folder", workflow)
         self.assertIn("Outside education mode, do not load learner profiles", workflow)

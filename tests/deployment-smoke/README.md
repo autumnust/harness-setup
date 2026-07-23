@@ -38,8 +38,8 @@ The offline test verifies:
 - Seatbelt permits writes only below a uniquely created temporary root.
 - Offline mode denies network access and unsets provider API keys.
 - The installer preserves an existing Codex setting while adding max depth 2.
-- Both root sessions receive the provider adapter's fast coordinator model and
-  medium reasoning policy.
+- The Codex root session receives Terra, the Claude Code root session receives
+  Sonnet, and both use the medium reasoning policy.
 - Codex Executor renders with `gpt-5.6-sol` and high reasoning effort.
 - Reviewer renders with Executor's model at `max` effort. Its dry-run command
   selects Claude `opus` with `max` effort from Codex, and the installed OpenAI
@@ -56,7 +56,7 @@ The offline test verifies:
 - No Educator custom agent renders for either provider, and an update retires
   previously generated Educator files from provider discovery.
 - The installed education workflow keeps teaching in Coordinator, requires
-  explicit entry, uses the coordinator fast model policy, and allows bounded
+  explicit entry, uses the coordinator model policy, and allows bounded
   supporting delegation.
 - Learner profiles are loaded only in education mode and considered for update
   only on exit. The default update policy is `ask`.

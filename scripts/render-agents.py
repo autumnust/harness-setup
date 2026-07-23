@@ -193,8 +193,8 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise SpecError("coordinator must be the only root role")
     if roles["coordinator"]["human_interface"] != "default":
         raise SpecError("coordinator must remain the default human interface")
-    if roles["coordinator"].get("model_policy") != "fast":
-        raise SpecError("coordinator must use the fast model policy")
+    if roles["coordinator"].get("model_policy") != "coordinator":
+        raise SpecError("coordinator must use the coordinator model policy")
     if roles["reviewer"].get("required_skills") != ["cross-provider-review"]:
         raise SpecError("reviewer must be the sole cross-provider review invoker")
     expected_role_workflows = {

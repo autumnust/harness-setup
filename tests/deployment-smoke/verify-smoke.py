@@ -52,12 +52,20 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     assert claude_settings["enabledPlugins"]["smoke-only@example"] is False
     assert claude_settings["env"]["SMOKE_HOST_ONLY"] == "preserved"
     assert "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" not in claude_settings["env"]
-    assert claude_settings["model"] == claude_adapter["models"]["fast"]
+    assert (
+        claude_settings["model"]
+        == claude_adapter["models"]["coordinator"]
+        == "sonnet"
+    )
     assert claude_settings["effortLevel"] == claude_adapter["effort"]["medium"]
 
     config = tomllib.loads((home / ".codex/config.toml").read_text())
     assert config["smoke_sentinel"] == "preserved"
-    assert config["model"] == codex_adapter["models"]["fast"]
+    assert (
+        config["model"]
+        == codex_adapter["models"]["coordinator"]
+        == "gpt-5.6-terra"
+    )
     assert config["model_reasoning_effort"] == codex_adapter["reasoning_effort"]["medium"]
     assert config["agents"]["max_depth"] == manifest["max_depth"] == 2
 

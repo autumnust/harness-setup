@@ -1,5 +1,6 @@
 {
   "models": {
+    "coordinator": "gpt-5.6-terra",
     "fast": "gpt-5.6-luna",
     "executor": "gpt-5.6-sol",
     "capable": "gpt-5.6-terra",

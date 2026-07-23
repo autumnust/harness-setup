@@ -92,7 +92,7 @@ def verify(provider: str, home: Path, markers_path: Path, response_path: Path) -
     assert candidate["max_depth"] == 2
     assert candidate["education_is_coordinator_mode"] is True
     assert candidate["education_requires_explicit_entry"] is True
-    assert candidate["education_uses_coordinator_fast_model"] is True
+    assert candidate["education_uses_coordinator_model"] is True
     assert candidate["education_can_delegate_supporting_work"] is True
     assert candidate["education_defaults_to_no_execution_artifacts"] is True
     assert candidate["learner_profile_is_education_scoped"] is True
