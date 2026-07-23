@@ -22,7 +22,7 @@
       "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
       "required_skills": ["quiz", "retrospector"],
       "required_workflows": ["default", "education-mode", "pr-maintenance", "pr-review"],
-      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/learning-state.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
+      "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/human-readable-html.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/learning-state.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     },
     {
       "name": "exec-env-prepper",
