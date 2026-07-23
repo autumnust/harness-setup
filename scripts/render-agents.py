@@ -182,9 +182,16 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise SpecError("coordinator must remain the default human interface")
     if roles["coordinator"].get("model_policy") != "fast":
         raise SpecError("coordinator must use the fast model policy")
+    if roles["reviewer"].get("required_skills") != ["cross-provider-review"]:
+        raise SpecError("reviewer must be the sole cross-provider review invoker")
     for name, role in roles.items():
         if name != "coordinator" and role["human_interface"] != "none":
             raise SpecError(f"{name}: direct human interaction is not permitted")
+        if (
+            name != "reviewer"
+            and "cross-provider-review" in role.get("required_skills", [])
+        ):
+            raise SpecError("reviewer must be the sole cross-provider review invoker")
 
     for name, role in roles.items():
         children = role.get("allowed_children", [])
@@ -256,6 +263,21 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
                 raise SpecError(
                     f"{provider}: no {reasoning_field} mapping for policy {reasoning_policy!r}"
                 )
+        review_bridge = adapter.get("review_bridge")
+        if not isinstance(review_bridge, dict) or set(review_bridge) != {
+            "backend",
+            "caller",
+            "model",
+            "effort",
+        }:
+            raise SpecError(f"{provider}: review_bridge has an invalid shape")
+        if review_bridge["caller"] != provider:
+            raise SpecError(f"{provider}: review_bridge caller must be {provider}")
+        for field in ("backend", "model", "effort"):
+            if not isinstance(review_bridge[field], str) or not review_bridge[field]:
+                raise SpecError(
+                    f"{provider}: review_bridge {field} must be a non-empty string"
+                )
         adapters[provider] = adapter
 
     return manifest, adapters
@@ -281,6 +303,19 @@ def role_instructions(
         f"{child_text}. Do not spawn any other role. Permitted direct message "
         f"targets: {target_text}. Do not message any other role."
     )
+    if role["name"] == "reviewer":
+        bridge = adapter["review_bridge"]
+        sections.append(
+            "# Installed cross-provider review route\n\n"
+            f"Caller provider: {bridge['caller']}. External backend: "
+            f"{bridge['backend']}. External model: {bridge['model']}. "
+            f"External effort: {bridge['effort']}.\n\n"
+            "Load the installed `cross-provider-review` skill and invoke its "
+            f"helper with `--caller {bridge['caller']}` exactly once. You are "
+            "the only role permitted to invoke this review route. If it fails, "
+            "return a blocked result; do not ask the coordinator or another "
+            "child to invoke it."
+        )
     return "\n\n---\n\n".join(sections) + "\n"
 
 
@@ -355,7 +390,7 @@ def render(source: Path, out: Path, manifest: dict[str, Any], adapters: dict[str
         (out / "claude" / f"{role['name']}.md").write_text(
             render_claude(source, manifest, adapters["claude"], role), encoding="utf-8"
         )
-        (out / "codex" / f"lei-harness-{role['name']}.toml").write_text(
+        (out / "codex" / f"agent-harness-{role['name']}.toml").write_text(
             render_codex(source, manifest, adapters["codex"], role), encoding="utf-8"
         )
         count += 1

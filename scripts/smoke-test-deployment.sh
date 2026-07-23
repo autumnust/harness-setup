@@ -155,12 +155,29 @@ run_inside_sandbox() {
     > "$AGENT_HARNESS_HOME/config.json"
   printf '%s\n' '# Smoke learner profile' 'must survive update' \
     > "$AGENT_HARNESS_HOME/state/learner-profiles/smoke.md"
+  mkdir -p "$CLAUDE_CONFIG_DIR/agents/lei-harness" "$CODEX_HOME/agents"
   printf '%s\n' 'retired educator fixture' \
     > "$CLAUDE_CONFIG_DIR/agents/lei-harness/educator.md"
   printf '%s\n' 'name = "educator"' \
     > "$CODEX_HOME/agents/lei-harness-educator.toml"
   "$REPO_ROOT/install.sh" --update > "$root/stale-update.log"
   "$REPO_ROOT/install.sh" --update > "$root/update.log"
+
+  mkdir -p "$root/fake-codex-plugin/scripts"
+  printf '%s\n' '// smoke plugin runtime' \
+    > "$root/fake-codex-plugin/scripts/codex-companion.mjs"
+  python3 \
+    "$AGENT_SKILLS_DIR/cross-provider-review/scripts/invoke_review.py" \
+    --caller codex --scope branch --base main --repo "$root/workspace" \
+    --dry-run > "$root/codex-review-route.json"
+  HARNESS_CODEX_PLUGIN_ROOT="$root/fake-codex-plugin" python3 \
+    "$AGENT_SKILLS_DIR/cross-provider-review/scripts/invoke_review.py" \
+    --caller claude --scope branch --base main --repo "$root/workspace" \
+    --dry-run > "$root/claude-review-route.json"
+
+  active_release="$("$AGENT_HARNESS_HOME/bin/harness-release" current)"
+  "$AGENT_HARNESS_HOME/bin/harness-release" rollback "$active_release" \
+    > "$root/rollback.log"
 
   python3 "$REPO_ROOT/tests/deployment-smoke/verify-smoke.py" install \
     --repo "$REPO_ROOT" \

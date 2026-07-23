@@ -19,7 +19,7 @@ items. It messages the coordinator for scope or user decisions, cross-PR
 problems, terminal state, or an unavailable executor; a failed direct message
 must fall back to the coordinator.
 
-The maintainer never spawns an agent, edits product code, or talks to Lei. It
+The maintainer never spawns an agent, edits product code, or talks to the human user. It
 runs until the coordinator terminates, then stops cleanly. When a provider
 cannot keep a background child active, the coordinator must resume the same
 maintainer and its persisted queue on the configured cadence rather than create

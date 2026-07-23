@@ -41,12 +41,12 @@ def prepare(home: Path, output: Path) -> None:
     ):
         append_marker(path, "skill marker", markers["skill_marker"])
     append_marker(
-        home / ".claude/agents/lei-harness/reviewer.md",
+        home / ".claude/agents/agent-harness/reviewer.md",
         "reviewer marker",
         markers["reviewer_marker"],
     )
 
-    codex_path = home / ".codex/agents/lei-harness-reviewer.toml"
+    codex_path = home / ".codex/agents/agent-harness-reviewer.toml"
     text = codex_path.read_text(encoding="utf-8")
     before, separator, after = text.rpartition('\n"""')
     if not separator:

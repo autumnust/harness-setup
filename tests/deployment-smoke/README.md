@@ -40,6 +40,10 @@ The offline test verifies:
 - The installer preserves an existing Codex setting while adding max depth 2.
 - Both root sessions receive the provider adapter's fast coordinator model and
   medium reasoning policy.
+- Codex Executor renders with `gpt-5.6-sol` and high reasoning effort.
+- Reviewer is a low-latency router whose dry-run command selects Claude
+  `opus` with `max` effort from Codex, and the installed OpenAI Codex plugin's
+  native review runtime from Claude Code.
 - The installer preserves host-only Claude plugin settings while rendering.
 - The installer preserves host-only Claude environment values while removing
   the retired agent-team flag previously used for direct education.
@@ -56,6 +60,9 @@ The offline test verifies:
   retain the normal preparation requirements.
 - Each role includes its declared shared contracts.
 - Skills deploy identically to Claude, portable, and Codex locations.
+- Each install registers one immutable content-addressed release, identical
+  updates reuse it, and rollback can restore that release without changing
+  mutable state.
 - `--update` is a no-op and does not replace mutable learner state.
 - Both real CLIs launch; their doctor commands accept installed configuration.
 - Only missing credentials and unreachable providers may fail Codex doctor in

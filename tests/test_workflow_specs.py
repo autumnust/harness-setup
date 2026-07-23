@@ -44,6 +44,28 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertEqual(manifest["max_depth"], 2)
         self.assertEqual(adapters["claude"]["models"]["deep"], "opus")
         self.assertEqual(adapters["codex"]["models"]["deep"], "gpt-5.6-sol")
+        self.assertEqual(adapters["codex"]["models"]["executor"], "gpt-5.6-sol")
+        self.assertEqual(
+            self.role(manifest, "executor")["reasoning_policy"], "high"
+        )
+        self.assertEqual(
+            adapters["codex"]["review_bridge"],
+            {
+                "backend": "claude-code",
+                "caller": "codex",
+                "model": "opus",
+                "effort": "max",
+            },
+        )
+        self.assertEqual(
+            adapters["claude"]["review_bridge"],
+            {
+                "backend": "codex-plugin-native-review",
+                "caller": "claude",
+                "model": "gpt-5.6-sol",
+                "effort": "provider-default",
+            },
+        )
         claude_settings = json.loads((REPO_ROOT / "claude/settings.json").read_text())
         self.assertEqual(claude_settings["model"], adapters["claude"]["models"]["fast"])
         self.assertEqual(
@@ -76,6 +98,18 @@ class WorkflowSpecTests(unittest.TestCase):
         with self.assertRaisesRegex(render_agents.SpecError, "must be a leaf"):
             render_agents.validate(self.source)
 
+    def test_reviewer_is_only_cross_provider_review_invoker(self) -> None:
+        manifest = self.manifest()
+        self.role(manifest, "executor")["required_skills"] = [
+            "cross-provider-review"
+        ]
+        self.write_manifest(manifest)
+        with self.assertRaisesRegex(
+            render_agents.SpecError,
+            "sole cross-provider review invoker",
+        ):
+            render_agents.validate(self.source)
+
     def test_requires_education_mode_workflow(self) -> None:
         manifest = self.manifest()
         del manifest["workflows"]["education-mode"]
@@ -87,7 +121,7 @@ class WorkflowSpecTests(unittest.TestCase):
         workflow = (self.source / "workflows/education.md").read_text()
         self.assertIn("not a separate agent", workflow)
         self.assertIn("A single ordinary question stays in the current", workflow)
-        self.assertIn("coordinator teaches Lei directly", workflow)
+        self.assertIn("coordinator teaches the human user directly", workflow)
         self.assertIn("existing fast model policy", workflow)
         self.assertIn("existing child or spawn a new child", workflow)
         self.assertIn("By default, create no execution folder", workflow)
@@ -166,14 +200,28 @@ class WorkflowSpecTests(unittest.TestCase):
             )
             self.assertIn("Agent", disallowed)
         pr_maintainer = (
-            output / "codex/lei-harness-pr-maintainer.toml"
+            output / "codex/agent-harness-pr-maintainer.toml"
         ).read_text()
         self.assertIn("Permitted child roles from this role: none", pr_maintainer)
         self.assertIn(
             "Permitted direct message targets: coordinator, executor", pr_maintainer
         )
-        self.assertFalse((output / "codex/lei-harness-educator.toml").exists())
+        self.assertFalse((output / "codex/agent-harness-educator.toml").exists())
         self.assertFalse((output / "claude/educator.md").exists())
+
+        reviewer = (output / "codex/agent-harness-reviewer.toml").read_text()
+        self.assertIn('model = "gpt-5.6-luna"', reviewer)
+        self.assertIn('model_reasoning_effort = "low"', reviewer)
+        self.assertIn("External backend: claude-code", reviewer)
+        self.assertIn("External model: opus", reviewer)
+        self.assertIn("External effort: max", reviewer)
+        self.assertIn("--caller codex", reviewer)
+
+        claude_reviewer = (output / "claude/reviewer.md").read_text()
+        self.assertIn("  - cross-provider-review", claude_reviewer)
+        self.assertIn("External backend: codex-plugin-native-review", claude_reviewer)
+        self.assertIn("External model: gpt-5.6-sol", claude_reviewer)
+        self.assertIn("--caller claude", claude_reviewer)
 
 
 if __name__ == "__main__":

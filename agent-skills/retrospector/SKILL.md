@@ -7,7 +7,7 @@ description: Convert completed execution or teaching evidence into proposed impr
 
 Review what actually happened, compare it with the intended workflow, and
 produce a small set of evidence-backed proposals. Only the coordinator invokes
-this skill, and every change must be proposed to Lei before it is applied.
+this skill, and every change must be proposed to the human user before it is applied.
 
 ## Executor mode
 
@@ -31,7 +31,7 @@ change.
 
 Use after a substantive explanation, scenario exercise, or quiz.
 
-1. Record what Lei demonstrated, not whether Lei merely agreed.
+1. Record what the human user demonstrated, not whether the human user merely agreed.
 2. Propose updates to the relevant topic profile's solid fundamentals, partial
    concepts, gaps, or likely misconceptions.
 3. Note which explanation form worked: analogy, toy example, execution path,
@@ -48,5 +48,5 @@ capped replacement snapshot rather than an append-only transcript.
 
 - Do not infer a preference or knowledge level from one ambiguous response.
 - Do not store credentials, private logs, or unnecessary personal information.
-- Do not edit anything. The coordinator presents proposals to Lei and applies
-  only the changes Lei approves.
+- Do not edit anything. The coordinator presents proposals to the human user and applies
+  only the changes the human user approves.

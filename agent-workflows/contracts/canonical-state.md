@@ -13,5 +13,5 @@ and store raw evidence or a private operational ledger in a disjoint location.
 They must not update canonical state. A child returns a state-change proposal
 with evidence; the coordinator validates and applies it without silently
 changing the meaning. Retrospector output is always a proposal, and the
-coordinator obtains Lei's approval before applying any proposed process,
+coordinator obtains the human user's approval before applying any proposed process,
 prompt, skill, runbook, or harness change.

@@ -1,7 +1,7 @@
 # harness-setup — agent orientation
 
 This repo is a **meta-prompt harness**: it authors and deploys the global
-AI-agent configuration that gets installed on Lei's dev machines. The output
+AI-agent configuration that gets installed on human users' development machines. The output
 of this repo is a set of files that instruct agents elsewhere — it is not
 itself a software project to build or test.
 

@@ -1,12 +1,13 @@
-# harness-setup — Lei's portable AI coding-agent harness
+# harness-setup — portable AI coding-agent harness
 
-A self-contained snapshot of my **global** AI coding-agent harness. It has two
-layers:
+A self-contained **global** AI coding-agent harness that can be installed for
+any developer. It has these layers:
 
 - **Tool-agnostic core — `~/AGENTS.md`.** How any agent should communicate and
-  work with me: explanation style, word choice, execution conventions.
+  work with the human user: explanation style, word choice, execution
+  conventions.
   `AGENTS.md` is a cross-tool convention, not a Claude Code feature — the
-  guidance is about *how to work with me*, so any coding agent that reads
+  guidance is about *how to work with the human user*, so any coding agent that reads
   `AGENTS.md` can use it. This is the portable heart of the setup.
 - **Skills — `agent-skills/`.** Reusable, invokable procedures (a directory
   per skill holding `SKILL.md`). Claude Code and Codex CLI both use this same
@@ -63,7 +64,7 @@ Pick one of:
 > `--overwrite`, or `--skip-existing` — before re-running. Do not
 > choose for me.
 >
-> After the install succeeds, verify the four plugins listed in
+> After the install succeeds, verify the enabled plugins listed in
 > `~/.claude/settings.json` are installed by checking
 > `~/.claude/plugins/installed_plugins.json`. Report anything that
 > needed manual intervention.
@@ -75,10 +76,11 @@ Pick one of:
 | `home/AGENTS.md` | `~/AGENTS.md` (and tool-specific global-instruction symlinks for Claude and Codex) |
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
 | `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
-| `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/lei-harness/*.md` and, when Codex is present, `~/.codex/agents/lei-harness-*.toml` |
+| `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |
 | coordinator model and workflow depth | Provider fast model plus medium effort in Claude settings and Codex config; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
-| mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates) |
+| versioned harness releases | `~/.agent-harness/releases/<release-id>/` with `~/.agent-harness/current` selecting the active release |
+| mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates or rollback) |
 | *(cloned at install)* | `~/Documents/kumo-skills-catalog/` (from `kumo-ai/kumo-skills-catalog`) |
 
 ## Portable agent workflow
@@ -91,22 +93,25 @@ the main context. Nesting stops after two subagent levels.
 ```text
 coordinator
 |-- exec-env-prepper (leaf)
-|-- executor (leaf)
-|-- reviewer (leaf, different model foundation from executor)
+|-- executor (leaf, high effort; Codex maps this role to gpt-5.6-sol)
+|-- reviewer (leaf, sole caller of the cross-provider review route)
 `-- pr-maintainer (leaf, coordinator-lifetime PR queue monitor)
 ```
 
 Only the coordinator spawns agents, writes canonical state, or invokes the
 `retrospector` skill. The PR maintainer may message the exact executor identity
-registered for a PR, with coordinator fallback. Supporting review tools are
-selected through runtime configuration and never own material review judgment.
+registered for a PR, with coordinator fallback. In Codex, Reviewer invokes
+Claude Code with the current `opus` alias at `max` effort. In Claude Code,
+Reviewer invokes the installed OpenAI Codex plugin's native review runtime.
+No other harness role may invoke these primary review routes. Optional
+supporting scanners do not replace the cross-provider review.
 The provider limit remains depth two as a defensive ceiling even though the
 current topology uses only depth-one leaves. See
 [`agent-workflows/`](./agent-workflows/) for the complete contracts and routing
 rules.
 
 Education mode runs directly in the coordinator on its fast model policy. It is
-entered only by explicit request or after Lei accepts a suggestion prompted by
+entered only by explicit request or after the human user accepts a suggestion prompted by
 repeated connected questions. Learner state is loaded on entry and considered
 for an evidence-based update on exit. Supporting children may produce data,
 experiments, or visualizations without becoming the teaching interface.
@@ -132,13 +137,28 @@ experiments, or visualizations without becoming the teaching interface.
 
 Plugins are not vendored here. The marketplace entries tell Claude Code
 where to fetch them on first launch — they auto-install into
-`~/.claude/plugins/cache/` on the new device.
+`~/.claude/plugins/cache/` on the new device. The OpenAI Codex plugin supplies
+the native review runtime used by Reviewer in Claude Code sessions.
 
 ## Idempotency
 
 Re-running `install.sh` is safe: the default mode refuses conflicts, while
 `--backup` and `--update` preserve replaced content as
 `<path>.bak.<timestamp>`. Mutable state is never replaced.
+
+Each successful install also preserves an immutable source snapshot. Repeating
+an install with identical content reuses its release ID instead of creating a
+duplicate.
+
+```bash
+~/.agent-harness/bin/harness-release list
+~/.agent-harness/bin/harness-release current
+~/.agent-harness/bin/harness-release rollback <release-id>
+```
+
+Rollback reruns the selected release's installer, then changes `current` after
+that installation succeeds. Runtime configuration, learner profiles, PR
+queues, and execution history remain outside release snapshots.
 
 ## What is deliberately not included
 

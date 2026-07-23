@@ -1,6 +1,8 @@
 {
   "models": {
     "fast": "sonnet",
+    "executor": "sonnet",
+    "review-router": "sonnet",
     "capable": "sonnet",
     "deep": "opus"
   },
@@ -8,5 +10,11 @@
     "low": "low",
     "medium": "medium",
     "high": "high"
+  },
+  "review_bridge": {
+    "backend": "codex-plugin-native-review",
+    "caller": "claude",
+    "model": "gpt-5.6-sol",
+    "effort": "provider-default"
   }
 }

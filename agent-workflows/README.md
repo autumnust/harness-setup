@@ -1,6 +1,6 @@
 # Portable agent workflows
 
-This directory is the source of truth for Lei's multi-agent roles and
+This directory is the source of truth for the harness's multi-agent roles and
 orchestration rules. It is deliberately independent of Claude Code and Codex.
 `scripts/render-agents.py` combines the manifest, role prompts, and shared
 contracts into each tool's native agent format during installation.

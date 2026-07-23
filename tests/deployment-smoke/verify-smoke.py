@@ -72,20 +72,27 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     assert runtime_config["pr_maintenance"]["poll_interval_seconds"] == 600
     assert not (home / ".agent-harness/state/education-sessions").exists()
 
-    claude_dir = home / ".claude/agents/lei-harness"
+    claude_dir = home / ".claude/agents/agent-harness"
     codex_dir = home / ".codex/agents"
     assert {path.stem for path in claude_dir.glob("*.md")} == subagents
     assert {
-        path.stem.removeprefix("lei-harness-") for path in codex_dir.glob("lei-harness-*.toml")
+        path.stem.removeprefix("agent-harness-")
+        for path in codex_dir.glob("agent-harness-*.toml")
     } == subagents
 
     for name in subagents:
         claude_path = claude_dir / f"{name}.md"
-        codex_path = codex_dir / f"lei-harness-{name}.toml"
+        codex_path = codex_dir / f"agent-harness-{name}.toml"
         verify_frontmatter(claude_path, name)
         codex_agent = tomllib.loads(codex_path.read_text())
         assert codex_agent["name"] == name
         assert codex_agent["nickname_candidates"] == [roles[name]["display_name"]]
+        assert codex_agent["model"] == codex_adapter["models"][
+            roles[name]["model_policy"]
+        ]
+        assert codex_agent["model_reasoning_effort"] == codex_adapter[
+            "reasoning_effort"
+        ][roles[name]["reasoning_policy"]]
         assert codex_agent["description"]
         assert codex_agent["developer_instructions"]
         for contract in roles[name].get("contracts", []):
@@ -93,10 +100,22 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
             assert heading in claude_path.read_text()
             assert heading in codex_agent["developer_instructions"]
 
+    executor = tomllib.loads(
+        (codex_dir / "agent-harness-executor.toml").read_text()
+    )
+    assert executor["model"] == "gpt-5.6-sol"
+    assert executor["model_reasoning_effort"] == "high"
+    reviewer = tomllib.loads(
+        (codex_dir / "agent-harness-reviewer.toml").read_text()
+    )
+    assert reviewer["model_reasoning_effort"] == "low"
+    assert "only role permitted" in reviewer["developer_instructions"]
+
+    legacy_claude_dir = home / ".claude/agents/lei-harness"
     assert not (codex_dir / "lei-harness-educator.toml").exists()
     assert not (claude_dir / "educator.md").exists()
     assert list(codex_dir.glob("lei-harness-educator.toml.bak.*"))
-    assert list(claude_dir.glob("educator.md.bak.*"))
+    assert list(legacy_claude_dir.glob("educator.md.bak.*"))
 
     installed_specs = home / ".agent-harness/specs"
     assert file_hashes(repo / "agent-workflows") == file_hashes(installed_specs)
@@ -104,7 +123,7 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
         installed_specs / "workflows/education.md"
     ).read_text(encoding="utf-8")
     assert "not a separate agent" in education_workflow
-    assert "coordinator teaches Lei directly" in education_workflow
+    assert "coordinator teaches the human user directly" in education_workflow
     assert "existing child or spawn a new child" in education_workflow
     assert "Outside education mode, do not load learner profiles" in education_workflow
 
@@ -117,6 +136,38 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
         home / ".codex/skills",
     ):
         assert {path.parent.name for path in skill_root.glob("*/SKILL.md")} == skill_names
+
+    root = home.parent
+    codex_route = json.loads((root / "codex-review-route.json").read_text())
+    assert codex_route["provenance"] == {
+        "caller": "codex",
+        "backend": "claude-code",
+        "model": "opus",
+        "effort": "max",
+    }
+    codex_command = codex_route["command"]
+    assert codex_command[codex_command.index("--model") + 1] == "opus"
+    assert codex_command[codex_command.index("--effort") + 1] == "max"
+    assert codex_command[codex_command.index("--permission-mode") + 1] == "plan"
+
+    claude_route = json.loads((root / "claude-review-route.json").read_text())
+    assert claude_route["provenance"] == {
+        "caller": "claude",
+        "backend": "codex-plugin-native-review",
+        "model": "gpt-5.6-sol",
+        "effort": "provider-default",
+    }
+    claude_command = claude_route["command"]
+    assert claude_command[2:4] == ["review", "--wait"]
+    assert claude_command[claude_command.index("--model") + 1] == "gpt-5.6-sol"
+
+    releases = home / ".agent-harness/releases"
+    release_ids = [path.name for path in releases.iterdir() if path.is_dir()]
+    assert len(release_ids) == 1
+    assert (home / ".agent-harness/current").resolve() == (
+        releases / release_ids[0]
+    ).resolve()
+    assert "restored harness release" in (root / "rollback.log").read_text()
 
     learner = home / ".agent-harness/state/learner-profiles/smoke.md"
     assert "must survive update" in learner.read_text()

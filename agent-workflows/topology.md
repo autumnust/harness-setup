@@ -1,8 +1,8 @@
 # Agent topology
 
-The main session is always the coordinator and is Lei's sole interface. It owns
-interactive education, spawning, decisions, canonical state, and final
-synthesis. Every operational child is a leaf.
+The main session is always the coordinator and is the human user's sole
+interface. It owns interactive education, spawning, decisions, canonical
+state, and final synthesis. Every operational child is a leaf.
 
 ```text
 coordinator (depth 0)
@@ -12,7 +12,8 @@ coordinator (depth 0)
 `-- pr-maintainer (depth 1, leaf; lazy-started, then coordinator-lifetime)
 
 retrospector: a coordinator-invoked skill; it is not another agent
-supporting reviewer: a configured tool/backend; it is not another agent
+cross-provider review: invoked only by Reviewer; it is not another agent
+supporting scanner: an optional configured tool; it is not another agent
 ```
 
 ## Rules
@@ -33,5 +34,6 @@ supporting reviewer: a configured tool/backend; it is not another agent
    interactive teaching interface while education mode is active.
 8. Education mode may reuse a relevant existing child or spawn a new child for
    bounded evidence collection, experiments, or teaching artifacts. The child
-   returns material to the coordinator and does not teach Lei directly.
+   returns material to the coordinator and does not teach the human user
+   directly.
 9. The coordinator owns final synthesis and every user-visible decision.

@@ -316,24 +316,26 @@ everything. It is not limited by the Communication-style scope note above.
 
 For work that materially benefits from isolated context, parallel reading,
 specialized review, or a different model policy, the main session acts as the
-**coordinator**. It remains the sole default interface to Lei, owns decisions
-and canonical mutable state, and delegates bounded assignments using the
-installed workflow specification at `$AGENT_HARNESS_HOME/specs/`, defaulting
-`AGENT_HARNESS_HOME` to `~/.agent-harness`. Classify the goal before resolving
-configuration or spawning a child. Read `$AGENT_HARNESS_HOME/config.json` and
-resolve only the choices required by the selected workflow.
+**coordinator**. It remains the sole default interface to the human user, owns
+decisions and canonical mutable state, and delegates bounded assignments using
+the installed workflow specification at `$AGENT_HARNESS_HOME/specs/`,
+defaulting `AGENT_HARNESS_HOME` to `~/.agent-harness`. Classify the goal before
+resolving configuration or spawning a child. Read
+`$AGENT_HARNESS_HOME/config.json` and resolve only the choices required by the
+selected workflow.
 
 - Keep small or tightly coupled work in the main session; do not create an
   agent team merely because roles are available.
-- Enter education mode only when Lei explicitly asks to enter it, be taught, or
-  be quizzed on a sustained topic. Do not enter it for one ordinary question.
-  After repeated connected questions, suggest education mode and wait for Lei
-  to accept. Follow `$AGENT_HARNESS_HOME/specs/workflows/education.md` and teach
-  directly in the coordinator session.
+- Enter education mode only when the human user explicitly asks to enter it, be
+  taught, or be quizzed on a sustained topic. Do not enter it for one ordinary
+  question. After repeated connected questions, suggest education mode and
+  wait for the human user to accept. Follow
+  `$AGENT_HARNESS_HOME/specs/workflows/education.md` and teach directly in the
+  coordinator session.
 - On education-mode entry, load only the relevant learner profile, using the
   portable learner-state fallback when configuration is unresolved. Outside
-  education mode, do not load or update learner profiles unless Lei explicitly
-  requests that state operation. On exit, propose an update only from
+  education mode, do not load or update learner profiles unless the human user
+  explicitly requests that state operation. On exit, propose an update only from
   demonstrated understanding and apply the configured `ask`, `auto`, or `off`
   policy; a missing policy means `ask`.
 - Only the coordinator spawns agents. Current operational children are
@@ -345,9 +347,10 @@ resolve only the choices required by the selected workflow.
 - Parallel writers must own different files. Serialize work that touches the
   same files or depends on an earlier result.
 - Use `exec-env-prepper` before large execution work, then present readiness to
-  Lei and wait for confirmation before implementation. Use `executor` for
-  bounded implementation and an independent-foundation `reviewer` for
-  problem-level and core-code review.
+  the human user and wait for confirmation before implementation. Use
+  `executor` for bounded implementation at the provider adapter's high effort.
+  Under Codex, Executor uses `gpt-5.6-sol`. Use `reviewer` for problem-level and
+  core-code review.
 - The coordinator uses its fast model policy for education mode; entering the
   mode does not require a provider-specific model switch or fast-service
   toggle. It may resume a relevant existing child or spawn a new child for
@@ -361,16 +364,20 @@ resolve only the choices required by the selected workflow.
   Register every PR with its responsible executor identity. The maintainer
   polls the configured queue and may message only the coordinator or that exact
   executor.
+- Reviewer is the only role permitted to invoke the cross-provider primary
+  review route. Under Codex, it invokes Claude Code with the current `opus`
+  alias and `max` effort. Under Claude Code, it invokes the installed OpenAI
+  Codex plugin's native review runtime. The coordinator and other children
+  never invoke those routes as a substitute. Supporting scanners remain
+  optional and do not replace the primary review.
 - `retrospector` is a coordinator-invoked skill, not another agent. It proposes
-  changes and never applies them. Supporting review tools are selected from
-  runtime configuration rather than hardcoded; the primary reviewer verifies
-  their findings and remains responsible for material judgment.
+  changes and never applies them.
 - Child results are summaries with evidence links. Keep verbose exploration,
   logs, and scans out of the main conversation.
 - Only the coordinator writes runtime configuration, learner state,
   communication conventions, `progress.html`, or accepted retrospective
   changes. Children return evidence-backed state proposals and never interact
-  with Lei directly.
+  with the human user directly.
 
 The provider-neutral Markdown and topology are authoritative. Native Claude
 and Codex agent files are generated during harness installation.

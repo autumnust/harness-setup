@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs Lei's global coding-agent harness onto this machine
+# Installs the global coding-agent harness onto this machine
 # (tool-agnostic ~/AGENTS.md + native Claude/Codex integration: settings,
 # skills, custom agents, and workflow specifications).
 #
@@ -21,15 +21,17 @@
 set -euo pipefail
 
 MODE="prompt"
+PRESERVE_RELEASE=1
 for arg in "$@"; do
   case "$arg" in
     --backup)         MODE="backup" ;;
     --overwrite)      MODE="overwrite" ;;
     --skip-existing)  MODE="skip" ;;
     --update)         MODE="update" ;;
+    --no-release)     PRESERVE_RELEASE=0 ;;
     -h|--help)
       cat <<'HELP'
-Installs Lei's global coding-agent harness onto this machine
+Installs the global coding-agent harness onto this machine
 (tool-agnostic core + native Claude Code and Codex integration).
 
 Usage:
@@ -69,6 +71,15 @@ TS="$(date +%Y%m%dT%H%M%S)"
 TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/harness-install.XXXXXX")"
 cleanup() { rm -rf "$TEMP_ROOT"; }
 trap cleanup EXIT
+
+RELEASE_STAGED="$TEMP_ROOT/release"
+RELEASE_ID=""
+if (( PRESERVE_RELEASE )); then
+  RELEASE_ID="$(python3 "$REPO_ROOT/scripts/harness-release.py" \
+    --home "$AGENT_HARNESS_HOME" prepare \
+    --source "$REPO_ROOT" \
+    --destination "$RELEASE_STAGED")"
+fi
 
 # Validate the provider-neutral topology and render provider-native agent files
 # before conflict detection, so install remains all-or-nothing on invalid specs.
@@ -112,8 +123,12 @@ record_conflict "$HOME/AGENTS.md"
 record_conflict "$CLAUDE_DIR/CLAUDE.md"
 record_conflict "$CLAUDE_DIR/settings.json"
 record_conflict "$AGENT_HARNESS_HOME/specs"
+record_conflict "$AGENT_HARNESS_HOME/bin/harness-release"
 for agent_file in "$TEMP_ROOT"/agents/claude/*; do
-  record_conflict "$CLAUDE_DIR/agents/lei-harness/$(basename "$agent_file")"
+  record_conflict "$CLAUDE_DIR/agents/agent-harness/$(basename "$agent_file")"
+done
+for agent_file in "$CLAUDE_DIR"/agents/agent-harness/*.md; do
+  [[ -e "$agent_file" ]] && record_conflict "$agent_file"
 done
 for agent_file in "$CLAUDE_DIR"/agents/lei-harness/*.md; do
   [[ -e "$agent_file" ]] && record_conflict "$agent_file"
@@ -123,6 +138,9 @@ if (( CODEX_PRESENT )); then
   record_conflict "$CODEX_DIR/config.toml"
   for agent_file in "$TEMP_ROOT"/agents/codex/*; do
     record_conflict "$CODEX_DIR/agents/$(basename "$agent_file")"
+  done
+  for agent_file in "$CODEX_DIR"/agents/agent-harness-*.toml; do
+    [[ -e "$agent_file" ]] && record_conflict "$agent_file"
   done
   for agent_file in "$CODEX_DIR"/agents/lei-harness-*.toml; do
     [[ -e "$agent_file" ]] && record_conflict "$agent_file"
@@ -326,6 +344,10 @@ place_file "$RENDERED_SETTINGS" "$CLAUDE_DIR/settings.json"
 say "Installing portable workflow specifications"
 mkdir -p "$AGENT_HARNESS_HOME"
 place_tree "$REPO_ROOT/agent-workflows" "$AGENT_HARNESS_HOME/specs"
+mkdir -p "$AGENT_HARNESS_HOME/bin"
+place_file \
+  "$REPO_ROOT/scripts/harness-release.py" \
+  "$AGENT_HARNESS_HOME/bin/harness-release"
 
 # Runtime configuration is mutable, confirmed by the coordinator, and never
 # managed by place_file after initialization.
@@ -336,18 +358,24 @@ if [[ ! -e "$AGENT_HARNESS_HOME/config.json" ]]; then
 fi
 
 say "Installing Claude custom agents"
-mkdir -p "$CLAUDE_DIR/agents/lei-harness"
+for agent_file in "$CLAUDE_DIR"/agents/lei-harness/*.md; do
+  [[ -e "$agent_file" ]] && remove_stale_agent "$agent_file"
+done
+mkdir -p "$CLAUDE_DIR/agents/agent-harness"
 prune_stale_agents \
-  "$CLAUDE_DIR/agents/lei-harness" "$TEMP_ROOT/agents/claude" '*.md'
+  "$CLAUDE_DIR/agents/agent-harness" "$TEMP_ROOT/agents/claude" '*.md'
 for agent_file in "$TEMP_ROOT"/agents/claude/*; do
-  place_file "$agent_file" "$CLAUDE_DIR/agents/lei-harness/$(basename "$agent_file")"
+  place_file "$agent_file" "$CLAUDE_DIR/agents/agent-harness/$(basename "$agent_file")"
 done
 
 if (( CODEX_PRESENT )); then
   say "Installing Codex custom agents and max_depth=2"
   mkdir -p "$CODEX_DIR/agents"
+  for agent_file in "$CODEX_DIR"/agents/lei-harness-*.toml; do
+    [[ -e "$agent_file" ]] && remove_stale_agent "$agent_file"
+  done
   prune_stale_agents "$CODEX_DIR/agents" "$TEMP_ROOT/agents/codex" \
-    'lei-harness-*.toml'
+    'agent-harness-*.toml'
   for agent_file in "$TEMP_ROOT"/agents/codex/*; do
     place_file "$agent_file" "$CODEX_DIR/agents/$(basename "$agent_file")"
   done
@@ -390,6 +418,18 @@ for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
   fi
 done
 
+# Register only after every managed target has been installed successfully.
+if (( PRESERVE_RELEASE )); then
+  REGISTERED_RELEASE="$(python3 "$REPO_ROOT/scripts/harness-release.py" \
+    --home "$AGENT_HARNESS_HOME" register \
+    --staged "$RELEASE_STAGED")"
+  [[ "$REGISTERED_RELEASE" == "$RELEASE_ID" ]] || {
+    echo "error: staged and registered release IDs differ" >&2
+    exit 1
+  }
+  ok "Active harness release: $REGISTERED_RELEASE"
+fi
+
 # --- 5. Clone kumo-skills-catalog (referenced by AGENTS.md) -----------------
 CATALOG_DIR="$HOME/Documents/kumo-skills-catalog"
 if [[ -d "$CATALOG_DIR/.git" ]]; then
@@ -426,12 +466,12 @@ printf '\n%s\n' \
   "Next steps:" \
   "  1. Launch Claude Code in any directory. On first launch it will:" \
   "       - Read $CLAUDE_DIR/settings.json" \
-  "       - See the four enabled plugins (claude-hud, understand-anything," \
-  "         frontend-design, crit) and their marketplaces" \
+  "       - See the enabled plugins and their marketplaces, including the" \
+  "         OpenAI Codex plugin used by the Claude Reviewer" \
   "       - Install them automatically into $CLAUDE_DIR/plugins/cache/" \
   "  2. If a plugin does not auto-install, run inside Claude Code:" \
   "         /plugin" \
-  "       and enable from the four entries listed in settings.json." \
+  "       and enable it from the entries listed in settings.json." \
   "  3. Verify the statusline renders. If not, check node path in" \
   "       $CLAUDE_DIR/settings.json  (statusLine.command embeds it literally)." \
   "" \
@@ -440,15 +480,17 @@ printf '\n%s\n' \
   "  $CLAUDE_DIR/CLAUDE.md       (symlink -> $HOME/AGENTS.md)" \
   "  $CLAUDE_DIR/settings.json" \
   "  $CLAUDE_DIR/skills/*" \
-  "  $CLAUDE_DIR/agents/lei-harness/*" \
+  "  $CLAUDE_DIR/agents/agent-harness/*" \
   "  $AGENT_HARNESS_HOME/specs" \
+  "  $AGENT_HARNESS_HOME/releases/* and current" \
+  "  $AGENT_HARNESS_HOME/bin/harness-release" \
   "  $AGENT_HARNESS_HOME/config.json  (initialized once, never overwritten)" \
   "  $AGENT_HARNESS_HOME/state/learner-profiles  (initialized, never overwritten)"
 if (( CODEX_PRESENT )); then
   printf '%s\n' \
     "  $CODEX_DIR/AGENTS.md        (symlink -> $HOME/AGENTS.md)" \
     "  $CODEX_DIR/config.toml      (agents.max_depth = 2)" \
-    "  $CODEX_DIR/agents/lei-harness-*.toml" \
+    "  $CODEX_DIR/agents/agent-harness-*.toml" \
     "  $PORTABLE_SKILLS_DIR/*" \
     "  $CODEX_DIR/skills/*         (legacy-compatible copy)"
 fi

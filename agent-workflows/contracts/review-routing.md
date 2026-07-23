@@ -1,9 +1,11 @@
 # Review routing contract
 
-The reviewer retains responsibility for material judgment even when a
-configured supporting-review backend performs a scan.
+The configured cross-provider backend performs the material primary review.
+The Reviewer is the sole owner of invoking it and returning its findings
+faithfully. The Reviewer may verify evidence and remove exact duplicates, but
+its low-latency router model must not replace the external review judgment.
 
-## Reviewer-owned work
+## Primary cross-provider review
 
 - problem framing and whether the approach is sound;
 - public API, protocol, schema, and compatibility changes;
@@ -11,13 +13,13 @@ configured supporting-review backend performs a scan.
 - architecture, security, concurrency, and data correctness;
 - changed core logic, regressions, and missing behavioral tests.
 
-## Supporting-backend work
+## Optional supporting-scanner work
 
 - style and naming consistency;
 - documentation nits and obvious duplication;
 - generated-file or dependency noise;
 - broad low-risk scans that the reviewer subsequently verifies.
 
-The backend comes from resolved runtime configuration; no product is assumed or
-hardcoded. The reviewer verifies and deduplicates its findings before returning
-them. Supporting scans never satisfy the independent primary-review requirement.
+The primary backend comes from the provider adapter. A supporting scanner may
+come from runtime configuration. Supporting scans never satisfy the
+cross-provider primary-review requirement.
