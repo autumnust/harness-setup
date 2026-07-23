@@ -90,12 +90,33 @@ delegate environment preparation, implementation, review, PR maintenance, and
 bounded teaching support while keeping user decisions and final synthesis in
 the main context. Nesting stops after two subagent levels.
 
-```text
-coordinator
-|-- exec-env-prepper (leaf)
-|-- executor (leaf, high effort; Codex maps this role to gpt-5.6-sol)
-|-- reviewer (leaf, Executor model at maximum effort; sole cross-provider caller)
-`-- pr-maintainer (leaf, coordinator-lifetime PR queue monitor)
+```mermaid
+flowchart TB
+    Human["Human user"] <-->|default interface| Coordinator["Coordinator<br/>root session and education mode"]
+
+    subgraph Leaves["Depth-one agent sessions (all leaves)"]
+        Prep["Environment Prepper"]
+        Executor["Executor<br/>implementation at high effort"]
+        Reviewer["Reviewer<br/>Executor model at max effort"]
+        Maintainer["PR Maintainer<br/>coordinator-lifetime queue"]
+    end
+
+    Coordinator -->|spawn when needed| Prep
+    Coordinator -->|assign implementation| Executor
+    Coordinator -->|request review| Reviewer
+    Coordinator -->|start for PR work| Maintainer
+
+    Maintainer -.->|PR status| Coordinator
+    Maintainer -.->|registered PR only| Executor
+
+    Reviewer -->|invoke and wait| Opinion(["Cross-provider opinion"])
+    Opinion -->|findings and evidence| Reviewer
+    Reviewer -->|agreed: suggested actions| Coordinator
+    Reviewer -->|disagreed: both positions| Coordinator
+    Coordinator -->|assign agreed actions| Executor
+    Coordinator -->|request disagreement assessment| Human
+
+    Coordinator -.->|invoke| Retrospector(["Retrospector skill"])
 ```
 
 Only the coordinator spawns agents, writes canonical state, or invokes the
@@ -111,7 +132,7 @@ invoke the cross-provider route.
 The provider limit remains depth two as a defensive ceiling even though the
 current topology uses only depth-one leaves. See
 [`agent-workflows/`](./agent-workflows/) for the complete contracts and routing
-rules.
+rules and the [detailed topology](./agent-workflows/topology.md).
 
 Education mode runs directly in the coordinator on its fast model policy. It is
 entered only by explicit request or after the human user accepts a suggestion prompted by
