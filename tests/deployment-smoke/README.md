@@ -51,6 +51,8 @@ The offline test verifies:
   the retired agent-team flag previously used for direct education.
 - Mutable coordinator configuration is initialized once and survives updates.
 - Provider-neutral specs render as the complete Claude and Codex role sets.
+- Required workflows render once into their corresponding native agents, while
+  roles and contracts do not repeat workflow-owned lifecycle or result rules.
 - No Educator custom agent renders for either provider, and an update retires
   previously generated Educator files from provider discovery.
 - The installed education workflow keeps teaching in Coordinator, requires

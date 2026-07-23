@@ -197,8 +197,22 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise SpecError("coordinator must use the fast model policy")
     if roles["reviewer"].get("required_skills") != ["cross-provider-review"]:
         raise SpecError("reviewer must be the sole cross-provider review invoker")
-    if roles["reviewer"].get("required_workflows") != ["pr-review"]:
-        raise SpecError("reviewer must include the PR-review workflow")
+    expected_role_workflows = {
+        "coordinator": [
+            "default",
+            "education-mode",
+            "pr-maintenance",
+            "pr-review",
+        ],
+        "pr-maintainer": ["pr-maintenance"],
+        "reviewer": ["pr-review"],
+    }
+    for name, role in roles.items():
+        expected = expected_role_workflows.get(name, [])
+        if role.get("required_workflows", []) != expected:
+            raise SpecError(
+                f"{name}: required_workflows must be {expected!r}"
+            )
     if roles["reviewer"].get("model_policy") != roles["executor"].get(
         "model_policy"
     ):

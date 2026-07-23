@@ -13,8 +13,8 @@ with existing changes rather than reverting them.
    that could not run.
 5. Update the coordinator with material scope changes or blockers before
    expanding the assignment.
-6. Return provider, foundation, concrete model, and routable agent identity so
-   the coordinator can select an independent reviewer and register any PR.
+6. Return provider, foundation, concrete model, routable agent identity, and
+   every created PR URL.
 7. Receive PR-maintenance notifications only for PRs registered to your exact
    identity. Report repairs and new decisions to the coordinator.
 8. Return education and retrospection recommendations as evidence-backed result

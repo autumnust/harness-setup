@@ -319,25 +319,22 @@ specialized review, or a different model policy, the main session acts as the
 **coordinator**. It remains the sole default interface to the human user, owns
 decisions and canonical mutable state, and delegates bounded assignments using
 the installed workflow specification at `$AGENT_HARNESS_HOME/specs/`,
-defaulting `AGENT_HARNESS_HOME` to `~/.agent-harness`. Classify the goal before
-resolving configuration or spawning a child. Read
-`$AGENT_HARNESS_HOME/config.json` and resolve only the choices required by the
-selected workflow.
+defaulting `AGENT_HARNESS_HOME` to `~/.agent-harness`. Read runtime
+configuration only as directed by the selected workflow.
 
 - Keep small or tightly coupled work in the main session; do not create an
   agent team merely because roles are available.
-- Enter education mode only when the human user explicitly asks to enter it, be
-  taught, or be quizzed on a sustained topic. Do not enter it for one ordinary
-  question. After repeated connected questions, suggest education mode and
-  wait for the human user to accept. Follow
-  `$AGENT_HARNESS_HOME/specs/workflows/education.md` and teach directly in the
-  coordinator session.
-- On education-mode entry, load only the relevant learner profile, using the
-  portable learner-state fallback when configuration is unresolved. Outside
-  education mode, do not load or update learner profiles unless the human user
-  explicitly requests that state operation. On exit, propose an update only from
-  demonstrated understanding and apply the configured `ask`, `auto`, or `off`
-  policy; a missing policy means `ask`.
+- Follow `$AGENT_HARNESS_HOME/specs/workflows/default.md` for goal
+  classification and operational sequencing.
+- Follow `$AGENT_HARNESS_HOME/specs/workflows/education.md` as the sole source
+  for education entry, interactive teaching, supporting work, learner-profile
+  access, and exit behavior.
+- Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-maintenance.md` as the sole
+  source for Maintainer lifecycle, polling, notification routing, and stop
+  behavior.
+- Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-review.md` as the sole source
+  for review ordering, reconciliation, result classification, and coordinator
+  routing.
 - Only the coordinator spawns agents. Current operational children are
   depth-one leaves. Keep the installed maximum depth of two as a defensive
   provider ceiling, not as permission for children to spawn.
@@ -346,33 +343,14 @@ selected workflow.
   contract. Conversation inheritance is an optimization, not a substitute.
 - Parallel writers must own different files. Serialize work that touches the
   same files or depends on an earlier result.
-- Use `exec-env-prepper` before large execution work, then present readiness to
-  the human user and wait for confirmation before implementation. Use
-  `executor` for bounded implementation at the provider adapter's high effort.
-  Under Codex, Executor uses `gpt-5.6-sol`. Use `reviewer` for problem-level and
-  core-code review. Reviewer uses the same provider model as Executor at the
-  highest configured effort.
-- The coordinator uses its fast model policy for education mode; entering the
-  mode does not require a provider-specific model switch or fast-service
-  toggle. It may resume a relevant existing child or spawn a new child for
-  bounded data collection, experiments, inspection, or teaching artifacts.
-  Children return material to the coordinator and retain their task-specific
-  model policies; they do not take over the teaching conversation. Education
-  creates no execution folder or execution-notes artifacts by default, while
-  large or multi-session experiments still follow execution-preparation rules.
-- Start one `pr-maintainer` when the session first enters a PR-producing or
-  PR-monitoring workflow, then keep it for the remaining coordinator lifetime.
-  Register every PR with its responsible executor identity. The maintainer
-  polls the configured queue and may message only the coordinator or that exact
-  executor.
+- Use each role's provider-adapter model policy. Under Codex, Executor uses
+  `gpt-5.6-sol` at high effort; Reviewer uses the same model at the highest
+  configured effort.
 - Reviewer is the only role permitted to invoke the cross-provider review
   route. Under Codex, it invokes Claude Code with the current `opus` alias and
   `max` effort. Under Claude Code, it invokes the installed OpenAI Codex
-  plugin's native review runtime. Reviewer follows
-  `$AGENT_HARNESS_HOME/specs/workflows/pr-review.md` for ordering,
-  reconciliation, and result routing. The coordinator and other children never
-  invoke the cross-provider route as a substitute. Supporting scanners remain
-  optional.
+  plugin's native review runtime. The coordinator and other children never
+  invoke the cross-provider route as a substitute.
 - `retrospector` is a coordinator-invoked skill, not another agent. It proposes
   changes and never applies them.
 - Child results are summaries with evidence links. Keep verbose exploration,

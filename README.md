@@ -120,25 +120,15 @@ flowchart TB
 ```
 
 Only the coordinator spawns agents, writes canonical state, or invokes the
-`retrospector` skill. The PR maintainer may message the exact executor identity
-registered for a PR, with coordinator fallback. Reviewer uses the same model as
-Executor at `max` effort. It first waits for the other foundation's opinion:
-in Codex, Claude Code with the current `opus` alias at `max` effort; in Claude
-Code, the installed OpenAI Codex plugin's native review runtime. Reviewer then
-challenges that opinion and performs its own full review. The
-[PR-review workflow](./agent-workflows/workflows/pr-review.md) is the single
-source for result classification and coordinator routing. No other harness
-role may invoke the cross-provider route.
+`retrospector` skill. The Mermaid diagram is a summary; ordered behavior is
+defined only in the [default](./agent-workflows/workflows/default.md),
+[education](./agent-workflows/workflows/education.md),
+[PR-maintenance](./agent-workflows/workflows/pr-maintenance.md), and
+[PR-review](./agent-workflows/workflows/pr-review.md) workflows.
 The provider limit remains depth two as a defensive ceiling even though the
 current topology uses only depth-one leaves. See
 [`agent-workflows/`](./agent-workflows/) for the complete contracts and routing
 rules and the [detailed topology](./agent-workflows/topology.md).
-
-Education mode runs directly in the coordinator on its fast model policy. It is
-entered only by explicit request or after the human user accepts a suggestion prompted by
-repeated connected questions. Learner state is loaded on entry and considered
-for an evidence-based update on exit. Supporting children may produce data,
-experiments, or visualizations without becoming the teaching interface.
 
 ## What the settings.json controls
 

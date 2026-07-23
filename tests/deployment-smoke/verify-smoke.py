@@ -99,6 +99,11 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
             heading = (repo / "agent-workflows" / contract).read_text().splitlines()[0]
             assert heading in claude_path.read_text()
             assert heading in codex_agent["developer_instructions"]
+        for workflow in roles[name].get("required_workflows", []):
+            relative = manifest["workflows"][workflow]
+            heading = (repo / "agent-workflows" / relative).read_text().splitlines()[0]
+            assert claude_path.read_text().count(heading) == 1
+            assert codex_agent["developer_instructions"].count(heading) == 1
 
     executor = tomllib.loads(
         (codex_dir / "agent-harness-executor.toml").read_text()
@@ -118,6 +123,16 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     )
     assert reviewer["developer_instructions"].count("**Disagreement:**") == 1
     assert "asks the human user" in reviewer["developer_instructions"]
+    maintainer = tomllib.loads(
+        (codex_dir / "agent-harness-pr-maintainer.toml").read_text()
+    )
+    assert maintainer["developer_instructions"].count(
+        "# PR maintenance workflow"
+    ) == 1
+    assert maintainer["developer_instructions"].count(
+        "**Registered Executor route:**"
+    ) == 1
+    assert maintainer["developer_instructions"].count("**Coordinator route:**") == 1
 
     legacy_claude_dir = home / ".claude/agents/lei-harness"
     assert not (codex_dir / "lei-harness-educator.toml").exists()
@@ -131,7 +146,7 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
         installed_specs / "workflows/education.md"
     ).read_text(encoding="utf-8")
     assert "not a separate agent" in education_workflow
-    assert "coordinator teaches the human user directly" in education_workflow
+    assert "Coordinator teaches the human user directly" in education_workflow
     assert "existing child or spawn a new child" in education_workflow
     assert "Outside education mode, do not load learner profiles" in education_workflow
 

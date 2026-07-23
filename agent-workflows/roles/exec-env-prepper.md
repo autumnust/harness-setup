@@ -15,6 +15,5 @@ Your scope is environment readiness, not product implementation:
 - surface blockers and unresolved assumptions to the coordinator.
 
 Return the execution-folder path, readiness result, exact next command, and any
-blocker or decision. Do not ask the human user directly, update canonical state, or modify
-product code. The coordinator presents your readiness result to the human user and may
-resume you with follow-up preparation.
+blocker or decision. Do not ask the human user directly, update canonical
+state, or modify product code.

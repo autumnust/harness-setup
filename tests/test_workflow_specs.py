@@ -58,6 +58,14 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertEqual(
             self.role(manifest, "reviewer")["required_workflows"], ["pr-review"]
         )
+        self.assertEqual(
+            self.role(manifest, "coordinator")["required_workflows"],
+            ["default", "education-mode", "pr-maintenance", "pr-review"],
+        )
+        self.assertEqual(
+            self.role(manifest, "pr-maintainer")["required_workflows"],
+            ["pr-maintenance"],
+        )
         self.assertEqual(adapters["codex"]["reasoning_effort"]["highest"], "max")
         self.assertEqual(adapters["claude"]["effort"]["highest"], "max")
         self.assertEqual(
@@ -148,7 +156,29 @@ class WorkflowSpecTests(unittest.TestCase):
         self.write_manifest(manifest)
         with self.assertRaisesRegex(
             render_agents.SpecError,
-            "include the PR-review workflow",
+            "required_workflows must be",
+        ):
+            render_agents.validate(self.source)
+
+    def test_roles_must_declare_exact_workflow_dependencies(self) -> None:
+        manifest = self.manifest()
+        self.role(manifest, "pr-maintainer")["required_workflows"] = []
+        self.write_manifest(manifest)
+        with self.assertRaisesRegex(
+            render_agents.SpecError,
+            "pr-maintainer: required_workflows must be",
+        ):
+            render_agents.validate(self.source)
+
+        manifest = self.manifest()
+        self.role(manifest, "pr-maintainer")["required_workflows"] = [
+            "pr-maintenance"
+        ]
+        self.role(manifest, "coordinator")["required_workflows"] = ["default"]
+        self.write_manifest(manifest)
+        with self.assertRaisesRegex(
+            render_agents.SpecError,
+            "coordinator: required_workflows must be",
         ):
             render_agents.validate(self.source)
 
@@ -176,14 +206,69 @@ class WorkflowSpecTests(unittest.TestCase):
 
     def test_education_mode_is_owned_by_coordinator(self) -> None:
         workflow = (self.source / "workflows/education.md").read_text()
+        normalized = " ".join(workflow.split())
         self.assertIn("not a separate agent", workflow)
-        self.assertIn("A single ordinary question stays in the current", workflow)
-        self.assertIn("coordinator teaches the human user directly", workflow)
+        self.assertIn(
+            "A single ordinary question stays in the current",
+            normalized,
+        )
+        self.assertIn("Coordinator teaches the human user directly", workflow)
         self.assertIn("existing fast model policy", workflow)
         self.assertIn("existing child or spawn a new child", workflow)
         self.assertIn("By default, create no execution folder", workflow)
         self.assertIn("Outside education mode, do not load learner profiles", workflow)
         self.assertIn("A missing policy means `ask`", workflow)
+
+    def test_other_workflow_semantics_are_not_redefined_in_roles_or_contracts(
+        self,
+    ) -> None:
+        global_docs = "\n".join(
+            path.read_text()
+            for path in (
+                REPO_ROOT / "README.md",
+                REPO_ROOT / "home/AGENTS.md",
+            )
+        )
+        default = (self.source / "workflows/default.md").read_text()
+        coordinator = (self.source / "roles/coordinator.md").read_text()
+        self.assertEqual(default.count("presents it to the human user"), 1)
+        self.assertNotIn("presents it to the human user", coordinator)
+        self.assertNotIn("presents it to the human user", global_docs)
+
+        education = (self.source / "workflows/education.md").read_text()
+        education_other = "\n".join(
+            (self.source / relative).read_text()
+            for relative in (
+                "roles/coordinator.md",
+                "contracts/education-routing.md",
+                "contracts/learning-state.md",
+            )
+        )
+        for marker in (
+            "A single ordinary question stays",
+            "By default, create no execution folder",
+            "A request for product",
+        ):
+            self.assertEqual(education.count(marker), 1)
+            self.assertNotIn(marker, education_other)
+            self.assertNotIn(marker, global_docs)
+
+        maintenance = (self.source / "workflows/pr-maintenance.md").read_text()
+        maintenance_other = "\n".join(
+            (self.source / relative).read_text()
+            for relative in (
+                "roles/pr-maintainer.md",
+                "contracts/pr-queue.md",
+            )
+        )
+        for marker in (
+            "**Registered Executor route:**",
+            "**Coordinator route:**",
+            "defaulting to ten minutes",
+        ):
+            self.assertEqual(maintenance.count(marker), 1)
+            self.assertNotIn(marker, maintenance_other)
+            self.assertNotIn(marker, global_docs)
 
     def test_rejects_broad_pr_maintainer_messaging(self) -> None:
         manifest = self.manifest()
@@ -263,6 +348,12 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn(
             "Permitted direct message targets: coordinator, executor", pr_maintainer
         )
+        self.assertEqual(pr_maintainer.count("# PR maintenance workflow"), 1)
+        self.assertEqual(
+            pr_maintainer.count("**Registered Executor route:**"),
+            1,
+        )
+        self.assertEqual(pr_maintainer.count("**Coordinator route:**"), 1)
         self.assertFalse((output / "codex/agent-harness-educator.toml").exists())
         self.assertFalse((output / "claude/educator.md").exists())
 

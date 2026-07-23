@@ -25,10 +25,3 @@ chosen. The coordinator records confirmed choices, then passes only the
 relevant resolved values to children in their context packets. A child reports
 a missing prerequisite or proposed configuration change to the coordinator; it
 never asks the human user directly and never edits global configuration.
-
-Education mode is the deliberate exception to full first-run configuration. It
-may immediately use the portable learner-state fallback and leave
-`configured: false`; unresolved execution roots, review backends, supporting
-scanners, and PR settings do not block or prompt during that lesson. Ask about
-an external-memory backend only when the human user explicitly requires it for the current
-lesson.

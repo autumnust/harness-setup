@@ -55,20 +55,12 @@ flowchart TB
 
 1. All current children are depth-one leaves. Keep the provider limit at depth
    two as a defensive ceiling; it is not permission for a child to spawn.
-2. Only the coordinator spawns agents, enters education mode, or invokes the
-   retrospector skill.
-3. The coordinator delegates only when isolation, parallelism, special model
-   choice, or reduced context noise materially improves the work.
-4. Parallel writers must own disjoint files. Otherwise, serialize the work.
-5. A child receives an explicit context packet. Provider-native conversation
-   inheritance is an optimization, not a requirement.
-6. Children normally message only the coordinator. The sole peer-message
+2. Only Coordinator spawns agents. Retrospector and supporting scanners are
+   invoked capabilities, not children.
+3. Children normally message only Coordinator. The sole peer-message
    exception is PR maintainer to the exact executor identity registered for a
-   queue item, with coordinator fallback when delivery fails.
-7. Children do not accept direct human turns. The coordinator remains the
-   interactive teaching interface while education mode is active.
-8. Education mode may reuse a relevant existing child or spawn a new child for
-   bounded evidence collection, experiments, or teaching artifacts. The child
-   returns material to the coordinator and does not teach the human user
-   directly.
-9. The coordinator owns final synthesis and every user-visible decision.
+   queue item.
+4. Children do not accept direct human turns. Coordinator remains the sole
+   default human interface.
+5. Diagram edge labels summarize behavior. The workflow files are
+   authoritative for process order, lifecycle, and result routing.

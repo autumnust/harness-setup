@@ -48,15 +48,9 @@ second editable copy of every prompt.
   defensive provider ceiling.
 - Mutable learner profiles and execution history never live here. Installed
   state belongs under `$AGENT_HARNESS_HOME/state/`.
-- `workflows/education.md` defines an interactive coordinator mode. It loads
-  learner state only on entry, teaches in the root session, and considers a
-  profile update only on exit.
 
-## Interactive education
+## Workflow authority
 
-Education is not a rendered child. The coordinator enters the mode only after
-an explicit request or accepted suggestion, and continues using its provider
-adapter's fast model policy. It may delegate bounded evidence collection,
-experiments, or teaching artifacts to operational children while keeping the
-interactive lesson in the root session. Small lessons create no execution
-artifacts; large experiments still follow execution-preparation rules.
+Each workflow is the single source for its ordered process, lifecycle, and
+named result states. Roles reference workflows without restating them, and
+contracts define shared data shape, write authority, and handoff requirements.

@@ -21,6 +21,7 @@
       "allowed_children": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
       "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
       "required_skills": ["quiz", "retrospector"],
+      "required_workflows": ["default", "education-mode", "pr-maintenance", "pr-review"],
       "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/learning-state.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     },
     {
@@ -71,12 +72,13 @@
       "display_name": "PR Maintainer",
       "kind": "subagent",
       "human_interface": "none",
-      "description": "Runs for the coordinator lifetime, monitors every registered PR, and routes actionable state changes to its coordinator or registered executor.",
+      "description": "Owns a private PR queue and reports observed state changes through its permitted message targets.",
       "prompt": "roles/pr-maintainer.md",
       "model_policy": "capable",
       "reasoning_policy": "high",
       "allowed_children": [],
       "allowed_message_targets": ["coordinator", "executor"],
+      "required_workflows": ["pr-maintenance"],
       "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     }
   ]
