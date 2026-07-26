@@ -23,7 +23,7 @@ Select the least expensive mode that answers the user's question:
   experiments, and proposed follow-ups. Use only when the user is implementing,
   reviewing, or co-developing the method.
 
-Default to a systems brief for an infrastructure engineer unless the user asks
+Default to a quick triage for an infrastructure engineer unless the user asks
 for another mode.
 
 ## Collect the evidence
