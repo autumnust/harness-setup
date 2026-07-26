@@ -1,0 +1,4 @@
+interface:
+  display_name: "Distill ML Paper"
+  short_description: "Extract research claims and systems consequences"
+  default_prompt: "Use $distill-ml-paper to turn this paper into a concise research and infrastructure brief."
