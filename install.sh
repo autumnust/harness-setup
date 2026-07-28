@@ -18,17 +18,35 @@
 #                                 # shows a diff and backs up each before
 #                                 # writing, and is a no-op when in sync.
 #                                 # (See update.sh, which git-pulls first.)
+#   ./install.sh --instance NAME  # Append instances/NAME.md to the deployed
+#                                 # ~/AGENTS.md and remember the selection.
 set -euo pipefail
 
 MODE="prompt"
 PRESERVE_RELEASE=1
-for arg in "$@"; do
-  case "$arg" in
-    --backup)         MODE="backup" ;;
-    --overwrite)      MODE="overwrite" ;;
-    --skip-existing)  MODE="skip" ;;
-    --update)         MODE="update" ;;
-    --no-release)     PRESERVE_RELEASE=0 ;;
+INSTANCE_PROFILE=""
+INSTANCE_SELECTION="remembered"
+while (($#)); do
+  case "$1" in
+    --backup)         MODE="backup"; shift ;;
+    --overwrite)      MODE="overwrite"; shift ;;
+    --skip-existing)  MODE="skip"; shift ;;
+    --update)         MODE="update"; shift ;;
+    --no-release)     PRESERVE_RELEASE=0; shift ;;
+    --instance)
+      [[ $# -ge 2 ]] || {
+        echo "Missing profile name after --instance" >&2
+        exit 2
+      }
+      INSTANCE_PROFILE="$2"
+      INSTANCE_SELECTION="set"
+      shift 2
+      ;;
+    --no-instance)
+      INSTANCE_PROFILE=""
+      INSTANCE_SELECTION="clear"
+      shift
+      ;;
     -h|--help)
       cat <<'HELP'
 Installs the global coding-agent harness onto this machine
@@ -49,10 +67,14 @@ Usage:
                                 diff and backing up each first; no-op when
                                 already in sync. update.sh wraps this and
                                 git-pulls beforehand.
+  ./install.sh --instance NAME  Append instances/NAME.md to ~/AGENTS.md and
+                                remember NAME for later updates and rollback.
+  ./install.sh --no-instance    Deploy only the portable instructions and
+                                clear any remembered instance profile.
 HELP
       exit 0 ;;
     *)
-      echo "Unknown flag: $arg" >&2; exit 2 ;;
+      echo "Unknown flag: $1" >&2; exit 2 ;;
   esac
 done
 
@@ -61,6 +83,24 @@ CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CODEX_DIR="${CODEX_CONFIG_DIR:-$HOME/.codex}"
 AGENT_HARNESS_HOME="${AGENT_HARNESS_HOME:-$HOME/.agent-harness}"
 PORTABLE_SKILLS_DIR="${AGENT_SKILLS_DIR:-$HOME/.agents/skills}"
+INSTANCE_PROFILE_STATE="$AGENT_HARNESS_HOME/instance-profile"
+
+if [[ "$INSTANCE_SELECTION" == "remembered" && -f "$INSTANCE_PROFILE_STATE" ]]; then
+  INSTANCE_PROFILE="$(<"$INSTANCE_PROFILE_STATE")"
+fi
+if [[ -n "$INSTANCE_PROFILE" ]]; then
+  if [[ ! "$INSTANCE_PROFILE" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+    echo "Invalid instance profile name: $INSTANCE_PROFILE" >&2
+    exit 2
+  fi
+  INSTANCE_PROFILE_SOURCE="$REPO_ROOT/instances/$INSTANCE_PROFILE.md"
+  if [[ ! -f "$INSTANCE_PROFILE_SOURCE" ]]; then
+    echo "Unknown instance profile: $INSTANCE_PROFILE" >&2
+    echo "Expected file: $INSTANCE_PROFILE_SOURCE" >&2
+    exit 2
+  fi
+fi
+
 # A config directory or installed binary signals that this machine uses Codex;
 # no separate opt-in flag is required, including before Codex's first launch.
 CODEX_PRESENT=0
@@ -71,6 +111,13 @@ TS="$(date +%Y%m%dT%H%M%S)"
 TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/harness-install.XXXXXX")"
 cleanup() { rm -rf "$TEMP_ROOT"; }
 trap cleanup EXIT
+
+RENDERED_AGENTS="$TEMP_ROOT/AGENTS.md"
+cp "$REPO_ROOT/home/AGENTS.md" "$RENDERED_AGENTS"
+if [[ -n "$INSTANCE_PROFILE" ]]; then
+  printf '\n' >> "$RENDERED_AGENTS"
+  cat "$INSTANCE_PROFILE_SOURCE" >> "$RENDERED_AGENTS"
+fi
 
 RELEASE_STAGED="$TEMP_ROOT/release"
 RELEASE_ID=""
@@ -289,8 +336,12 @@ prune_stale_agents() {
 }
 
 # --- 1. AGENTS.md + CLAUDE.md symlink ---------------------------------------
-say "Installing ~/AGENTS.md (global instructions)"
-place_file "$REPO_ROOT/home/AGENTS.md" "$HOME/AGENTS.md"
+if [[ -n "$INSTANCE_PROFILE" ]]; then
+  say "Installing ~/AGENTS.md (global instructions + $INSTANCE_PROFILE profile)"
+else
+  say "Installing ~/AGENTS.md (global instructions)"
+fi
+place_file "$RENDERED_AGENTS" "$HOME/AGENTS.md"
 
 say "Ensuring $CLAUDE_DIR exists"
 mkdir -p "$CLAUDE_DIR"
@@ -417,6 +468,21 @@ for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
     place_tree "$skill_dir" "$CODEX_DIR/skills/$name"
   fi
 done
+
+# This small machine-local file lets ordinary updates and rollback reuse the
+# selected paragraph without requiring another command-line option.
+case "$INSTANCE_SELECTION" in
+  set)
+    mkdir -p "$AGENT_HARNESS_HOME"
+    printf '%s\n' "$INSTANCE_PROFILE" > "$TEMP_ROOT/instance-profile"
+    cp "$TEMP_ROOT/instance-profile" "$INSTANCE_PROFILE_STATE"
+    ok "Remembered instance profile: $INSTANCE_PROFILE"
+    ;;
+  clear)
+    rm -f "$INSTANCE_PROFILE_STATE"
+    ok "Cleared remembered instance profile"
+    ;;
+esac
 
 # Register only after every managed target has been installed successfully.
 if (( PRESERVE_RELEASE )); then

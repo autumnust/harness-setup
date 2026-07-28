@@ -17,6 +17,7 @@ from pathlib import Path
 
 PAYLOAD = (
     "home",
+    "instances",
     "claude",
     "agent-skills",
     "agent-workflows",

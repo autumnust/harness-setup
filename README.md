@@ -40,6 +40,16 @@ cd ~/Documents/harness-setup
 On a **fresh device** with no existing harness instructions, settings, skills,
 workflow specs, or generated agents, this installs cleanly with no prompts.
 
+To add a machine-specific paragraph to the deployed `~/AGENTS.md`, select a
+profile once:
+
+```bash
+./install.sh --instance nvda-laptop
+```
+
+Profiles live in `instances/<name>.md`. Updates and rollback reuse the selected
+profile; `--no-instance` returns the machine to the portable instructions only.
+
 On a **device that already has global agent config**, `./install.sh` **refuses
 to overwrite anything**. It lists every conflicting file and exits non-zero.
 Pick one of:
@@ -74,6 +84,7 @@ Pick one of:
 | Source in this repo | Target on the new machine |
 |---|---|
 | `home/AGENTS.md` | `~/AGENTS.md` (and tool-specific global-instruction symlinks for Claude and Codex) |
+| `instances/<name>.md` | Appended to `~/AGENTS.md` only when that profile is selected |
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
 | `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |

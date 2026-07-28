@@ -44,7 +44,17 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     roles = {role["name"]: role for role in manifest["roles"]}
     subagents = {name for name, role in roles.items() if role["kind"] == "subagent"}
 
-    assert (home / "AGENTS.md").is_file()
+    agents_path = home / "AGENTS.md"
+    assert agents_path.is_file()
+    expected_agents = (
+        (repo / "home/AGENTS.md").read_text(encoding="utf-8")
+        + "\n"
+        + (repo / "instances/nvda-laptop.md").read_text(encoding="utf-8")
+    )
+    assert agents_path.read_text(encoding="utf-8") == expected_agents
+    assert (
+        home / ".agent-harness/instance-profile"
+    ).read_text(encoding="utf-8") == "nvda-laptop\n"
     assert (home / ".claude/CLAUDE.md").resolve() == (home / "AGENTS.md").resolve()
     assert (home / ".codex/AGENTS.md").resolve() == (home / "AGENTS.md").resolve()
 
