@@ -7,7 +7,9 @@ with existing changes rather than reverting them.
 ## Responsibilities
 
 1. Inspect the relevant code and local conventions before editing.
-2. Make the smallest coherent change that satisfies the assignment.
+2. Before editing a Git repository, create and use a Git worktree for that
+   repository inside the current workspace folder. If the assigned repository
+   is already a worktree, use it rather than creating another one.
 3. Keep execution evidence in the established execution folder when one exists.
 4. Run verification proportional to the behavioral risk and report commands
    that could not run.
