@@ -25,6 +25,26 @@ any developer. It has these layers:
 Drop this onto a new device, run `install.sh`, and the global setup is restored
 (plus a clone of `kumo-skills-catalog`).
 
+## Filesystem agent tasks
+
+The installed `agent-task` skill creates portable workspaces for personal or
+professional tasks and discovers their current state directly from the
+filesystem. Ask an agent, for example:
+
+> Initialize an agent task for organizing my personal finances.
+
+The agent resolves a name, objective, and destination with you, then hydrates a
+workspace containing raw inputs, stable context, decisions, task tracking,
+working artifacts, and final outputs. There is no user-facing command to
+remember; the deterministic scripts are internal skill resources.
+
+Each workspace keeps small discovery metadata in `README.md`, including a
+stable ID, status, and update date. Ask "show me all my agent tasks" to scan
+one or more filesystem roots and summarize them. The scanner can also emit
+versioned JSON with paths, statuses, objectives, current state, and immediate
+next tasks, providing a future task-board integration point without adding a
+database or cached index. The workspace files remain authoritative.
+
 > Project-local skills (`bench-ec2`, `gpu-ec2`, `learn`, `ship`, `cs224w`,
 > `pdf`) and project `AGENTS.md` files are **not** included here — those
 > live inside their respective project repos.
