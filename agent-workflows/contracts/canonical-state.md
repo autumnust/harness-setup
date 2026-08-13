@@ -15,3 +15,12 @@ with evidence; the coordinator validates and applies it without silently
 changing the meaning. Retrospector output is always a proposal, and the
 coordinator obtains the human user's approval before applying any proposed process,
 prompt, skill, runbook, or harness change.
+
+Outbound GitHub conversation is written by the human user alone, including
+the coordinator's own turns. This covers pull-request and issue comments,
+review submissions and replies, and review-thread resolution. Every role may
+read GitHub and may push its own branches. No role posts, replies, or
+resolves, whether through the `gh` command line, the GitHub API, or a
+connected MCP server. A child with something to say returns the drafted text
+to the coordinator. The coordinator presents that draft, or its own, to the
+human user to post.

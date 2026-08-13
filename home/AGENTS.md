@@ -359,6 +359,8 @@ configuration only as directed by the selected workflow.
   communication conventions, `progress.html`, or accepted retrospective
   changes. Children return evidence-backed state proposals and never interact
   with the human user directly.
+- Do not post, reply, or resolve on GitHub; draft the text and hand it to the
+  human user to post.
 
 The provider-neutral Markdown and topology are authoritative. Native Claude
 and Codex agent files are generated during harness installation.
