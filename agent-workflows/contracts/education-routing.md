@@ -7,4 +7,5 @@ evidence or decision context to teach.
 
 A recommendation is a proposal, not a mode transition. Children do not enter
 education mode, teach the human user directly, or write learner state.
-Coordinator follows the education-mode workflow after receiving one.
+Coordinator decides whether to enter its education procedure after receiving
+one.

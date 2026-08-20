@@ -116,46 +116,38 @@ Pick one of:
 
 ## Portable agent workflow
 
-The main session is the coordinator. It owns interactive education and can
-delegate environment preparation, implementation, review, PR maintenance, and
-bounded teaching support while keeping user decisions and final synthesis in
-the main context. Nesting stops after two subagent levels.
+The main session is the coordinator. Fast is the default path: the
+coordinator implements directly or fans out Executors. Education runs on
+that path. Full-path prepper, review, and PR maintenance are escalation.
+Nesting stops after two subagent levels.
 
 ```mermaid
 flowchart TB
     Human["Human user"] <-->|default interface| Coordinator["Coordinator<br/>root session and education mode"]
+    Executor["Executor<br/>worktree, high effort"]
+    Coordinator -->|fast: 0-N disjoint scopes| Executor
 
-    subgraph Leaves["Depth-one agent sessions (all leaves)"]
-        Prep["Environment Prepper"]
-        Executor["Executor<br/>implementation at high effort"]
-        Reviewer["Reviewer<br/>Executor model at max effort"]
-        Maintainer["PR Maintainer<br/>coordinator-lifetime queue"]
-    end
-
-    Coordinator -->|spawn when needed| Prep
-    Coordinator -->|assign implementation| Executor
-    Coordinator -->|request review| Reviewer
-    Coordinator -->|start for PR work| Maintainer
-
-    Maintainer -.->|PR status| Coordinator
-    Maintainer -.->|registered PR only| Executor
-
+    Prep["Environment Prepper"]
+    Reviewer["Reviewer<br/>other-foundation opinion"]
+    Maintainer["PR Maintainer"]
+    Coordinator -->|full: long-running| Prep
+    Coordinator -->|full: review| Reviewer
+    Coordinator -->|full: PR work| Maintainer
     Reviewer -->|invoke and wait| Opinion(["Cross-provider opinion"])
-    Opinion -->|findings and evidence| Reviewer
-    Reviewer -->|agreed result| Coordinator
-    Reviewer -->|contested result| Coordinator
-    Coordinator -->|assign agreed actions| Executor
-    Coordinator -->|request human assessment| Human
+    Opinion -->|findings| Reviewer
+    Reviewer -->|return opinion| Coordinator
+    Maintainer -.->|registered PR only| Executor
 
     Coordinator -.->|invoke| Retrospector(["Retrospector skill"])
 ```
 
 Only the coordinator spawns agents, writes canonical state, or invokes the
-`retrospector` skill. The Mermaid diagram is a summary; ordered behavior is
-defined only in the [default](./agent-workflows/workflows/default.md),
-[education](./agent-workflows/workflows/education.md),
-[PR-maintenance](./agent-workflows/workflows/pr-maintenance.md), and
-[PR-review](./agent-workflows/workflows/pr-review.md) workflows.
+`retrospector` skill. The Mermaid diagram is a summary; ordinary-work and
+education behavior is defined in the
+[Coordinator prompt](./agent-workflows/roles/coordinator.md). The shared
+[PR-maintenance](./agent-workflows/workflows/pr-maintenance.md) and
+[PR-review](./agent-workflows/workflows/pr-review.md) workflows define their
+respective ordered processes.
 The provider limit remains depth two as a defensive ceiling even though the
 current topology uses only depth-one leaves. See
 [`agent-workflows/`](./agent-workflows/) for the complete contracts and routing
@@ -183,7 +175,8 @@ rules and the [detailed topology](./agent-workflows/topology.md).
 Plugins are not vendored here. The marketplace entries tell Claude Code
 where to fetch them on first launch — they auto-install into
 `~/.claude/plugins/cache/` on the new device. The OpenAI Codex plugin supplies
-the native review runtime used by Reviewer in Claude Code sessions.
+the read-only adversarial-review runtime used by Reviewer in Claude Code
+sessions.
 
 ## Idempotency
 

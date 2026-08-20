@@ -1,5 +1,7 @@
 # Context packet
 
+## Mode
+
 ## Goal
 
 ## User intent and decisions

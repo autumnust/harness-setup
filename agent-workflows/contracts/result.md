@@ -12,7 +12,7 @@ Every child returns a compact result to its permitted parent or message target:
 - **Retrospection input:** meaningful failures, reruns, or teaching evidence.
 
 Omit fields that genuinely do not apply, but never omit model provenance from
-executor or reviewer results. A child does not claim workflow-level completion
-or present teaching turns directly to the human user. The coordinator
-interprets supporting material, applies state changes, and publishes the
-overall result.
+executor results. Reviewer results must include the other-foundation opinion's
+provenance. A child does not claim workflow-level completion or present
+teaching turns directly to the human user. The coordinator interprets
+supporting material, applies state changes, and publishes the overall result.

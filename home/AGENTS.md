@@ -324,33 +324,30 @@ configuration only as directed by the selected workflow.
 
 - Keep small or tightly coupled work in the main session; do not create an
   agent team merely because roles are available.
-- Follow `$AGENT_HARNESS_HOME/specs/workflows/default.md` for goal
-  classification and operational sequencing.
-- Follow `$AGENT_HARNESS_HOME/specs/workflows/education.md` as the sole source
-  for education entry, interactive teaching, supporting work, learner-profile
-  access, and exit behavior.
+- Follow `$AGENT_HARNESS_HOME/specs/roles/coordinator.md` for fast-versus-full
+  classification, operational sequencing, and education. Fast is the default.
 - Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-maintenance.md` as the sole
   source for Maintainer lifecycle, polling, notification routing, and stop
-  behavior.
+  behavior. Full path only.
 - Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-review.md` as the sole source
-  for review ordering, reconciliation, result classification, and coordinator
-  routing.
+  for full-mode review: one other-foundation opinion, no same-foundation
+  second pass.
 - Only the coordinator spawns agents. Current operational children are
   depth-one leaves. Keep the installed maximum depth of two as a defensive
   provider ceiling, not as permission for children to spawn.
-- Give every child a complete context packet: goal, user intent, scope,
+- Give every child a complete context packet: mode, goal, user intent, scope,
   constraints, current state, artifact links, open questions, and return
   contract. Conversation inheritance is an optimization, not a substitute.
 - Parallel writers must own different files. Serialize work that touches the
   same files or depends on an earlier result.
 - Use each role's provider-adapter model policy. Under Codex, Executor uses
-  `gpt-5.6-sol` at high effort; Reviewer uses the same model at the highest
-  configured effort.
+  `gpt-5.6-sol` at high effort.
 - Reviewer is the only role permitted to invoke the cross-provider review
   route. Under Codex, it invokes Claude Code with the current `opus` alias and
   `max` effort. Under Claude Code, it invokes the installed OpenAI Codex
-  plugin's native review runtime. The coordinator and other children never
-  invoke the cross-provider route as a substitute.
+  plugin's read-only adversarial-review runtime. The coordinator and other
+  children never invoke the cross-provider route as a substitute. Reviewer
+  returns that opinion and does not run a second same-foundation review.
 - `retrospector` is a coordinator-invoked skill, not another agent. It proposes
   changes and never applies them.
 - Child results are summaries with evidence links. Keep verbose exploration,

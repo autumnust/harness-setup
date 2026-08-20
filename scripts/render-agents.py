@@ -119,12 +119,7 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     if max_depth != 2:
         raise SpecError("max_depth must remain the defensive provider ceiling of 2")
     workflows = manifest.get("workflows")
-    required_workflows = {
-        "default",
-        "education-mode",
-        "pr-maintenance",
-        "pr-review",
-    }
+    required_workflows = {"pr-maintenance", "pr-review"}
     if not isinstance(workflows, dict) or set(workflows) != required_workflows:
         raise SpecError("manifest must declare the complete workflow set")
     for workflow, relative_path in workflows.items():
@@ -199,8 +194,6 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise SpecError("reviewer must be the sole cross-provider review invoker")
     expected_role_workflows = {
         "coordinator": [
-            "default",
-            "education-mode",
             "pr-maintenance",
             "pr-review",
         ],
@@ -213,12 +206,6 @@ def validate(source: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
             raise SpecError(
                 f"{name}: required_workflows must be {expected!r}"
             )
-    if roles["reviewer"].get("model_policy") != roles["executor"].get(
-        "model_policy"
-    ):
-        raise SpecError("reviewer and executor must use the same model policy")
-    if roles["reviewer"].get("reasoning_policy") != "highest":
-        raise SpecError("reviewer must use the highest reasoning policy")
     for name, role in roles.items():
         if name != "coordinator" and role["human_interface"] != "none":
             raise SpecError(f"{name}: direct human interaction is not permitted")

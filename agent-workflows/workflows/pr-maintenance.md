@@ -1,8 +1,9 @@
 # PR maintenance workflow
 
-1. Coordinator starts one Maintainer when the session first enters
-   PR-producing or PR-monitoring work and retains its identity until
-   Coordinator terminates.
+Full-mode only.
+
+1. Coordinator starts one Maintainer when full work first creates or monitors
+   a PR and retains its identity until Coordinator terminates.
 2. For every created or adopted PR, Coordinator sends a registration satisfying
    the PR-queue contract, including the responsible Executor's routable
    identity.

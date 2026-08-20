@@ -32,6 +32,7 @@ def args(
         repo=str(repo),
         scope=scope,
         base=base,
+        context="Goal: review the change. Target: the complete diff.",
         codex_model="gpt-5.6-sol",
     )
 
@@ -44,12 +45,17 @@ class CrossProviderReviewTests(unittest.TestCase):
 
         self.assertEqual(command[0:2], ["claude", "-p"])
         self.assertIn("independent read-only code-review opinion", command[2])
+        self.assertIn("Coordinator review context:", command[2])
+        self.assertIn("Goal: review the change.", command[2])
         self.assertEqual(command[command.index("--model") + 1], "opus")
         self.assertEqual(command[command.index("--effort") + 1], "max")
         self.assertEqual(command[command.index("--permission-mode") + 1], "plan")
         self.assertEqual(
             command[command.index("--tools") + 1],
-            "Read,Glob,Grep,Bash(git:*)",
+            "Read,Glob,Grep,Bash",
+        )
+        self.assertEqual(
+            command[command.index("--allowed-tools") + 1], "Bash(git:*)"
         )
         self.assertIn("--no-session-persistence", command)
         self.assertEqual(
@@ -82,10 +88,11 @@ class CrossProviderReviewTests(unittest.TestCase):
 
         self.assertEqual(command[0], "/test/node")
         self.assertEqual(command[1], str(companion.resolve()))
-        self.assertEqual(command[2:4], ["review", "--wait"])
+        self.assertEqual(command[2:4], ["adversarial-review", "--wait"])
         self.assertEqual(command[command.index("--scope") + 1], "branch")
         self.assertEqual(command[command.index("--base") + 1], "main")
         self.assertEqual(command[command.index("--model") + 1], "gpt-5.6-sol")
+        self.assertEqual(command[-1], "Goal: review the change. Target: the complete diff.")
         self.assertEqual(
             provenance,
             {

@@ -12,8 +12,8 @@ contracts into each tool's native agent format during installation.
 | `manifest.json` | Harness-specific machine-readable roles, topology, model policies, message targets, and output limits |
 | `runtime-config.*.json` | Schema and initial mutable configuration installed for coordinator confirmation |
 | `topology.md` | Human-readable orchestration design and depth rules |
-| `roles/` | One provider-neutral prompt per role |
-| `workflows/` | Procedures that coordinate several roles |
+| `roles/` | One provider-neutral responsibility prompt per role; the Coordinator prompt also contains ordinary-work and education procedures |
+| `workflows/` | Procedures shared by Coordinator and a child agent |
 | `contracts/` | Handoff, routing, state, and output requirements shared by roles |
 | `adapters/` | Provider-specific model and sandbox mappings |
 | `templates/` | Starting points for human-facing execution artifacts |
@@ -33,10 +33,10 @@ second editable copy of every prompt.
 
 - Put provider-neutral behavior in Markdown and provider-specific fields in an
   adapter.
-- Declare a role's `required_workflows` in the manifest when generated native
-  agent instructions must include a workflow. Keep ordered multi-role process
-  and result-category definitions in that workflow rather than repeating them
-  in the role prompt.
+- Declare a role's `required_workflows` in the manifest only when generated
+  native agent instructions must include a procedure shared with another role.
+  Keep its ordered multi-role process and result-category definitions there
+  rather than repeating them in either role prompt.
 - `manifest.json` is this harness's validated schema, not a provider or industry
   standard. Keep detailed responsibility in roles and cross-role sequence in
   workflows rather than duplicating prose in the manifest.
@@ -49,8 +49,9 @@ second editable copy of every prompt.
 - Mutable learner profiles and execution history never live here. Installed
   state belongs under `$AGENT_HARNESS_HOME/state/`.
 
-## Workflow authority
+## Procedure authority
 
-Each workflow is the single source for its ordered process, lifecycle, and
-named result states. Roles reference workflows without restating them, and
-contracts define shared data shape, write authority, and handoff requirements.
+The Coordinator prompt is the single source for ordinary-work classification,
+full-work escalation, and education. Each shared workflow is the single source
+for its ordered process, lifecycle, and named result states. Contracts define
+shared data shape, write authority, and handoff requirements.

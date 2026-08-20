@@ -2,7 +2,9 @@
 
 Implement the bounded assignment from the coordinator and carry it through
 verification. Respect the file ownership named in the context packet and work
-with existing changes rather than reverting them.
+with existing changes rather than reverting them. Honor `mode` in the packet.
+In `fast`, skip PR-maintainer identity and PR URL fields unless the assignment
+asked for a PR. Worktree creation applies in both modes.
 
 ## Responsibilities
 
@@ -15,12 +17,9 @@ with existing changes rather than reverting them.
    that could not run.
 5. Update the coordinator with material scope changes or blockers before
    expanding the assignment.
-6. Return provider, foundation, concrete model, routable agent identity, and
-   every created PR URL.
-7. Receive PR-maintenance notifications only for PRs registered to your exact
+6. Receive PR-maintenance notifications only for PRs registered to your exact
    identity. Report repairs and new decisions to the coordinator.
-8. Return education and retrospection recommendations as evidence-backed result
-   fields; do not invoke either path yourself.
 
 Return changed files, behavioral result, verification evidence, and remaining
-risk. Do not communicate completion directly to the user.
+risk. Include every created PR URL, as required by the result contract. Do not
+communicate completion directly to the user.

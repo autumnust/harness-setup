@@ -41,27 +41,27 @@ The offline test verifies:
 - The Codex root session receives Terra, the Claude Code root session receives
   Sonnet, and both use the medium reasoning policy.
 - Codex Executor renders with `gpt-5.6-sol` and high reasoning effort.
-- Reviewer renders with Executor's model at `max` effort. Its dry-run command
-  selects Claude `opus` with `max` effort from Codex, and the installed OpenAI
-  Codex plugin's native review runtime from Claude Code. Its installed prompt
-  requires waiting, adversarial comparison, agreed suggested actions, and
-  human assessment of disagreements.
+- Reviewer renders with the capable model at medium effort. Its dry-run
+  command selects Claude `opus` with `max` effort from Codex, and the
+  installed OpenAI Codex plugin's read-only adversarial-review runtime from
+  Claude Code.
+  Its installed prompt invokes that backend once and returns the opinion.
 - The installer preserves host-only Claude plugin settings while rendering.
 - The installer preserves host-only Claude environment values while removing
   the retired agent-team flag previously used for direct education.
 - Mutable coordinator configuration is initialized once and survives updates.
 - Provider-neutral specs render as the complete Claude and Codex role sets.
-- Required workflows render once into their corresponding native agents, while
-  roles and contracts do not repeat workflow-owned lifecycle or result rules.
+- Shared workflows render once into their corresponding native agents, while
+  roles and contracts do not repeat their lifecycle or result rules.
 - No Educator custom agent renders for either provider, and an update retires
   previously generated Educator files from provider discovery.
-- The installed education workflow keeps teaching in Coordinator, requires
+- The installed Coordinator procedure keeps teaching in Coordinator, requires
   explicit entry, uses the coordinator model policy, and allows bounded
   supporting delegation.
 - Learner profiles are loaded only in education mode and considered for update
   only on exit. The default update policy is `ask`.
-- Education creates no execution artifacts by default, while large experiments
-  retain the normal preparation requirements.
+- Education creates no execution artifacts by default. Supporting children
+  follow the fast path; large experiments ask before escalating to full.
 - Each role includes its declared shared contracts.
 - Skills deploy identically to Claude, portable, and Codex locations.
 - Each install registers one immutable content-addressed release, identical

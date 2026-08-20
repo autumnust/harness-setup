@@ -131,16 +131,14 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     reviewer = tomllib.loads(
         (codex_dir / "agent-harness-reviewer.toml").read_text()
     )
-    assert reviewer["model"] == executor["model"] == "gpt-5.6-sol"
-    assert reviewer["model_reasoning_effort"] == "max"
+    assert reviewer["model"] == "gpt-5.6-terra"
+    assert reviewer["model_reasoning_effort"] == "medium"
     assert "only role permitted" in reviewer["developer_instructions"]
     assert "# PR review workflow" in reviewer["developer_instructions"]
     assert "waits for its opinion" in reviewer["developer_instructions"]
-    assert (
-        reviewer["developer_instructions"].count("**Suggested action item:**") == 1
-    )
-    assert reviewer["developer_instructions"].count("**Disagreement:**") == 1
-    assert "asks the human user" in reviewer["developer_instructions"]
+    assert reviewer["developer_instructions"].count("**Finding:**") == 1
+    assert "**Suggested action item:**" not in reviewer["developer_instructions"]
+    assert "**Disagreement:**" not in reviewer["developer_instructions"]
     maintainer = tomllib.loads(
         (codex_dir / "agent-harness-pr-maintainer.toml").read_text()
     )
@@ -160,13 +158,13 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
 
     installed_specs = home / ".agent-harness/specs"
     assert file_hashes(repo / "agent-workflows") == file_hashes(installed_specs)
-    education_workflow = (
-        installed_specs / "workflows/education.md"
+    coordinator_prompt = (
+        installed_specs / "roles/coordinator.md"
     ).read_text(encoding="utf-8")
-    assert "not a separate agent" in education_workflow
-    assert "Coordinator teaches the human user directly" in education_workflow
-    assert "existing child or spawn a new child" in education_workflow
-    assert "Outside education mode, do not load learner profiles" in education_workflow
+    assert "not a separate agent" in coordinator_prompt
+    assert "Teach the human user directly" in coordinator_prompt
+    assert "a bounded child for research" in coordinator_prompt
+    assert "Do not load a profile outside education" in coordinator_prompt
 
     skill_names = {
         path.parent.name for path in (repo / "agent-skills").glob("*/SKILL.md")
@@ -190,6 +188,12 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     assert codex_command[codex_command.index("--model") + 1] == "opus"
     assert codex_command[codex_command.index("--effort") + 1] == "max"
     assert codex_command[codex_command.index("--permission-mode") + 1] == "plan"
+    assert codex_command[codex_command.index("--tools") + 1] == "Read,Glob,Grep,Bash"
+    assert (
+        codex_command[codex_command.index("--allowed-tools") + 1]
+        == "Bash(git:*)"
+    )
+    assert "Smoke review context" in codex_command[2]
 
     claude_route = json.loads((root / "claude-review-route.json").read_text())
     assert claude_route["provenance"] == {
@@ -199,8 +203,9 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
         "effort": "provider-default",
     }
     claude_command = claude_route["command"]
-    assert claude_command[2:4] == ["review", "--wait"]
+    assert claude_command[2:4] == ["adversarial-review", "--wait"]
     assert claude_command[claude_command.index("--model") + 1] == "gpt-5.6-sol"
+    assert claude_command[-1].startswith("Smoke review context")
 
     releases = home / ".agent-harness/releases"
     release_ids = [path.name for path in releases.iterdir() if path.is_dir()]

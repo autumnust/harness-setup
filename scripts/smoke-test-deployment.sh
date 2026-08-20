@@ -169,10 +169,12 @@ run_inside_sandbox() {
   python3 \
     "$AGENT_SKILLS_DIR/cross-provider-review/scripts/invoke_review.py" \
     --caller codex --scope branch --base main --repo "$root/workspace" \
+    --context 'Smoke review context: inspect the complete branch diff.' \
     --dry-run > "$root/codex-review-route.json"
   HARNESS_CODEX_PLUGIN_ROOT="$root/fake-codex-plugin" python3 \
     "$AGENT_SKILLS_DIR/cross-provider-review/scripts/invoke_review.py" \
     --caller claude --scope branch --base main --repo "$root/workspace" \
+    --context 'Smoke review context: inspect the complete branch diff.' \
     --dry-run > "$root/claude-review-route.json"
 
   active_release="$("$AGENT_HARNESS_HOME/bin/harness-release" current)"

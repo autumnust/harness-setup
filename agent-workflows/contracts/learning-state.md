@@ -10,8 +10,8 @@ $AGENT_HARNESS_HOME/state/communication.md
 
 `AGENT_HARNESS_HOME` defaults to `~/.agent-harness`. Only Coordinator writes
 learner state. Coordinator and the quiz procedure may collect evidence and
-prepare a proposed replacement snapshot when directed by the education-mode
-workflow.
+prepare a proposed replacement snapshot during the Coordinator's education
+procedure.
 
 A topic profile is a current snapshot, not an append-only transcript. Keep:
 

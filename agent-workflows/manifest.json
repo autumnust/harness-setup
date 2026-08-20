@@ -3,8 +3,6 @@
   "max_depth": 2,
   "default_result_word_limit": 800,
   "workflows": {
-    "default": "workflows/default.md",
-    "education-mode": "workflows/education.md",
     "pr-maintenance": "workflows/pr-maintenance.md",
     "pr-review": "workflows/pr-review.md"
   },
@@ -21,7 +19,7 @@
       "allowed_children": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
       "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
       "required_skills": ["quiz", "retrospector"],
-      "required_workflows": ["default", "education-mode", "pr-maintenance", "pr-review"],
+      "required_workflows": ["pr-maintenance", "pr-review"],
       "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/human-readable-html.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/learning-state.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     },
     {
@@ -43,16 +41,16 @@
       "display_name": "Reviewer",
       "kind": "subagent",
       "human_interface": "none",
-      "description": "Reviews a proposed approach or PR for problem-level soundness, harness alignment, core correctness, compatibility, and missing tests.",
+      "description": "Invokes the other-foundation review backend and returns that opinion.",
       "prompt": "roles/reviewer.md",
-      "model_policy": "executor",
-      "reasoning_policy": "highest",
+      "model_policy": "capable",
+      "reasoning_policy": "medium",
       "sandbox_policy": "read-only",
       "allowed_children": [],
       "allowed_message_targets": ["coordinator"],
       "required_skills": ["cross-provider-review"],
       "required_workflows": ["pr-review"],
-      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/review-routing.md", "contracts/review-independence.md", "contracts/education-routing.md", "contracts/output-limits.md"]
+      "contracts": ["contracts/canonical-state.md", "contracts/handoff.md", "contracts/result.md", "contracts/review-independence.md", "contracts/education-routing.md", "contracts/output-limits.md"]
     },
     {
       "name": "executor",

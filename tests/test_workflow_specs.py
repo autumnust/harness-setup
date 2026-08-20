@@ -53,18 +53,17 @@ class WorkflowSpecTests(unittest.TestCase):
             self.role(manifest, "executor")["reasoning_policy"], "high"
         )
         self.assertEqual(
-            self.role(manifest, "reviewer")["model_policy"],
-            self.role(manifest, "executor")["model_policy"],
+            self.role(manifest, "reviewer")["model_policy"], "capable"
         )
         self.assertEqual(
-            self.role(manifest, "reviewer")["reasoning_policy"], "highest"
+            self.role(manifest, "reviewer")["reasoning_policy"], "medium"
         )
         self.assertEqual(
             self.role(manifest, "reviewer")["required_workflows"], ["pr-review"]
         )
         self.assertEqual(
             self.role(manifest, "coordinator")["required_workflows"],
-            ["default", "education-mode", "pr-maintenance", "pr-review"],
+            ["pr-maintenance", "pr-review"],
         )
         self.assertEqual(
             self.role(manifest, "pr-maintainer")["required_workflows"],
@@ -99,7 +98,7 @@ class WorkflowSpecTests(unittest.TestCase):
         )
         self.assertEqual(
             set(manifest["workflows"]),
-            {"default", "education-mode", "pr-maintenance", "pr-review"},
+            {"pr-maintenance", "pr-review"},
         )
         interfaces = {
             role["name"]: role["human_interface"] for role in manifest["roles"]
@@ -136,26 +135,6 @@ class WorkflowSpecTests(unittest.TestCase):
         ):
             render_agents.validate(self.source)
 
-    def test_reviewer_must_match_executor_model_at_highest_effort(self) -> None:
-        manifest = self.manifest()
-        reviewer = self.role(manifest, "reviewer")
-        reviewer["model_policy"] = "fast"
-        self.write_manifest(manifest)
-        with self.assertRaisesRegex(
-            render_agents.SpecError,
-            "same model policy",
-        ):
-            render_agents.validate(self.source)
-
-        reviewer["model_policy"] = self.role(manifest, "executor")["model_policy"]
-        reviewer["reasoning_policy"] = "high"
-        self.write_manifest(manifest)
-        with self.assertRaisesRegex(
-            render_agents.SpecError,
-            "highest reasoning policy",
-        ):
-            render_agents.validate(self.source)
-
     def test_reviewer_must_include_pr_review_workflow(self) -> None:
         manifest = self.manifest()
         self.role(manifest, "reviewer")["required_workflows"] = []
@@ -180,7 +159,9 @@ class WorkflowSpecTests(unittest.TestCase):
         self.role(manifest, "pr-maintainer")["required_workflows"] = [
             "pr-maintenance"
         ]
-        self.role(manifest, "coordinator")["required_workflows"] = ["default"]
+        self.role(manifest, "coordinator")["required_workflows"] = [
+            "pr-maintenance"
+        ]
         self.write_manifest(manifest)
         with self.assertRaisesRegex(
             render_agents.SpecError,
@@ -192,38 +173,49 @@ class WorkflowSpecTests(unittest.TestCase):
         self,
     ) -> None:
         workflow = (self.source / "workflows/pr-review.md").read_text()
-        self.assertEqual(workflow.count("**Suggested action item:**"), 1)
-        self.assertEqual(workflow.count("**Disagreement:**"), 1)
+        self.assertEqual(workflow.count("**Finding:**"), 1)
+        self.assertNotIn("**Suggested action item:**", workflow)
+        self.assertNotIn("**Disagreement:**", workflow)
         for relative in (
             "roles/reviewer.md",
-            "contracts/review-routing.md",
+            "contracts/review-independence.md",
             "contracts/result.md",
         ):
             text = (self.source / relative).read_text()
+            self.assertNotIn("**Finding:**", text)
             self.assertNotIn("**Suggested action item:**", text)
             self.assertNotIn("**Disagreement:**", text)
 
-    def test_requires_education_mode_workflow(self) -> None:
+    def test_requires_complete_shared_workflow_set(self) -> None:
         manifest = self.manifest()
-        del manifest["workflows"]["education-mode"]
+        del manifest["workflows"]["pr-review"]
         self.write_manifest(manifest)
         with self.assertRaisesRegex(render_agents.SpecError, "complete workflow set"):
             render_agents.validate(self.source)
 
-    def test_education_mode_is_owned_by_coordinator(self) -> None:
-        workflow = (self.source / "workflows/education.md").read_text()
-        normalized = " ".join(workflow.split())
-        self.assertIn("not a separate agent", workflow)
-        self.assertIn(
-            "A single ordinary question stays in the current",
-            normalized,
-        )
-        self.assertIn("Coordinator teaches the human user directly", workflow)
-        self.assertIn("existing model policy", workflow)
-        self.assertIn("existing child or spawn a new child", workflow)
-        self.assertIn("By default, create no execution folder", workflow)
-        self.assertIn("Outside education mode, do not load learner profiles", workflow)
-        self.assertIn("A missing policy means `ask`", workflow)
+    def test_education_is_owned_by_coordinator(self) -> None:
+        coordinator = (self.source / "roles/coordinator.md").read_text()
+        normalized = " ".join(coordinator.split())
+        for marker in (
+            "not a separate agent",
+            "A single ordinary question remains in the current procedure",
+            "Teach the human user directly",
+            "existing model policy",
+            "resume or create a bounded child",
+            "That child uses `mode: fast`",
+            "By default, create no execution folder",
+            "Do not load a profile outside education",
+            "A missing policy means `ask`",
+        ):
+            self.assertIn(marker, normalized)
+
+    def test_pr_requests_escalate_to_full_work(self) -> None:
+        coordinator = (self.source / "roles/coordinator.md").read_text()
+        handoff = (self.source / "contracts/handoff.md").read_text()
+        maintenance = (self.source / "workflows/pr-maintenance.md").read_text()
+        self.assertIn("creates or monitors a PR", coordinator)
+        self.assertIn("A requested PR is full work.", handoff)
+        self.assertIn("Full-mode only.", maintenance)
 
     def test_coordinator_owns_human_readable_html_contract(self) -> None:
         manifest, _adapters = render_agents.validate(self.source)
@@ -257,7 +249,7 @@ class WorkflowSpecTests(unittest.TestCase):
         ):
             self.assertIn(marker, template)
 
-    def test_other_workflow_semantics_are_not_redefined_in_roles_or_contracts(
+    def test_procedures_have_one_authoritative_source(
         self,
     ) -> None:
         global_docs = "\n".join(
@@ -267,27 +259,26 @@ class WorkflowSpecTests(unittest.TestCase):
                 REPO_ROOT / "home/AGENTS.md",
             )
         )
-        default = (self.source / "workflows/default.md").read_text()
         coordinator = (self.source / "roles/coordinator.md").read_text()
-        self.assertEqual(default.count("presents it to the human user"), 1)
-        self.assertNotIn("presents it to the human user", coordinator)
-        self.assertNotIn("presents it to the human user", global_docs)
+        coordinator_normalized = " ".join(coordinator.split())
+        self.assertEqual(coordinator.count("Present its readiness result"), 1)
+        self.assertIn("**Fast**", coordinator)
+        self.assertIn("**Full**", coordinator)
+        self.assertNotIn("Present its readiness result", global_docs)
 
-        education = (self.source / "workflows/education.md").read_text()
         education_other = "\n".join(
             (self.source / relative).read_text()
             for relative in (
-                "roles/coordinator.md",
                 "contracts/education-routing.md",
                 "contracts/learning-state.md",
             )
         )
         for marker in (
-            "A single ordinary question stays",
+            "A single ordinary question remains",
             "By default, create no execution folder",
-            "A request for product",
+            "A product implementation request exits",
         ):
-            self.assertEqual(education.count(marker), 1)
+            self.assertEqual(coordinator_normalized.count(marker), 1)
             self.assertNotIn(marker, education_other)
             self.assertNotIn(marker, global_docs)
 
@@ -396,21 +387,21 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertFalse((output / "claude/educator.md").exists())
 
         reviewer = (output / "codex/agent-harness-reviewer.toml").read_text()
-        self.assertIn('model = "gpt-5.6-sol"', reviewer)
-        self.assertIn('model_reasoning_effort = "max"', reviewer)
+        self.assertIn('model = "gpt-5.6-terra"', reviewer)
+        self.assertIn('model_reasoning_effort = "medium"', reviewer)
         self.assertIn("External backend: claude-code", reviewer)
         self.assertIn("External model: opus", reviewer)
         self.assertIn("External effort: max", reviewer)
         self.assertIn("--caller codex", reviewer)
         self.assertIn("# PR review workflow", reviewer)
         self.assertIn("waits for its opinion", reviewer)
-        self.assertEqual(reviewer.count("**Suggested action item:**"), 1)
-        self.assertEqual(reviewer.count("**Disagreement:**"), 1)
-        self.assertIn("asks the human user", reviewer)
+        self.assertEqual(reviewer.count("**Finding:**"), 1)
+        self.assertNotIn("**Suggested action item:**", reviewer)
+        self.assertNotIn("**Disagreement:**", reviewer)
 
         claude_reviewer = (output / "claude/reviewer.md").read_text()
         self.assertIn("model: sonnet", claude_reviewer)
-        self.assertIn("effort: max", claude_reviewer)
+        self.assertIn("effort: medium", claude_reviewer)
         self.assertIn("  - cross-provider-review", claude_reviewer)
         self.assertIn("External backend: codex-plugin-native-review", claude_reviewer)
         self.assertIn("External model: gpt-5.6-sol", claude_reviewer)

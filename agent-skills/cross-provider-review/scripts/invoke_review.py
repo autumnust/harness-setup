@@ -62,7 +62,9 @@ def build_command(args: argparse.Namespace) -> tuple[list[str], dict[str, str]]:
             "compatibility, and "
             f"missing tests. {review_target(args.scope, args.base)} "
             "Return findings first, ordered by severity, with file references. "
-            "State when evidence is uncertain. Do not edit files."
+            "State when evidence is uncertain. Do not edit files.\n\n"
+            "Coordinator review context:\n"
+            f"{args.context}"
         )
         command = [
             os.environ.get("HARNESS_REVIEW_CLAUDE_BIN", "claude"),
@@ -75,7 +77,9 @@ def build_command(args: argparse.Namespace) -> tuple[list[str], dict[str, str]]:
             "--permission-mode",
             "plan",
             "--tools",
-            "Read,Glob,Grep,Bash(git:*)",
+            "Read,Glob,Grep,Bash",
+            "--allowed-tools",
+            "Bash(git:*)",
             "--add-dir",
             repo,
             "--no-session-persistence",
@@ -94,7 +98,7 @@ def build_command(args: argparse.Namespace) -> tuple[list[str], dict[str, str]]:
     command = [
         os.environ.get("HARNESS_REVIEW_NODE_BIN", "node"),
         str(plugin_root / "scripts/codex-companion.mjs"),
-        "review",
+        "adversarial-review",
         "--wait",
         "--scope",
         args.scope,
@@ -105,6 +109,7 @@ def build_command(args: argparse.Namespace) -> tuple[list[str], dict[str, str]]:
     ]
     if args.base:
         command.extend(["--base", args.base])
+    command.append(args.context)
     provenance = {
         "caller": "claude",
         "backend": "codex-plugin-native-review",
@@ -122,6 +127,11 @@ def main() -> int:
     )
     parser.add_argument("--base")
     parser.add_argument("--repo", default=".")
+    parser.add_argument(
+        "--context",
+        required=True,
+        help="Coordinator review context, including the problem and target diff.",
+    )
     parser.add_argument("--codex-model", default="gpt-5.6-sol")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
