@@ -5,8 +5,8 @@
 #
 # Transport: rsync the working tree to the remote, then run install.sh --update
 # there. The remote needs neither git nor GitHub access — it only receives
-# files. Every reachable Host alias works uniformly because ~/.ssh/config wires
-# up the SSM / IAP tunnels via ProxyCommand.
+# files. Every reachable Host alias works uniformly through the local SSH
+# configuration.
 #
 # Usage:
 #   broadcast.sh --list                 List candidate hosts from ~/.ssh/config.

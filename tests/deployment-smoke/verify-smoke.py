@@ -49,12 +49,12 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     expected_agents = (
         (repo / "home/AGENTS.md").read_text(encoding="utf-8")
         + "\n"
-        + (repo / "instances/nvda-laptop.md").read_text(encoding="utf-8")
+        + (repo / "instances/example-workstation.md").read_text(encoding="utf-8")
     )
     assert agents_path.read_text(encoding="utf-8") == expected_agents
     assert (
         home / ".agent-harness/instance-profile"
-    ).read_text(encoding="utf-8") == "nvda-laptop\n"
+    ).read_text(encoding="utf-8") == "example-workstation\n"
     assert (home / ".claude/CLAUDE.md").resolve() == (home / "AGENTS.md").resolve()
     assert (home / ".codex/AGENTS.md").resolve() == (home / "AGENTS.md").resolve()
 

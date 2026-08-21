@@ -130,7 +130,7 @@ run_inside_sandbox() {
   printf '%s\n' \
     '{"enabledPlugins":{"smoke-only@example":false},"env":{"SMOKE_HOST_ONLY":"preserved","CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS":"1"}}' \
     > "$CLAUDE_CONFIG_DIR/settings.json"
-  "$REPO_ROOT/install.sh" --overwrite --instance nvda-laptop > "$root/install.log"
+  "$REPO_ROOT/install.sh" --overwrite --instance example-workstation > "$root/install.log"
 
   [[ -f "$AGENT_HARNESS_HOME/config.json" ]] || {
     echo "error: installer did not initialize runtime configuration" >&2

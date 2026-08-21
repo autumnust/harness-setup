@@ -52,7 +52,7 @@ and install onto target machines:
 
 ```bash
 .claude/skills/broadcast-harness/scripts/broadcast.sh --list   # see targets
-.claude/skills/broadcast-harness/scripts/broadcast.sh gpu-ec2  # deploy to one
+.claude/skills/broadcast-harness/scripts/broadcast.sh build-box # deploy to one
 .claude/skills/broadcast-harness/scripts/broadcast.sh --all    # deploy to all reachable
 ```
 

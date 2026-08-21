@@ -496,24 +496,7 @@ if (( PRESERVE_RELEASE )); then
   ok "Active harness release: $REGISTERED_RELEASE"
 fi
 
-# --- 5. Clone kumo-skills-catalog (referenced by AGENTS.md) -----------------
-CATALOG_DIR="$HOME/Documents/kumo-skills-catalog"
-if [[ -d "$CATALOG_DIR/.git" ]]; then
-  ok "kumo-skills-catalog already present at $CATALOG_DIR — skipping clone"
-else
-  say "Cloning kumo-skills-catalog → $CATALOG_DIR"
-  mkdir -p "$(dirname "$CATALOG_DIR")"
-  if git clone git@github.com:kumo-ai/kumo-skills-catalog.git "$CATALOG_DIR" 2>/dev/null; then
-    ok "Cloned via SSH"
-  elif gh repo clone kumo-ai/kumo-skills-catalog "$CATALOG_DIR"; then
-    ok "Cloned via gh"
-  else
-    warn "Could not clone kumo-skills-catalog. Clone it manually:"
-    warn "  git clone git@github.com:kumo-ai/kumo-skills-catalog.git $CATALOG_DIR"
-  fi
-fi
-
-# --- 6. Final report --------------------------------------------------------
+# --- 5. Final report --------------------------------------------------------
 if [[ "$MODE" == "update" ]]; then
   printf '\n'
   ok "Harness sync complete: $UPDATED updated, $UNCHANGED already in sync."

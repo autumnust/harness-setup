@@ -1,6 +1,6 @@
 ---
 name: broadcast-harness
-description: Push this harness-setup repo to ssh-reachable machines and run the installer (--update) on each, so their global Claude Code config matches this repo. Use when the user wants to roll out harness changes to remote hosts / EC2 / dev boxes, or "update all my machines". Only for this repo's own deployment — not general remote command execution.
+description: Push this harness-setup repo to SSH-reachable machines and run the installer (--update) on each, so their global Claude Code config matches this repo. Use when the user wants to roll out harness changes to remote development machines or "update all my machines". Only for this repo's own deployment — not general remote command execution.
 ---
 
 # Broadcast the harness to remote machines
@@ -10,8 +10,8 @@ hosts: rsyncs the working tree to each, then runs `install.sh --update` there
 (diff + back up + no-op-when-synced). The remote needs no git or GitHub access.
 
 All work is done by `scripts/broadcast.sh`. Targets come from named `Host`
-entries in `~/.ssh/config` (SSM/IAP tunnels work transparently via their
-`ProxyCommand`s). `github.com` and wildcard patterns are never targets.
+entries in `~/.ssh/config`. `github.com` and wildcard patterns are never
+targets.
 
 ## Procedure
 
@@ -37,8 +37,8 @@ entries in `~/.ssh/config` (SSM/IAP tunnels work transparently via their
   on another machine — confirm the target list before a non-`--check` run.
 - Remote checkout path defaults to `~/harness-setup`; override with the
   `REMOTE_DIR` env var if needed.
-- A host may be **unreachable** simply because the instance is stopped (e.g. an
-  EC2 box). That is a skip, not a failure of the skill — note it and move on.
+- A host may be **unreachable** because it is offline. That is a skip, not a
+  failure of the skill; report it to the user.
 - After a successful update, the remote should restart Claude Code to pick up
   the new `settings.json`. Mention this.
 
@@ -46,7 +46,7 @@ entries in `~/.ssh/config` (SSM/IAP tunnels work transparently via their
 
 ```bash
 scripts/broadcast.sh --list                 # what can I reach?
-scripts/broadcast.sh --check gpu-ec2         # preflight one host, write nothing
-scripts/broadcast.sh gpu-ec2 aws-bench       # deploy to two hosts
+scripts/broadcast.sh --check build-box       # preflight one host, write nothing
+scripts/broadcast.sh build-box test-box      # deploy to two hosts
 scripts/broadcast.sh --all                   # deploy to every candidate
 ```

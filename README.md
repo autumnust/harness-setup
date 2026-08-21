@@ -22,8 +22,7 @@ any developer. It has these layers:
   core into Claude Code specifically: statusline, enabled plugins, and a
   `~/.claude/CLAUDE.md` symlink pointing at `~/AGENTS.md`.
 
-Drop this onto a new device, run `install.sh`, and the global setup is restored
-(plus a clone of `kumo-skills-catalog`).
+Drop this onto a new device and run `install.sh` to restore the global setup.
 
 ## Filesystem agent tasks
 
@@ -45,9 +44,8 @@ versioned JSON with paths, statuses, objectives, current state, and immediate
 next tasks, providing a future task-board integration point without adding a
 database or cached index. The workspace files remain authoritative.
 
-> Project-local skills (`bench-ec2`, `gpu-ec2`, `learn`, `ship`, `cs224w`,
-> `pdf`) and project `AGENTS.md` files are **not** included here — those
-> live inside their respective project repos.
+> Project-local skills and project `AGENTS.md` files are **not** included here;
+> they belong in their respective project repositories.
 
 ## Quick start on a new device
 
@@ -64,7 +62,7 @@ To add a machine-specific paragraph to the deployed `~/AGENTS.md`, select a
 profile once:
 
 ```bash
-./install.sh --instance nvda-laptop
+./install.sh --instance example-workstation
 ```
 
 Profiles live in `instances/<name>.md`. Updates and rollback reuse the selected
@@ -112,7 +110,6 @@ Pick one of:
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
 | versioned harness releases | `~/.agent-harness/releases/<release-id>/` with `~/.agent-harness/current` selecting the active release |
 | mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates or rollback) |
-| *(cloned at install)* | `~/Documents/kumo-skills-catalog/` (from `kumo-ai/kumo-skills-catalog`) |
 
 ## Portable agent workflow
 
@@ -212,6 +209,11 @@ queues, and execution history remain outside release snapshots.
   history. The installer initializes local configuration and state directories
   but never checks their contents into this repository or overwrites them during
   updates.
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE). The vendored
+`frontend-slides` skill retains its own [MIT license](./agent-skills/frontend-slides/LICENSE).
 
 ## Keeping a machine in sync after the repo changes (repo → `~/`)
 
