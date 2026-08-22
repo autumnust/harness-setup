@@ -44,6 +44,12 @@ versioned JSON with paths, statuses, objectives, current state, and immediate
 next tasks, providing a future task-board integration point without adding a
 database or cached index. The workspace files remain authoritative.
 
+For multi-repository development environments, the installed `agent-workspace`
+skill creates a versioned workspace root, clones the selected repositories,
+and prepares separate Git worktree containers for isolated changes. Its
+committed source is `agent-skills/agent-workspace/`; the copies installed under
+the supported agent runtime directories are generated outputs.
+
 > Project-local skills and project `AGENTS.md` files are **not** included here;
 > they belong in their respective project repositories.
 

@@ -63,7 +63,8 @@ The offline test verifies:
 - Education creates no execution artifacts by default. Supporting children
   follow the fast path; large experiments ask before escalating to full.
 - Each role includes its declared shared contracts.
-- Skills deploy identically to Claude, portable, and Codex locations.
+- Complete skill directory trees deploy identically to Claude, portable, and
+  Codex locations.
 - Each install registers one immutable content-addressed release, identical
   updates reuse it, and rollback can restore that release without changing
   mutable state.

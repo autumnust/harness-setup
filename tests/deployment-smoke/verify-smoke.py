@@ -166,15 +166,13 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     assert "a bounded child for research" in coordinator_prompt
     assert "Do not load a profile outside education" in coordinator_prompt
 
-    skill_names = {
-        path.parent.name for path in (repo / "agent-skills").glob("*/SKILL.md")
-    }
+    expected_skills = file_hashes(repo / "agent-skills")
     for skill_root in (
         home / ".claude/skills",
         home / ".agents/skills",
         home / ".codex/skills",
     ):
-        assert {path.parent.name for path in skill_root.glob("*/SKILL.md")} == skill_names
+        assert file_hashes(skill_root) == expected_skills
 
     root = home.parent
     codex_route = json.loads((root / "codex-review-route.json").read_text())
