@@ -17,6 +17,21 @@
     "version": {"const": 1},
     "configured": {"type": "boolean"},
     "execution_root": {"type": ["string", "null"]},
+    "task_runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tss"],
+      "properties": {
+        "tss": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["host_alias"],
+          "properties": {
+            "host_alias": {"type": ["string", "null"]}
+          }
+        }
+      }
+    },
     "learner_state_root": {"type": ["string", "null"]},
     "learner_profile_update_policy": {
       "type": "string",

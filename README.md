@@ -46,9 +46,36 @@ database or cached index. The workspace files remain authoritative.
 
 For multi-repository development environments, the installed `agent-workspace`
 skill creates a versioned workspace root, clones the selected repositories,
-and prepares separate Git worktree containers for isolated changes. Its
-committed source is `agent-skills/agent-workspace/`; the copies installed under
-the supported agent runtime directories are generated outputs.
+and prepares separate Git worktree containers for isolated changes. From an
+initialized workspace, ask `start-task <task-name>` to create a structured
+execution folder under the configured execution root and start a tmux session
+that TSS can discover. The session opens in the workspace root while task plans,
+logs, findings, and evidence default to the external execution folder. Durable
+material enters `context/` only when the user explicitly requests it. Ask
+`list-tasks` to find task records associated with the workspace without
+requiring tmux, including folders created at an explicitly overridden location.
+Repository worktrees remain a later per-repository operation. The richer
+long-running-work structure is created only when the coordinator selects that
+workflow. Its committed source is
+`agent-skills/agent-workspace/`; the copies installed under the supported agent
+runtime directories are generated outputs.
+
+New workspace manifests carry a stable ID so the workspace can be rehydrated at
+a different absolute path on another host. Rehydration asks for the exact
+destination and validates existing workspace metadata, repository origins, and
+primary branches before cloning missing repositories.
+
+The shared `task-session` skill can also start a TSS-reachable tmux session in
+an existing `agent-task` folder. In that case the task folder is reused as the
+working directory and no execution folder is added.
+
+From either task type, explicit requests to pause, wait, block, resume, finish,
+or cancel update the filesystem task record and then mirror that state into
+tmux when its session exists. TSS displays the recorded task state, and
+`tss prune --finished` removes only detached sessions carrying a task ID,
+terminal state, and completion timestamp. From an initialized professional
+workspace, ask `list active tasks` to filter its filesystem records to
+`status: active`.
 
 > Project-local skills and project `AGENTS.md` files are **not** included here;
 > they belong in their respective project repositories.

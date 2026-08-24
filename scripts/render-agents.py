@@ -52,7 +52,7 @@ def validate_runtime_config_document(config: dict[str, Any], label: str) -> None
         "review_independence",
         "pr_maintenance",
     }
-    optional = {"learner_profile_update_policy"}
+    optional = {"learner_profile_update_policy", "task_runtime"}
     if not required <= set(config) or not set(config) <= required | optional:
         raise SpecError(f"{label}: runtime-config keys differ from the schema")
     if config.get("version") != 1 or not isinstance(config.get("configured"), bool):
@@ -60,6 +60,20 @@ def validate_runtime_config_document(config: dict[str, Any], label: str) -> None
     for field in ("execution_root", "learner_state_root"):
         if config[field] is not None and not isinstance(config[field], str):
             raise SpecError(f"{label}: {field} must be a string or null")
+    task_runtime = config.get("task_runtime")
+    if task_runtime is not None:
+        if not isinstance(task_runtime, dict) or set(task_runtime) != {"tss"}:
+            raise SpecError(f"{label}: task_runtime has an invalid shape")
+        tss = task_runtime["tss"]
+        if not isinstance(tss, dict) or set(tss) != {"host_alias"}:
+            raise SpecError(f"{label}: task_runtime.tss has an invalid shape")
+        host_alias = tss["host_alias"]
+        if host_alias is not None and (
+            not isinstance(host_alias, str) or not host_alias
+        ):
+            raise SpecError(
+                f"{label}: task_runtime.tss.host_alias must be a non-empty string or null"
+            )
     update_policy = config.get("learner_profile_update_policy", "ask")
     if update_policy not in {"ask", "auto", "off"}:
         raise SpecError(

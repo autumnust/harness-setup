@@ -95,9 +95,18 @@ if [[ -n "$INSTANCE_PROFILE" ]]; then
   fi
   INSTANCE_PROFILE_SOURCE="$REPO_ROOT/instances/$INSTANCE_PROFILE.md"
   if [[ ! -f "$INSTANCE_PROFILE_SOURCE" ]]; then
-    echo "Unknown instance profile: $INSTANCE_PROFILE" >&2
-    echo "Expected file: $INSTANCE_PROFILE_SOURCE" >&2
-    exit 2
+    LOCAL_PROFILE_SOURCE="$REPO_ROOT/instances/$INSTANCE_PROFILE.local.md"
+    if [[ -f "$LOCAL_PROFILE_SOURCE" ]]; then
+      echo "Using local instance profile: $INSTANCE_PROFILE.local"
+      INSTANCE_PROFILE="$INSTANCE_PROFILE.local"
+      INSTANCE_PROFILE_SOURCE="$LOCAL_PROFILE_SOURCE"
+      INSTANCE_SELECTION="set"
+    else
+      echo "Unknown instance profile: $INSTANCE_PROFILE" >&2
+      echo "Expected file: $INSTANCE_PROFILE_SOURCE" >&2
+      echo "Local alternative: $LOCAL_PROFILE_SOURCE" >&2
+      exit 2
+    fi
   fi
 fi
 

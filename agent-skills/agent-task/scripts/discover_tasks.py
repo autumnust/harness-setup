@@ -20,8 +20,9 @@ STATUS_ORDER = {
     "waiting": 2,
     "paused": 3,
     "done": 4,
-    "archived": 5,
-    "unknown": 6,
+    "cancelled": 5,
+    "archived": 6,
+    "unknown": 7,
 }
 
 
@@ -68,12 +69,21 @@ def task_from_readme(readme: Path) -> dict[str, str] | None:
     metadata, body = parse_front_matter(text)
     if metadata.get("agent_task") != "1":
         return None
+    runtime_host = metadata.get("runtime_host", "")
+    tmux_session = metadata.get("tmux_session", "")
     return {
         "id": metadata.get("id", "unknown"),
         "title": metadata.get("title", readme.parent.name),
         "status": metadata.get("status", "unknown"),
         "created": metadata.get("created", ""),
         "updated": metadata.get("updated", ""),
+        "runtime_host": runtime_host,
+        "tmux_session": tmux_session,
+        "tss_target": (
+            f"{runtime_host}:{tmux_session}"
+            if runtime_host and tmux_session
+            else ""
+        ),
         "objective": markdown_section(body, "Current objective"),
         "current_state": markdown_section(body, "Current state"),
         "next_task": markdown_section(body, "Immediate next task"),
@@ -114,15 +124,22 @@ def render_markdown(tasks: list[dict[str, str]]) -> str:
     if not tasks:
         return "No agent-task workspaces found."
     lines = [
-        "| Status | Task | Updated | Immediate next task | Path |",
-        "| --- | --- | --- | --- | --- |",
+        "| Status | Task | Updated | Session | Immediate next task | Path |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for task in tasks:
         lines.append(
             "| "
             + " | ".join(
                 escape_cell(task[key])
-                for key in ("status", "title", "updated", "next_task", "path")
+                for key in (
+                    "status",
+                    "title",
+                    "updated",
+                    "tss_target",
+                    "next_task",
+                    "path",
+                )
             )
             + " |"
         )

@@ -2,6 +2,11 @@
   "version": 1,
   "configured": false,
   "execution_root": null,
+  "task_runtime": {
+    "tss": {
+      "host_alias": null
+    }
+  },
   "learner_state_root": null,
   "learner_profile_update_policy": "ask",
   "review_backends": [],

@@ -10,6 +10,7 @@ configuration questions or write this file.
 The configuration resolves:
 
 - the default execution root, or that every large goal asks for a location;
+- the optional local TSS host label used when creating task sessions;
 - the learner-state root and any external-memory mirror;
 - the learner-profile update policy: `ask`, `auto`, or `off`, defaulting to
   `ask` when absent from an older installation;
@@ -25,3 +26,8 @@ chosen. The coordinator records confirmed choices, then passes only the
 relevant resolved values to children in their context packets. A child reports
 a missing prerequisite or proposed configuration change to the coordinator; it
 never asks the human user directly and never edits global configuration.
+
+Older configurations may omit `task_runtime`. When present,
+`task_runtime.tss.host_alias` is the label a user enters in
+`tss <host>:<session>` for this machine. It does not store an execution path or
+change TSS configuration.

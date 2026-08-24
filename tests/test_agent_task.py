@@ -84,6 +84,9 @@ class AgentTaskTests(unittest.TestCase):
             self.assertEqual(
                 payload["tasks"][0]["path"], str((root / "taxes").resolve())
             )
+            self.assertEqual(payload["tasks"][0]["runtime_host"], "")
+            self.assertEqual(payload["tasks"][0]["tmux_session"], "")
+            self.assertEqual(payload["tasks"][0]["tss_target"], "")
 
     def test_template_is_not_reported_as_a_live_task(self) -> None:
         result = self.run_script(DISCOVER, str(SKILL_ROOT), "--format", "json")

@@ -341,12 +341,20 @@ class WorkflowSpecTests(unittest.TestCase):
         render_agents.validate_runtime_config_document(config, "test")
 
         del config["learner_profile_update_policy"]
+        del config["task_runtime"]
         render_agents.validate_runtime_config_document(config, "legacy test")
 
         config["learner_profile_update_policy"] = "sometimes"
         with self.assertRaisesRegex(render_agents.SpecError, "must be ask, auto, or off"):
             render_agents.validate_runtime_config_document(config, "test")
         config["learner_profile_update_policy"] = "ask"
+
+        config["task_runtime"] = {"tss": {"host_alias": "aws"}}
+        render_agents.validate_runtime_config_document(config, "test")
+        config["task_runtime"] = {"tss": {"host_alias": ""}}
+        with self.assertRaisesRegex(render_agents.SpecError, "host_alias"):
+            render_agents.validate_runtime_config_document(config, "test")
+        config["task_runtime"] = {"tss": {"host_alias": None}}
 
         config["review_backends"][1]["foundation"] = ""
         with self.assertRaisesRegex(render_agents.SpecError, "non-empty string"):
