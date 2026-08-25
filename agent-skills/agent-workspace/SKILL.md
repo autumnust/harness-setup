@@ -111,6 +111,42 @@ does not create repository worktrees or the full long-running-work structure.
 If task-session setup fails, report the initialized execution folder and the
 exact failure. Do not remove task records unless the user asks.
 
+### Start a task on a remote host
+
+When the user names a remote host and an absolute workspace path on that host,
+create the task record and tmux session on the remote machine. For example,
+`start-task tryout on remote instance omni under /home/leisun/workspace/structured_dm`
+means that both the workspace and its execution folder are on `omni`.
+
+1. Resolve the SSH/TSS host label, remote workspace path, task name, and
+   objective. The remote path must contain a matching `workspace.yaml`.
+2. Read the runtime configuration on the remote host. Use its
+   `execution_root/<task-name>` convention unless the user gives a different
+   absolute remote execution-folder path. Do not use the laptop's execution
+   root or relabel a laptop tmux session as remote.
+3. Confirm that the remote host has `python3`, `tmux`, and the installed
+   `agent-workspace` and `task-session` skills. Then run the remote launcher
+   from the laptop:
+
+   ```bash
+   python3 <skill-dir>/scripts/start_remote_workspace_task.py \
+     --host "omni" \
+     --workspace "/home/leisun/workspace/structured_dm" \
+     --name "tryout" \
+     --objective "<objective>"
+   ```
+
+   Add `--execution-folder "/absolute/remote/path"` only for an explicit
+   override. The launcher runs the existing task initializer and session helper
+   over SSH on the remote host, so the README and tmux metadata both contain
+   remote paths.
+4. Return the remote execution-folder path and `tss <host>:<session>`. The
+   connection command is ready to use from the laptop.
+
+For later task discovery or lifecycle changes, run the corresponding workspace
+or task-session helper on the same remote host; the task README is stored
+there, not on the laptop.
+
 ## List tasks
 
 Use this workflow when the user says `list-tasks` from an initialized workspace.

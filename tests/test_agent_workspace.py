@@ -26,6 +26,13 @@ START_TASK = (
     / "scripts"
     / "start_workspace_task.py"
 )
+START_REMOTE_TASK = (
+    REPO_ROOT
+    / "agent-skills"
+    / "agent-workspace"
+    / "scripts"
+    / "start_remote_workspace_task.py"
+)
 LIST_TASKS = (
     REPO_ROOT
     / "agent-skills"
@@ -86,6 +93,83 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             ["git", "init", "-q", "-b", "main", str(workspace)], check=True
         )
         return workspace
+
+    def test_remote_task_launcher_runs_both_helpers_on_the_named_host(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            log = root / "ssh-commands.jsonl"
+            fake_ssh = root / "fake-ssh"
+            fake_ssh.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json\n"
+                "import pathlib\n"
+                "import sys\n"
+                f"log = pathlib.Path({str(log)!r})\n"
+                "with log.open('a', encoding='utf-8') as output:\n"
+                "    output.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                "command = sys.argv[2]\n"
+                "if 'start_workspace_task.py' in command:\n"
+                "    print(json.dumps({'execution_folder': '/home/leisun/workspace/execution-notes/tryout'}))\n"
+                "elif 'start_task_session.py' in command:\n"
+                "    print(json.dumps({'tss_target': 'omni:tryout', 'created': True}))\n",
+                encoding="utf-8",
+            )
+            fake_ssh.chmod(0o755)
+
+            result = json.loads(
+                self.run_script(
+                    START_REMOTE_TASK,
+                    "--host",
+                    "omni",
+                    "--workspace",
+                    "/home/leisun/workspace/structured_dm",
+                    "--name",
+                    "tryout",
+                    "--objective",
+                    "Verify remote task creation.",
+                    "--ssh-command",
+                    str(fake_ssh),
+                    "--format",
+                    "json",
+                ).stdout
+            )
+
+            self.assertEqual(result["tss_target"], "omni:tryout")
+            self.assertEqual(
+                result["task"]["execution_folder"],
+                "/home/leisun/workspace/execution-notes/tryout",
+            )
+            commands = [
+                json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertEqual([entry[0] for entry in commands], ["omni"] * 3)
+            self.assertIn("command -v tmux", commands[0][1])
+            self.assertIn(
+                '"$HOME/.agents/skills"/agent-workspace/scripts/start_workspace_task.py',
+                commands[1][1],
+            )
+            self.assertIn(
+                "/home/leisun/workspace/structured_dm", commands[1][1]
+            )
+            self.assertIn(
+                '"$HOME/.agents/skills"/task-session/scripts/start_task_session.py',
+                commands[2][1],
+            )
+            self.assertIn("--tss-host omni", commands[2][1])
+
+    def test_remote_task_launcher_requires_an_absolute_remote_workspace(self) -> None:
+        result = self.run_script(
+            START_REMOTE_TASK,
+            "--host",
+            "omni",
+            "--workspace",
+            "workspace/structured_dm",
+            "--name",
+            "tryout",
+            check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("workspace must be an absolute remote path", result.stderr)
 
     def test_hydrated_workspace_includes_workflow_location(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
