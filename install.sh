@@ -110,6 +110,18 @@ if [[ -n "$INSTANCE_PROFILE" ]]; then
   fi
 fi
 
+# A selected profile may also provide private skills beside its instruction
+# paragraph.  These directories are intentionally local: for example,
+# instances/nvda-laptop.local/agent-skills/ is available only on that laptop.
+# They install in addition to the portable agent-skills/ tree.
+INSTANCE_SKILLS_DIR=""
+if [[ -n "$INSTANCE_PROFILE" ]]; then
+  candidate_instance_skills="$REPO_ROOT/instances/$INSTANCE_PROFILE/agent-skills"
+  if [[ -d "$candidate_instance_skills" ]]; then
+    INSTANCE_SKILLS_DIR="$candidate_instance_skills"
+  fi
+fi
+
 # A config directory or installed binary signals that this machine uses Codex;
 # no separate opt-in flag is required, including before Codex's first launch.
 CODEX_PRESENT=0
@@ -202,12 +214,16 @@ if (( CODEX_PRESENT )); then
     [[ -e "$agent_file" ]] && record_conflict "$agent_file"
   done
 fi
-for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
-  record_conflict "$CLAUDE_DIR/skills/$(basename "$skill_dir")"
-  if (( CODEX_PRESENT )); then
-    record_conflict "$PORTABLE_SKILLS_DIR/$(basename "$skill_dir")"
-    record_conflict "$CODEX_DIR/skills/$(basename "$skill_dir")"
-  fi
+for skill_root in "$REPO_ROOT/agent-skills" "$INSTANCE_SKILLS_DIR"; do
+  [[ -n "$skill_root" && -d "$skill_root" ]] || continue
+  for skill_dir in "$skill_root"/*/; do
+    [[ -d "$skill_dir" ]] || continue
+    record_conflict "$CLAUDE_DIR/skills/$(basename "$skill_dir")"
+    if (( CODEX_PRESENT )); then
+      record_conflict "$PORTABLE_SKILLS_DIR/$(basename "$skill_dir")"
+      record_conflict "$CODEX_DIR/skills/$(basename "$skill_dir")"
+    fi
+  done
 done
 
 if (( ${#CONFLICTS[@]} > 0 )) && [[ "$MODE" == "prompt" ]]; then
@@ -457,11 +473,12 @@ if [[ ! -e "$AGENT_HARNESS_HOME/state/learner-profiles" ]]; then
   fi
 fi
 
-# --- 4. Global skills (agent-skills/<name> → every tool this machine has) ---
-# agent-skills/ is the tool-agnostic source of truth. Claude Code and Codex
-# CLI both use the same on-disk convention (a directory per skill holding
-# SKILL.md), so each skill is installed as-is into every target present.
-say "Installing global skills into $CLAUDE_DIR/skills/"
+# --- 4. Skills (portable plus selected-profile skills → every tool) --------
+# agent-skills/ is the portable source of truth.  A selected instance profile
+# may add private skills from instances/<profile>/agent-skills/. Claude Code
+# and Codex CLI use the same on-disk convention (a directory per skill holding
+# SKILL.md), so each selected skill is installed as-is into every target.
+say "Installing portable skills into $CLAUDE_DIR/skills/"
 mkdir -p "$CLAUDE_DIR/skills"
 if (( CODEX_PRESENT )); then
   say "Codex CLI detected — installing into $PORTABLE_SKILLS_DIR/"
@@ -469,13 +486,20 @@ if (( CODEX_PRESENT )); then
   mkdir -p "$PORTABLE_SKILLS_DIR"
   mkdir -p "$CODEX_DIR/skills"
 fi
-for skill_dir in "$REPO_ROOT"/agent-skills/*/; do
-  name="$(basename "$skill_dir")"
-  place_tree "$skill_dir" "$CLAUDE_DIR/skills/$name"
-  if (( CODEX_PRESENT )); then
-    place_tree "$skill_dir" "$PORTABLE_SKILLS_DIR/$name"
-    place_tree "$skill_dir" "$CODEX_DIR/skills/$name"
+for skill_root in "$REPO_ROOT/agent-skills" "$INSTANCE_SKILLS_DIR"; do
+  [[ -n "$skill_root" && -d "$skill_root" ]] || continue
+  if [[ "$skill_root" == "$INSTANCE_SKILLS_DIR" ]]; then
+    say "Installing skills for the selected instance profile"
   fi
+  for skill_dir in "$skill_root"/*/; do
+    [[ -d "$skill_dir" ]] || continue
+    name="$(basename "$skill_dir")"
+    place_tree "$skill_dir" "$CLAUDE_DIR/skills/$name"
+    if (( CODEX_PRESENT )); then
+      place_tree "$skill_dir" "$PORTABLE_SKILLS_DIR/$name"
+      place_tree "$skill_dir" "$CODEX_DIR/skills/$name"
+    fi
+  done
 done
 
 # This small machine-local file lets ordinary updates and rollback reuse the

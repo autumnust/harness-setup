@@ -11,3 +11,4 @@ id_rsa
 id_ed25519
 *.secret
 instances/*.local.md
+instances/*.local/
