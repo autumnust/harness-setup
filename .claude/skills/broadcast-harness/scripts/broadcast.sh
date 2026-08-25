@@ -129,7 +129,7 @@ for host in "${HOSTS[@]}"; do
 
   install_args="--update"
   [[ -n "$INSTANCE_PROFILE" ]] && install_args+=" --instance $INSTANCE_PROFILE"
-  say "[$host] running install.sh $install_args…"
+  say "[$host] running install.sh ${install_args}…"
   if ssh "${SSH_OPTS[@]}" "$host" "cd \"$REMOTE_DIR\" && ./install.sh $install_args"; then
     ok "[$host] updated"
     R_OK+=("$host")
