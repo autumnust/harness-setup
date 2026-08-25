@@ -143,7 +143,12 @@ def tss_states(items: list[TaskRecord], validate: bool) -> dict[str, str]:
         sessions, error = live_sessions(host)
         for session in requested:
             target = f"{host}:{session}"
-            states[target] = "unknown" if sessions is None else ("present" if session in sessions else "missing")
+            displayed = sessions or set()
+            is_present = session in displayed or any(
+                name.endswith("…") and session.startswith(name[:-1])
+                for name in displayed
+            )
+            states[target] = "unknown" if sessions is None else ("present" if is_present else "missing")
         if sessions is None:
             print(f"warning: tss {host}: {error}", file=sys.stderr)
     return states
