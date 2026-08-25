@@ -122,7 +122,7 @@ def live_sessions(host: str) -> tuple[set[str] | None, str]:
     clean = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
     sessions: set[str] = set()
     for line in clean.splitlines():
-        match = re.match(rf"^\\s*{re.escape(host)}\\s+(\\S+)\\s+", line)
+        match = re.match(rf"^\s*{re.escape(host)}\s+(\S+)\s+", line)
         if match:
             sessions.add(match.group(1))
     return sessions, ""
@@ -149,6 +149,36 @@ def tss_states(items: list[TaskRecord], validate: bool) -> dict[str, str]:
     return states
 
 
+def recreate(item: TaskRecord) -> None:
+    if item.status in {"done", "cancelled", "archived"}:
+        raise ValueError(f"cannot recreate terminal task {item.task!r} ({item.status})")
+    if item.target == "not recorded":
+        raise ValueError(f"task {item.task!r} has no recorded TSS target")
+    helper = Path(__file__).resolve().parents[2] / "task-session" / "scripts" / "start_task_session.py"
+    if not helper.is_file():
+        raise ValueError(f"task-session helper is unavailable: {helper}")
+    host, session = item.target.split(":", 1)
+    command = [
+        sys.executable,
+        str(helper),
+        "--task-dir",
+        item.execution_folder,
+        "--tss-host",
+        host,
+        "--session-name",
+        session,
+        "--format",
+        "json",
+    ]
+    if item.workspace:
+        command.extend(("--workspace", item.workspace))
+    result = subprocess.run(command, text=True, capture_output=True, check=False)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or f"exit {result.returncode}").strip()
+        raise ValueError(f"could not recreate task {item.task!r}: {detail}")
+    print(f"Recreated {item.target} in {item.workspace or item.execution_folder}.")
+
+
 def markdown(items: list[TaskRecord], states: dict[str, str], root: Path, checked: bool) -> str:
     verification = "live TSS checked" if checked else "filesystem records only"
     lines = [
@@ -170,6 +200,8 @@ def main() -> int:
     parser.add_argument("--execution-root", type=Path)
     parser.add_argument("--config", type=Path)
     parser.add_argument("--validate-tss", action="store_true")
+    parser.add_argument("--recreate", action="store_true")
+    parser.add_argument("--task", action="append", help="task name to recreate; repeat for several tasks")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     arguments = parser.parse_args()
     try:
@@ -180,11 +212,27 @@ def main() -> int:
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    states = tss_states(items, arguments.validate_tss)
+    if arguments.recreate:
+        if not arguments.task:
+            parser.error("--recreate requires at least one --task")
+        selected_names = set(arguments.task)
+        selected = [item for item in items if item.task in selected_names]
+        missing_names = selected_names - {item.task for item in selected}
+        if missing_names:
+            print(f"error: task records not found: {', '.join(sorted(missing_names))}", file=sys.stderr)
+            return 1
+        try:
+            for item in selected:
+                recreate(item)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        items = selected
+    states = tss_states(items, arguments.validate_tss or arguments.recreate)
     if arguments.format == "json":
         payload = {
             "execution_root": str(root),
-            "tss_checked": arguments.validate_tss,
+            "tss_checked": arguments.validate_tss or arguments.recreate,
             "tasks": [
                 {
                     "status": item.status,
@@ -199,7 +247,7 @@ def main() -> int:
         }
         print(json.dumps(payload, indent=2))
     else:
-        print(markdown(items, states, root, arguments.validate_tss))
+        print(markdown(items, states, root, arguments.validate_tss or arguments.recreate))
     return 0
 
 
