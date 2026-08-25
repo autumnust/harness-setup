@@ -142,9 +142,18 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 "start-task <task-name>",
                 (workspace / "README.md").read_text(encoding="utf-8"),
             )
+            agents_md = (workspace / "AGENTS.md").read_text(encoding="utf-8")
             self.assertIn(
                 "does not create\nrepository worktrees",
-                (workspace / "AGENTS.md").read_text(encoding="utf-8"),
+                agents_md,
+            )
+            self.assertIn(
+                "write generated output to the current task's\nexecution folder",
+                agents_md,
+            )
+            self.assertIn(
+                "Execution output stays in execution-notes",
+                (workspace / "README.md").read_text(encoding="utf-8"),
             )
 
             portable = root / "portable-copy"

@@ -49,8 +49,8 @@ skill creates a versioned workspace root, clones the selected repositories,
 and prepares separate Git worktree containers for isolated changes. From an
 initialized workspace, ask `start-task <task-name>` to create a structured
 execution folder under the configured execution root and start a tmux session
-that TSS can discover. The session opens in the workspace root while task plans,
-logs, findings, and evidence default to the external execution folder. Durable
+that TSS can discover. The session opens in the workspace root. Generated output
+goes to the task's execution folder unless the user asks otherwise. Durable
 material enters `context/` only when the user explicitly requests it. Ask
 `list-tasks` to find task records associated with the workspace without
 requiring tmux, including folders created at an explicitly overridden location.

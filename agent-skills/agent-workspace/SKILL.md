@@ -159,11 +159,14 @@ tmux session for later `tss prune --finished` cleanup without terminating it.
 
 ## Work in a professional workspace
 
-Follow the workspace `AGENTS.md`. Before changing a nested repository, create
-a Git worktree under `<repository>-worktree/<task-name>/`. Keep the named
-checkout on its primary branch for inspection, fetches, and creating further
-worktrees. Remove a task worktree after merge or abandonment; preserve useful
-experiment source on an archive branch first.
+Follow the workspace `AGENTS.md`. Unless the user asks otherwise, write
+generated output to the current task's execution folder, not the workspace.
+
+Before changing a nested repository, create a Git worktree under
+`<repository>-worktree/<task-name>/`. Keep the named checkout on its primary
+branch for inspection, fetches, and creating further worktrees. Remove a task
+worktree after merge or abandonment; preserve useful experiment source on an
+archive branch first.
 
 Do not add nested repositories, task worktrees, virtual environments, or
 generated caches to the workspace root's Git index.

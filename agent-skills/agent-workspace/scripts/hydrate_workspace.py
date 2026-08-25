@@ -195,13 +195,11 @@ on those questions.
 Use the smallest runnable example that can show the intended behavior before
 applying the change to the full system.
 
-**4. Separate execution output from durable context**
-Write task plans, logs, evidence, findings, and other execution output to that
-task's external execution folder. Put material in `context/` only when the user
-explicitly asks to preserve it as durable information for later workspace
-tasks. Put incoming documents that still need review in `inbox/`, then move or
-remove them after processing. Do not create a `knowledge/` folder for this
-workspace type.
+**4. Execution output stays in execution-notes**
+Unless the user asks otherwise, write generated output to the task's execution
+folder, not this workspace. Put material in `context/` only when the user asks
+to keep it. Incoming documents that still need review go in `inbox/`. Do not
+create a `knowledge/` folder.
 
 **5. Start task executions explicitly**
 Use `start-task <task-name>` to create an execution folder under the configured
@@ -246,9 +244,9 @@ When the user explicitly asks to pause, wait, block, resume, finish, or cancel
 a task, use the installed `task-session` lifecycle command. Do not infer a state
 change from a conversational stopping point or a missing tmux session.
 
-Task plans, logs, evidence, and findings go to the external execution folder.
-Write to `context/` only when the user explicitly asks to preserve information
-for reuse by later workspace tasks.
+Unless the user asks otherwise, write generated output to the current task's
+execution folder, not this workspace. Write to `context/` only when the user
+asks to keep it. Product code still goes in a task worktree.
 
 Before changing a nested repository, create a Git worktree under
 `<repository>-worktree/<task-name>/`. Do not edit the named repository checkout
