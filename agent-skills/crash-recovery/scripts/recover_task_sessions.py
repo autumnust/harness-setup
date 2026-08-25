@@ -119,7 +119,7 @@ def live_sessions(host: str) -> tuple[set[str] | None, str]:
         return None, str(exc)
     if result.returncode != 0:
         return None, result.stdout.strip().splitlines()[-1] if result.stdout.strip() else f"exit {result.returncode}"
-    clean = re.sub(r"\\x1b\\[[0-9;]*m", "", result.stdout)
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
     sessions: set[str] = set()
     for line in clean.splitlines():
         match = re.match(rf"^\\s*{re.escape(host)}\\s+(\\S+)\\s+", line)
