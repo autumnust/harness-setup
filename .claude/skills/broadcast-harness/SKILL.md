@@ -23,7 +23,10 @@ targets.
 3. **Dry run first when unsure** — for an unfamiliar set, run with `--check` to
    confirm reachability and show the itemized rsync delta without writing
    anything. Show the user the per-host result.
-4. **Deploy** — run `scripts/broadcast.sh HOST...` (or `--all`). It is
+4. **Deploy** — run `scripts/broadcast.sh HOST...` (or `--all`). To install a
+   profile-specific skill or instruction set, add `--instance <profile>`; the
+   remote installer resolves either `instances/<profile>.md` or the local
+   `instances/<profile>.local.md` profile copied with the harness. It is
    sequential, preflights each host's reachability, and prints a pass/fail
    summary at the end.
 5. **Report** — relay the summary. For any host that failed, say why
@@ -37,6 +40,9 @@ targets.
   on another machine — confirm the target list before a non-`--check` run.
 - Remote checkout path defaults to `~/harness-setup`; override with the
   `REMOTE_DIR` env var if needed.
+- The NVIDIA laptop profile is deployed to the `omni` target with
+  `--instance nvda-laptop`; this carries its local MAAS preflight skill to
+  Omnistation without selecting that profile for other hosts.
 - A host may be **unreachable** because it is offline. That is a skip, not a
   failure of the skill; report it to the user.
 - After a successful update, the remote should restart Claude Code to pick up
@@ -49,4 +55,6 @@ scripts/broadcast.sh --list                 # what can I reach?
 scripts/broadcast.sh --check build-box       # preflight one host, write nothing
 scripts/broadcast.sh build-box test-box      # deploy to two hosts
 scripts/broadcast.sh --all                   # deploy to every candidate
+scripts/broadcast.sh --check --instance nvda-laptop omni
+scripts/broadcast.sh --instance nvda-laptop omni
 ```

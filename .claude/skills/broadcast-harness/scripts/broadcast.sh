@@ -9,11 +9,13 @@
 # configuration.
 #
 # Usage:
-#   broadcast.sh --list                 List candidate hosts from ~/.ssh/config.
-#   broadcast.sh [--check] HOST...      Deploy to the named hosts.
-#   broadcast.sh [--check] --all        Deploy to every candidate host.
+#   broadcast.sh --list                             List candidate hosts from ~/.ssh/config.
+#   broadcast.sh [--check] [--instance NAME] HOST... Deploy to the named hosts.
+#   broadcast.sh [--check] [--instance NAME] --all   Deploy to every candidate host.
 #     --check   Dry run: preflight reachability + rsync --dry-run (itemized),
 #               but do NOT write or run the installer on the remote.
+#     --instance Install instances/NAME.md, or its local NAME.local.md fallback,
+#               on each selected target.
 #
 # Env:
 #   REMOTE_DIR   Remote checkout path, relative to the remote home.
@@ -54,18 +56,33 @@ list_hosts() {
 # --- arg parsing -------------------------------------------------------------
 CHECK=0
 ALL=0
+INSTANCE_PROFILE=""
 declare -a HOSTS=()
-for arg in "$@"; do
-  case "$arg" in
+while (($#)); do
+  case "$1" in
     --list)  list_hosts; exit 0 ;;
     --check) CHECK=1 ;;
     --all)   ALL=1 ;;
+    --instance)
+      [[ $# -ge 2 ]] || { err "Missing profile name after --instance"; exit 2; }
+      INSTANCE_PROFILE="$2"
+      [[ "$INSTANCE_PROFILE" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || {
+        err "Invalid instance profile name: $INSTANCE_PROFILE"
+        exit 2
+      }
+      shift
+      ;;
     -h|--help)
-      sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      awk '
+        /^# Usage:/ { printing = 1 }
+        /^set -euo pipefail$/ { exit }
+        printing { sub(/^# ?/, ""); print }
+      ' "${BASH_SOURCE[0]}"
       exit 0 ;;
-    -*) err "Unknown flag: $arg"; exit 2 ;;
-    *)  HOSTS+=("$arg") ;;
+    -*) err "Unknown flag: $1"; exit 2 ;;
+    *)  HOSTS+=("$1") ;;
   esac
+  shift
 done
 
 if (( ALL )); then
@@ -80,6 +97,7 @@ fi
 (( CHECK )) && say "DRY RUN (--check): no remote will be written." || true
 say "Source: $REPO_ROOT  →  remote: ~/$REMOTE_DIR"
 say "Targets: ${HOSTS[*]}"
+[[ -n "$INSTANCE_PROFILE" ]] && say "Instance profile: $INSTANCE_PROFILE"
 echo
 
 # --- per-host deploy ---------------------------------------------------------
@@ -109,8 +127,10 @@ for host in "${HOSTS[@]}"; do
     continue
   fi
 
-  say "[$host] running install.sh --update…"
-  if ssh "${SSH_OPTS[@]}" "$host" "cd \"$REMOTE_DIR\" && ./install.sh --update"; then
+  install_args="--update"
+  [[ -n "$INSTANCE_PROFILE" ]] && install_args+=" --instance $INSTANCE_PROFILE"
+  say "[$host] running install.sh $install_args…"
+  if ssh "${SSH_OPTS[@]}" "$host" "cd \"$REMOTE_DIR\" && ./install.sh $install_args"; then
     ok "[$host] updated"
     R_OK+=("$host")
   else
