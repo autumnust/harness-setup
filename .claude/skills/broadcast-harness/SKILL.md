@@ -26,7 +26,9 @@ targets.
 4. **Deploy** — run `scripts/broadcast.sh HOST...` (or `--all`). To install a
    profile-specific skill or instruction set, add `--instance <profile>`; the
    remote installer resolves either `instances/<profile>.md` or the local
-   `instances/<profile>.local.md` profile copied with the harness. It is
+   `instances/<profile>.local.md` profile copied with the harness. Add
+   `--with-tss` only when the selected machines should fetch the lockfile-pinned
+   TSS companion and install `~/bin/tss`. It is
    sequential, preflights each host's reachability, and prints a pass/fail
    summary at the end.
 5. **Report** — relay the summary. For any host that failed, say why
@@ -57,4 +59,5 @@ scripts/broadcast.sh build-box test-box      # deploy to two hosts
 scripts/broadcast.sh --all                   # deploy to every candidate
 scripts/broadcast.sh --check --instance nvda-laptop omni
 scripts/broadcast.sh --instance nvda-laptop omni
+scripts/broadcast.sh --with-tss build-box    # deploy harness plus TSS
 ```

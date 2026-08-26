@@ -20,12 +20,15 @@
 #                                 # (See update.sh, which git-pulls first.)
 #   ./install.sh --instance NAME  # Append instances/NAME.md to the deployed
 #                                 # ~/AGENTS.md and remember the selection.
+#   ./install.sh --with-tss       # Optionally install the lockfile-pinned TSS
+#                                 # client into ~/bin/tss.
 set -euo pipefail
 
 MODE="prompt"
 PRESERVE_RELEASE=1
 INSTANCE_PROFILE=""
 INSTANCE_SELECTION="remembered"
+WITH_TSS=0
 while (($#)); do
   case "$1" in
     --backup)         MODE="backup"; shift ;;
@@ -47,6 +50,7 @@ while (($#)); do
       INSTANCE_SELECTION="clear"
       shift
       ;;
+    --with-tss)       WITH_TSS=1; shift ;;
     -h|--help)
       cat <<'HELP'
 Installs the global coding-agent harness onto this machine
@@ -71,6 +75,10 @@ Usage:
                                 remember NAME for later updates and rollback.
   ./install.sh --no-instance    Deploy only the portable instructions and
                                 clear any remembered instance profile.
+  ./install.sh --with-tss       Also fetch the lockfile-pinned TSS client,
+                                store its source under
+                                ~/.agent-harness/dependencies/tss, and install
+                                its tss command into ~/bin/tss.
 HELP
       exit 0 ;;
     *)
@@ -133,6 +141,14 @@ TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/harness-install.XXXXXX")"
 cleanup() { rm -rf "$TEMP_ROOT"; }
 trap cleanup EXIT
 
+TSS_STAGED=""
+if (( WITH_TSS )); then
+  TSS_STAGED="$TEMP_ROOT/tss"
+  python3 "$REPO_ROOT/scripts/prepare-git-dependency.py" \
+    --manifest "$REPO_ROOT/dependencies/tss.json" \
+    --destination "$TSS_STAGED"
+fi
+
 RENDERED_AGENTS="$TEMP_ROOT/AGENTS.md"
 cp "$REPO_ROOT/home/AGENTS.md" "$RENDERED_AGENTS"
 if [[ -n "$INSTANCE_PROFILE" ]]; then
@@ -192,6 +208,10 @@ record_conflict "$CLAUDE_DIR/CLAUDE.md"
 record_conflict "$CLAUDE_DIR/settings.json"
 record_conflict "$AGENT_HARNESS_HOME/specs"
 record_conflict "$AGENT_HARNESS_HOME/bin/harness-release"
+if (( WITH_TSS )); then
+  record_conflict "$AGENT_HARNESS_HOME/dependencies/tss"
+  record_conflict "$HOME/bin/tss"
+fi
 for agent_file in "$TEMP_ROOT"/agents/claude/*; do
   record_conflict "$CLAUDE_DIR/agents/agent-harness/$(basename "$agent_file")"
 done
@@ -502,6 +522,15 @@ for skill_root in "$REPO_ROOT/agent-skills" "$INSTANCE_SKILLS_DIR"; do
   done
 done
 
+# --- Optional companion: TSS -----------------------------------------------
+if (( WITH_TSS )); then
+  say "Installing lockfile-pinned TSS companion"
+  mkdir -p "$AGENT_HARNESS_HOME/dependencies" "$HOME/bin"
+  place_tree "$TSS_STAGED" "$AGENT_HARNESS_HOME/dependencies/tss"
+  place_file "$TSS_STAGED/tss" "$HOME/bin/tss"
+  chmod u+x "$HOME/bin/tss"
+fi
+
 # This small machine-local file lets ordinary updates and rollback reuse the
 # selected paragraph without requiring another command-line option.
 case "$INSTANCE_SELECTION" in
@@ -568,6 +597,11 @@ printf '\n%s\n' \
   "  $AGENT_HARNESS_HOME/bin/harness-release" \
   "  $AGENT_HARNESS_HOME/config.json  (initialized once, never overwritten)" \
   "  $AGENT_HARNESS_HOME/state/learner-profiles  (initialized, never overwritten)"
+if (( WITH_TSS )); then
+  printf '%s\n' \
+    "  $AGENT_HARNESS_HOME/dependencies/tss  (lockfile-pinned source)" \
+    "  $HOME/bin/tss"
+fi
 if (( CODEX_PRESENT )); then
   printf '%s\n' \
     "  $CODEX_DIR/AGENTS.md        (symlink -> $HOME/AGENTS.md)" \

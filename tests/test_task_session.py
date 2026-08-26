@@ -212,6 +212,48 @@ class TaskSessionTests(unittest.TestCase):
                 )
                 self.assertEqual(option.stdout.strip(), task_id)
 
+                for option_name, expected in (
+                    ("@agent_task_name", "personal finance"),
+                    ("@agent_task_kind", "agent-task"),
+                    ("@agent_task_path", str(task.resolve())),
+                    ("@agent_tss_host", "local"),
+                ):
+                    value = subprocess.run(
+                        [
+                            "tmux",
+                            "-L",
+                            socket_name,
+                            "show-options",
+                            "-v",
+                            "-t",
+                            "personal-finance",
+                            option_name,
+                        ],
+                        check=True,
+                        text=True,
+                        capture_output=True,
+                        env=env,
+                    )
+                    self.assertEqual(value.stdout.strip(), expected)
+
+                pane_path = subprocess.run(
+                    [
+                        "tmux",
+                        "-L",
+                        socket_name,
+                        "display-message",
+                        "-p",
+                        "-t",
+                        "personal-finance",
+                        "#{pane_current_path}",
+                    ],
+                    check=True,
+                    text=True,
+                    capture_output=True,
+                    env=env,
+                )
+                self.assertEqual(Path(pane_path.stdout.strip()).resolve(), task.resolve())
+
                 status_option = subprocess.run(
                     [
                         "tmux",

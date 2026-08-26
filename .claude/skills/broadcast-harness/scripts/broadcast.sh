@@ -9,9 +9,9 @@
 # configuration.
 #
 # Usage:
-#   broadcast.sh --list                             List candidate hosts from ~/.ssh/config.
-#   broadcast.sh [--check] [--instance NAME] HOST... Deploy to the named hosts.
-#   broadcast.sh [--check] [--instance NAME] --all   Deploy to every candidate host.
+#   broadcast.sh --list                                        List candidate hosts from ~/.ssh/config.
+#   broadcast.sh [--check] [--with-tss] [--instance NAME] HOST... Deploy to the named hosts.
+#   broadcast.sh [--check] [--with-tss] [--instance NAME] --all   Deploy to every candidate host.
 #     --check   Dry run: preflight reachability + rsync --dry-run (itemized),
 #               but do NOT write or run the installer on the remote.
 #     --instance Install instances/NAME.md, or its local NAME.local.md fallback,
@@ -57,11 +57,13 @@ list_hosts() {
 CHECK=0
 ALL=0
 INSTANCE_PROFILE=""
+WITH_TSS=0
 declare -a HOSTS=()
 while (($#)); do
   case "$1" in
     --list)  list_hosts; exit 0 ;;
     --check) CHECK=1 ;;
+    --with-tss) WITH_TSS=1 ;;
     --all)   ALL=1 ;;
     --instance)
       [[ $# -ge 2 ]] || { err "Missing profile name after --instance"; exit 2; }
@@ -129,6 +131,7 @@ for host in "${HOSTS[@]}"; do
 
   install_args="--update"
   [[ -n "$INSTANCE_PROFILE" ]] && install_args+=" --instance $INSTANCE_PROFILE"
+  (( WITH_TSS )) && install_args+=" --with-tss"
   say "[$host] running install.sh ${install_args}…"
   if ssh "${SSH_OPTS[@]}" "$host" "cd \"$REMOTE_DIR\" && ./install.sh $install_args"; then
     ok "[$host] updated"

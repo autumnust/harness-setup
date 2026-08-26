@@ -9,13 +9,16 @@
 #   ./update.sh            # git pull --ff-only, then ./install.sh --update
 #   ./update.sh --no-pull  # skip the pull (e.g. you just edited the repo
 #                          # locally and only want to push changes into ~/).
+#   ./update.sh --with-tss # also refresh the lockfile-pinned TSS companion.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PULL=1
+WITH_TSS=0
 for arg in "$@"; do
   case "$arg" in
     --no-pull) PULL=0 ;;
+    --with-tss) WITH_TSS=1 ;;
     -h|--help)
       sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -34,4 +37,6 @@ if (( PULL )); then
   fi
 fi
 
-exec "$REPO_ROOT/install.sh" --update
+INSTALL_ARGS=(--update)
+(( WITH_TSS )) && INSTALL_ARGS+=(--with-tss)
+exec "$REPO_ROOT/install.sh" "${INSTALL_ARGS[@]}"

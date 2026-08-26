@@ -27,15 +27,18 @@ Drop this onto a new device and run `install.sh` to restore the global setup.
 ## Filesystem agent tasks
 
 The installed `agent-task` skill creates portable workspaces for personal or
-professional tasks and discovers their current state directly from the
-filesystem. Ask an agent, for example:
+professional tasks, starts a TSS-reachable tmux session, and discovers their
+current state directly from the filesystem. Ask an agent, for example:
 
 > Initialize an agent task for organizing my personal finances.
 
-The agent resolves a name, objective, and destination with you, then hydrates a
-workspace containing raw inputs, stable context, decisions, task tracking,
-working artifacts, and final outputs. There is no user-facing command to
-remember; the deterministic scripts are internal skill resources.
+The agent resolves a name, objective, destination, TSS host label, and session
+name with you, then hydrates a workspace containing raw inputs, stable context,
+decisions, task tracking, working artifacts, and final outputs. It starts tmux
+in that task folder and returns `tss <host>:<session>`. The tmux custom options
+make the task available to a TSS metadata reader without a separate
+registration request. There is no user-facing command to remember; the
+deterministic scripts are internal skill resources.
 
 Each workspace keeps small discovery metadata in `README.md`, including a
 stable ID, status, and update date. Ask "show me all my agent tasks" to scan
@@ -65,8 +68,8 @@ a different absolute path on another host. Rehydration asks for the exact
 destination and validates existing workspace metadata, repository origins, and
 primary branches before cloning missing repositories.
 
-The shared `task-session` skill can also start a TSS-reachable tmux session in
-an existing `agent-task` folder. In that case the task folder is reused as the
+The shared `task-session` skill can restore a TSS-reachable tmux session for an
+existing `agent-task` folder. In that case the task folder is reused as the
 working directory and no execution folder is added.
 
 From either task type, explicit requests to pause, wait, block, resume, finish,
@@ -87,6 +90,21 @@ git clone git@github.com:autumnust/harness-setup.git ~/Documents/harness-setup
 cd ~/Documents/harness-setup
 ./install.sh
 ```
+
+TSS is an optional companion dependency. It is not fetched by a normal
+installation. To install the revision recorded in
+[`dependencies/tss.json`](dependencies/tss.json), run:
+
+```bash
+./install.sh --with-tss
+```
+
+The installer stores the checked-out source at
+`~/.agent-harness/dependencies/tss` and installs its command at `~/bin/tss`.
+Use `./update.sh --with-tss` to refresh it to the revision currently recorded
+by the harness. This requires Git and network access; an installation without
+this option remains usable, but task sessions cannot be opened with the `tss`
+command until TSS is installed.
 
 On a **fresh device** with no existing harness instructions, settings, skills,
 workflow specs, or generated agents, this installs cleanly with no prompts.

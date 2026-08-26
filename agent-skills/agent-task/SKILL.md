@@ -1,6 +1,6 @@
 ---
 name: agent-task
-description: Initialize, operate, discover, summarize, start TSS-reachable tmux sessions, and record explicit pause, wait, block, resume, finish, or cancel state for portable filesystem-backed task workspaces. Use for personal or professional task folders that are not multi-repository development workspaces.
+description: Initialize, operate, discover, summarize, and run portable filesystem-backed task workspaces with TSS-reachable tmux sessions and explicit lifecycle state. Use for personal or professional task folders that are not multi-repository development workspaces.
 ---
 
 # Agent Task
@@ -10,10 +10,14 @@ decisions, work in progress, and deliverables inspectable without chat history.
 
 ## Initialize a workspace
 
-1. Resolve the task name, objective, and destination from the request.
-2. If the destination is missing, ask where to create the workspace and offer
-   `~/Documents` as the default. Ask nothing else unless an unresolved choice
-   would materially change the result.
+1. Resolve the task name, objective, destination, TSS host label, and tmux
+   session name together. The default session name is a filesystem-safe form of
+   the task name. Resolve the host label from the request or from
+   `$AGENT_HARNESS_HOME/config.json` at `task_runtime.tss.host_alias`, defaulting
+   `AGENT_HARNESS_HOME` to `~/.agent-harness`. If the destination or host label
+   is missing, ask for all missing values together; offer `~/Documents` for the
+   destination and offer to save a confirmed host label as this machine's
+   default.
 3. Run the bundled hydrator, resolving `<skill-dir>` to this skill's directory:
 
    ```bash
@@ -23,8 +27,23 @@ decisions, work in progress, and deliverables inspectable without chat history.
      --destination "<existing parent directory>"
    ```
 
-4. Read the generated `README.md`, `tasks.md`, `AGENTS.md`, and relevant
-   context before beginning work.
+4. Start the session through the installed `task-session` skill. The task
+   folder is both its task record and tmux working directory:
+
+   ```bash
+   python3 <task-session-skill-dir>/scripts/start_task_session.py \
+     --task-dir "/path/to/task" \
+     --tss-host "<host-label>" \
+     --session-name "<session-name>"
+   ```
+
+   This writes the task ID, task name, task kind, task path, status, and TSS
+   host as tmux custom options. A TSS metadata reader can inspect those options
+   without a separate registration request. It also records the host and session
+   in the task README and returns `tss <host>:<session>`.
+5. Read the generated `README.md`, `tasks.md`, `AGENTS.md`, and relevant
+   context before beginning work. Return the task path and the TSS connection
+   command.
 
 The hydrator refuses to overwrite an existing path. Do not bypass that guard.
 
@@ -41,14 +60,15 @@ metadata and keep these fields current:
 Update the prose under `Current state` and `Immediate next task` with concise,
 current summaries. Do not duplicate detailed task lists in the front matter.
 
-## Start a task session
+## Start or restore a task session
 
-When the user wants to work on an agent task through tmux or TSS, use the task
-folder itself as the working directory. Do not create a second execution folder.
-Resolve the TSS host label and session name together, then use the installed
-`task-session` skill. The resulting `runtime_host` and `tmux_session` fields are
-discoverable task metadata; tmux determines whether the session is currently
-running.
+Initialization already starts a session. Use this workflow only to restore a
+session that was not created by this version of the skill, or whose tmux session
+was removed. Use the task folder itself as the working directory; do not create
+a second execution folder. Resolve the TSS host label and session name together,
+then use the installed `task-session` skill. The resulting `runtime_host` and
+`tmux_session` fields are discoverable task metadata; tmux determines whether
+the session is currently running.
 
 ## Discover workspaces
 
