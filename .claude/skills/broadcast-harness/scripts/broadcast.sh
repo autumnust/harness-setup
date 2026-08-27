@@ -10,12 +10,13 @@
 #
 # Usage:
 #   broadcast.sh --list                                        List candidate hosts from ~/.ssh/config.
+#   broadcast.sh --print-rsync-rules [--instance NAME]         Print transfer filter rules and exit.
 #   broadcast.sh [--check] [--with-tss] [--instance NAME] HOST... Deploy to the named hosts.
 #   broadcast.sh [--check] [--with-tss] [--instance NAME] --all   Deploy to every candidate host.
 #     --check   Dry run: preflight reachability + rsync --dry-run (itemized),
 #               but do NOT write or run the installer on the remote.
 #     --instance Install instances/NAME.md, or its local NAME.local.md fallback,
-#               on each selected target.
+#               on each selected target. Only that profile is transferred.
 #
 # Env:
 #   REMOTE_DIR   Remote checkout path, relative to the remote home.
@@ -58,12 +59,14 @@ CHECK=0
 ALL=0
 INSTANCE_PROFILE=""
 WITH_TSS=0
+PRINT_RSYNC_RULES=0
 declare -a HOSTS=()
 while (($#)); do
   case "$1" in
     --list)  list_hosts; exit 0 ;;
     --check) CHECK=1 ;;
     --with-tss) WITH_TSS=1 ;;
+    --print-rsync-rules) PRINT_RSYNC_RULES=1 ;;
     --all)   ALL=1 ;;
     --instance)
       [[ $# -ge 2 ]] || { err "Missing profile name after --instance"; exit 2; }
@@ -91,6 +94,27 @@ if (( ALL )); then
   while IFS= read -r h; do [[ -n "$h" ]] && HOSTS+=("$h"); done < <(list_hosts)
 fi
 
+# Instance profiles can contain machine-specific instructions and private
+# skills. Do not distribute the whole instances/ directory to every target.
+# The selected profile is the only profile allowed through; rsync excludes do
+# not participate in --delete, so a remote's other local profiles are kept.
+RSYNC_RULES=(--exclude='.git')
+if [[ -n "$INSTANCE_PROFILE" ]]; then
+  RSYNC_RULES+=(
+    --include='/instances/'
+    "--include=/instances/$INSTANCE_PROFILE.md"
+    "--include=/instances/$INSTANCE_PROFILE.local.md"
+    "--include=/instances/$INSTANCE_PROFILE.local/"
+    "--include=/instances/$INSTANCE_PROFILE.local/***"
+  )
+fi
+RSYNC_RULES+=(--exclude='/instances/***')
+
+if (( PRINT_RSYNC_RULES )); then
+  printf '%s\n' "${RSYNC_RULES[@]}"
+  exit 0
+fi
+
 if (( ${#HOSTS[@]} == 0 )); then
   err "No target hosts given. Use --list to see candidates, then pass host names or --all."
   exit 2
@@ -114,7 +138,7 @@ for host in "${HOSTS[@]}"; do
 
   if (( CHECK )); then
     say "[$host] rsync --dry-run:"
-    rsync -az --delete --itemize-changes --dry-run --exclude='.git' \
+    rsync -az --delete --itemize-changes --dry-run "${RSYNC_RULES[@]}" \
       -e "ssh ${SSH_OPTS[*]}" "$REPO_ROOT/" "$host:$REMOTE_DIR/" | sed 's/^/    /' || true
     ok "[$host] reachable; dry run complete (nothing written)"
     R_OK+=("$host (dry-run)")
@@ -122,7 +146,7 @@ for host in "${HOSTS[@]}"; do
   fi
 
   say "[$host] syncing repo…"
-  if ! rsync -az --delete --exclude='.git' \
+  if ! rsync -az --delete "${RSYNC_RULES[@]}" \
         -e "ssh ${SSH_OPTS[*]}" "$REPO_ROOT/" "$host:$REMOTE_DIR/"; then
     err "[$host] rsync failed — skipping install"
     R_FAIL+=("$host (rsync)")

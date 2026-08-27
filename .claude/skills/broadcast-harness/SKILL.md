@@ -23,10 +23,12 @@ targets.
 3. **Dry run first when unsure** — for an unfamiliar set, run with `--check` to
    confirm reachability and show the itemized rsync delta without writing
    anything. Show the user the per-host result.
-4. **Deploy** — run `scripts/broadcast.sh HOST...` (or `--all`). To install a
-   profile-specific skill or instruction set, add `--instance <profile>`; the
-   remote installer resolves either `instances/<profile>.md` or the local
-   `instances/<profile>.local.md` profile copied with the harness. Add
+4. **Deploy** — run `scripts/broadcast.sh HOST...` (or `--all`). The transfer
+   excludes `instances/` by default. To install a profile-specific skill or
+   instruction set, add `--instance <profile>`; the transfer then includes
+   only `instances/<profile>.md` and its local fallback or local skill
+   directory, if present. The remote installer resolves either the standard
+   profile or `instances/<profile>.local.md`. Add
    `--with-tss` only when the selected machines should fetch the lockfile-pinned
    TSS companion and install `~/bin/tss`. It is
    sequential, preflights each host's reachability, and prints a pass/fail
@@ -43,8 +45,8 @@ targets.
 - Remote checkout path defaults to `~/harness-setup`; override with the
   `REMOTE_DIR` env var if needed.
 - The NVIDIA laptop profile is deployed to the `omni` target with
-  `--instance nvda-laptop`; this carries its local MAAS preflight skill to
-  Omnistation without selecting that profile for other hosts.
+  `--instance nvda-laptop`; this carries only its local MAAS preflight skill
+  and instructions to Omnistation, without transferring it to other hosts.
 - A host may be **unreachable** because it is offline. That is a skip, not a
   failure of the skill; report it to the user.
 - After a successful update, the remote should restart Claude Code to pick up
