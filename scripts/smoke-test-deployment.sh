@@ -125,7 +125,17 @@ run_inside_sandbox() {
   export OTEL_SDK_DISABLED=true
   unset SSH_AUTH_SOCK
 
-  printf '%s\n' 'smoke_sentinel = "preserved"' > "$CODEX_HOME/config.toml"
+  printf '%s\n' \
+    'smoke_sentinel = "preserved"' \
+    '' \
+    '[mcp_servers.linear]' \
+    'url = "https://mcp.linear.app/mcp"' \
+    'enabled = true' \
+    '' \
+    '[mcp_servers.maas_jira]' \
+    'url = "https://maas.example/maas/jira/mcp"' \
+    'enabled = true' \
+    > "$CODEX_HOME/config.toml"
   mkdir -p "$CLAUDE_CONFIG_DIR"
   printf '%s\n' \
     '{"enabledPlugins":{"smoke-only@example":false},"env":{"SMOKE_HOST_ONLY":"preserved","CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS":"1"}}' \

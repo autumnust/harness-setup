@@ -18,6 +18,13 @@ except ModuleNotFoundError:  # Python 3.10 hosts still get the narrow text check
 TABLE_RE = re.compile(r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$")
 ARRAY_TABLE_RE = re.compile(r"^\s*\[\[([^\[\]]+)\]\]\s*(?:#.*)?$")
 MAX_DEPTH_RE = re.compile(r"^(\s*)max_depth\s*=.*$")
+MANAGED_MCP_SERVERS = (
+    "linear",
+    "linkify",
+    "maas_gdrive",
+    "maas_jira",
+    "maas_slack",
+)
 
 
 def table_header(line: str) -> tuple[str, bool] | None:
@@ -87,11 +94,44 @@ def set_max_depth(lines: list[str], depth: int) -> None:
         lines.insert(end, f"max_depth = {depth}")
 
 
-def render(text: str, depth: int, model: str, reasoning_effort: str) -> str:
+def set_existing_mcp_servers_enabled(lines: list[str], enabled: bool) -> None:
+    """Set the managed MCP servers' enabled flag, without adding new servers."""
+    tables = [
+        (i, header[0], header[1])
+        for i, line in enumerate(lines)
+        if (header := table_header(line))
+    ]
+    managed_tables = {f"mcp_servers.{server}" for server in MANAGED_MCP_SERVERS}
+    enabled_re = re.compile(r"^(\s*)enabled\s*=.*$")
+
+    # Work backward so inserting a key does not invalidate the remaining indices.
+    for index in range(len(tables) - 1, -1, -1):
+        start, name, is_array = tables[index]
+        if is_array or name not in managed_tables:
+            continue
+        end = tables[index + 1][0] if index + 1 < len(tables) else len(lines)
+        matches = [i for i in range(start + 1, end) if enabled_re.match(lines[i])]
+        if len(matches) > 1:
+            raise ValueError(f"[{name}] contains more than one enabled key")
+        if matches:
+            indent = enabled_re.match(lines[matches[0]]).group(1)
+            lines[matches[0]] = f"{indent}enabled = {str(enabled).lower()}"
+        else:
+            lines.insert(start + 1, f"enabled = {str(enabled).lower()}")
+
+
+def render(
+    text: str,
+    depth: int,
+    model: str,
+    reasoning_effort: str,
+    managed_mcp_enabled: bool = False,
+) -> str:
     lines = text.splitlines()
     set_root_string(lines, "model", model)
     set_root_string(lines, "model_reasoning_effort", reasoning_effort)
     set_max_depth(lines, depth)
+    set_existing_mcp_servers_enabled(lines, managed_mcp_enabled)
 
     result = "\n".join(lines).rstrip() + "\n"
     if tomllib is not None:
@@ -115,13 +155,24 @@ def main() -> int:
     parser.add_argument("--max-depth", type=int, default=2)
     parser.add_argument("--model", required=True)
     parser.add_argument("--reasoning-effort", required=True)
+    parser.add_argument(
+        "--enable-managed-mcp",
+        action="store_true",
+        help="Keep the managed MCP servers enabled for the NVIDIA laptop profile.",
+    )
     args = parser.parse_args()
     if args.max_depth < 1:
         parser.error("--max-depth must be positive")
     try:
         text = args.input.read_text(encoding="utf-8") if args.input and args.input.exists() else ""
         args.output.write_text(
-            render(text, args.max_depth, args.model, args.reasoning_effort),
+            render(
+                text,
+                args.max_depth,
+                args.model,
+                args.reasoning_effort,
+                managed_mcp_enabled=args.enable_managed_mcp,
+            ),
             encoding="utf-8",
         )
     except (OSError, ValueError) as exc:

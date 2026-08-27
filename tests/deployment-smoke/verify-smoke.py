@@ -78,6 +78,8 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     )
     assert config["model_reasoning_effort"] == codex_adapter["reasoning_effort"]["medium"]
     assert config["agents"]["max_depth"] == manifest["max_depth"] == 2
+    assert config["mcp_servers"]["linear"]["enabled"] is False
+    assert config["mcp_servers"]["maas_jira"]["enabled"] is False
 
     runtime_config = json.loads((home / ".agent-harness/config.json").read_text())
     assert runtime_config["configured"] is True

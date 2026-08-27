@@ -178,12 +178,17 @@ if (( CODEX_PRESENT )); then
   CODEX_COORDINATOR_EFFORT="$(python3 -c \
     'import json, sys; print(json.load(open(sys.argv[1]))["reasoning_effort"]["medium"])' \
     "$REPO_ROOT/agent-workflows/adapters/codex.json")"
+  CODEX_MCP_OPTION=""
+  if [[ "$INSTANCE_PROFILE" == "nvda-laptop.local" ]]; then
+    CODEX_MCP_OPTION="--enable-managed-mcp"
+  fi
   python3 "$REPO_ROOT/scripts/render-codex-config.py" \
     --input "$CODEX_DIR/config.toml" \
     --output "$TEMP_ROOT/codex-config.toml" \
     --max-depth 2 \
     --model "$CODEX_COORDINATOR_MODEL" \
-    --reasoning-effort "$CODEX_COORDINATOR_EFFORT"
+    --reasoning-effort "$CODEX_COORDINATOR_EFFORT" \
+    ${CODEX_MCP_OPTION:+"$CODEX_MCP_OPTION"}
 fi
 
 if [[ -f "$AGENT_HARNESS_HOME/config.json" ]]; then
