@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from task_history import history_tasks
+
 
 STATUS_ORDER = {
     "blocked": 0,
@@ -150,7 +152,9 @@ def task_from_path(
         "status": metadata.get("status", "unknown"),
         "created": metadata.get("created", ""),
         "updated": metadata.get("updated", ""),
+        "last_used_at": metadata.get("last_used_at", metadata.get("updated", "")),
         "runtime_host": runtime_host,
+        "host": runtime_host or os.uname().nodename,
         "tmux_session": tmux_session,
         "tss_target": (
             f"{runtime_host}:{tmux_session}"
@@ -158,6 +162,7 @@ def task_from_path(
             else ""
         ),
         "path": str(task_dir.resolve()),
+        "history_only": "",
     }
 
 
@@ -175,7 +180,7 @@ def discover(
     if execution_root is not None and execution_root.is_dir():
         candidates.extend(path for path in execution_root.iterdir() if path.is_dir())
 
-    tasks: list[dict[str, str]] = []
+    local_tasks: list[dict[str, str]] = []
     missing_paths: list[str] = []
     seen: set[Path] = set()
     for candidate in candidates:
@@ -188,13 +193,22 @@ def discover(
             continue
         seen.add(resolved)
         task = task_from_path(resolved, workspace, title, workspace_id)
-        if task is not None and (statuses is None or task["status"] in statuses):
-            tasks.append(task)
+        if task is not None:
+            local_tasks.append(task)
+    saved_tasks = {task["id"]: task for task in history_tasks(workspace)}
+    tasks: list[dict[str, str]] = []
+    for task in local_tasks:
+        saved = saved_tasks.pop(task["id"], None)
+        if saved is not None:
+            task["last_used_at"] = saved["last_used_at"]
+            task["host"] = saved["host"]
+        tasks.append(task)
+    tasks.extend(saved_tasks.values())
+    if statuses is not None:
+        tasks = [task for task in tasks if task["status"] in statuses]
     tasks.sort(
-        key=lambda task: (
-            STATUS_ORDER.get(task["status"], STATUS_ORDER["unknown"]),
-            task["task_name"].casefold(),
-        )
+        key=lambda task: (task.get("last_used_at", ""), task["task_name"].casefold()),
+        reverse=True,
     )
     return tasks, sorted(set(missing_paths))
 
@@ -208,15 +222,15 @@ def render_markdown(tasks: list[dict[str, str]], missing_paths: list[str]) -> st
         output = "No workspace tasks found."
     else:
         lines = [
-            "| Status | Task | Updated | Recorded TSS target | Path |",
-            "| --- | --- | --- | --- | --- |",
+            "| Host | Task | Status | Last used | Recorded TSS target | Path |",
+            "| --- | --- | --- | --- | --- | --- |",
         ]
         for task in tasks:
             lines.append(
                 "| "
                 + " | ".join(
                     escape_cell(task[key])
-                    for key in ("status", "task_name", "updated", "tss_target", "path")
+                    for key in ("host", "task_name", "status", "last_used_at", "tss_target", "path")
                 )
                 + " |"
             )

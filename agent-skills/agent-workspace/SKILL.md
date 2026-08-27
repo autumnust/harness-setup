@@ -87,10 +87,11 @@ does not create repository worktrees or the full long-running-work structure.
 4. Run the bundled task initializer:
 
    ```bash
-   python3 <skill-dir>/scripts/start_workspace_task.py \
-     --workspace "/path/to/workspace" \
-     --name "<task-name>" \
-     --objective "<objective>"
+python3 <skill-dir>/scripts/start_workspace_task.py \
+  --workspace "/path/to/workspace" \
+  --name "<task-name>" \
+  --objective "<objective>" \
+  --host "<tss-host-label>"
    ```
 
    Pass `--execution-folder "/other/path"` when the user overrides the default.
@@ -124,8 +125,15 @@ python3 <skill-dir>/scripts/list_workspace_tasks.py \
 When the user asks for active tasks, pass `--status active`. Repeat `--status`
 to include several requested states.
 
-The script scans the configured execution root for task metadata matching the
-workspace and also checks the machine-local path index for folder overrides.
+The script reads the workspace-root `task-history.json`, whose records are keyed
+by host and task name, then merges it with task metadata found in the configured
+execution root and the machine-local path index. It orders results by each
+task's own `last_used_at` timestamp, newest first. The history remains available
+when the same workspace is materialized on another host; a remote execution
+folder is a recorded path, not a claim that the folder exists locally.
+Commit `task-history.json` in the workspace repository when the history must
+travel through the normal Git-based workspace exchange; rehydration also copies
+it when it is next to the source `workspace.yaml`.
 The task `README.md` remains the authoritative record, so task resolution does
 not require tmux metadata. Match by stable workspace ID when available, with
 name/path compatibility for older records. A displayed TSS target is the saved

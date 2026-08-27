@@ -14,6 +14,12 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+WORKSPACE_SCRIPTS = Path(__file__).resolve().parents[2] / "agent-workspace" / "scripts"
+if str(WORKSPACE_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(WORKSPACE_SCRIPTS))
+
+from task_history import current_timestamp, record_task_use
+
 
 SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
@@ -331,10 +337,12 @@ def start_session(
         raise
 
     try:
+        last_used_at = current_timestamp()
         updates = {
             "runtime_host": tss_host,
             "tmux_session": session_name,
             "updated": date.today().isoformat(),
+            "last_used_at": last_used_at,
         }
         if task_kind == "workspace-task":
             updates["workspace_path"] = str(working_directory)
@@ -345,6 +353,16 @@ def start_session(
                 task_dir,
                 working_directory,
                 metadata.get("workspace", working_directory.name),
+            )
+            record_task_use(
+                working_directory,
+                host=tss_host,
+                task_id=task_id,
+                task_name=task_name,
+                status=metadata.get("status", "active"),
+                execution_folder=task_dir,
+                tss_target=f"{tss_host}:{session_name}",
+                used_at=last_used_at,
             )
     except OSError:
         if created:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 import uuid
@@ -437,6 +438,9 @@ def rehydrate(manifest_path: Path, destination: Path) -> Path:
             manifest.workspace_id,
             manifest.repositories,
         )
+        source_history = manifest_path.parent / "task-history.json"
+        if source_history.is_file():
+            shutil.copy2(source_history, destination / "task-history.json")
         run("git", "init", "-b", "main", str(destination))
 
     for repository in manifest.repositories:

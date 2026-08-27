@@ -15,6 +15,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from task_history import current_timestamp, record_task_use
+
 
 NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
@@ -121,6 +123,7 @@ def task_readme(
     workspace_title: str,
     workspace_id: str,
     task_dir: Path,
+    last_used_at: str,
 ) -> str:
     today = date.today().isoformat()
     workspace_href = relative_link(task_dir, workspace)
@@ -135,6 +138,7 @@ workspace_id: {yaml_scalar(workspace_id)}
 workspace_path: {yaml_scalar(str(workspace))}
 created: {today}
 updated: {today}
+last_used_at: {yaml_scalar(last_used_at)}
 ---
 
 # {task_name}
@@ -214,6 +218,7 @@ def initialize_task(
     config_path: Path | None = None,
     execution_root: Path | None = None,
     execution_folder: Path | None = None,
+    host: str | None = None,
 ) -> dict[str, str]:
     workspace = workspace.expanduser().resolve()
     if not NAME_PATTERN.fullmatch(task_name):
@@ -232,6 +237,7 @@ def initialize_task(
         raise FileExistsError(f"refusing to overwrite existing execution path: {task_dir}")
 
     task_id = str(uuid.uuid4())
+    task_last_used_at = current_timestamp()
     created_task = False
     try:
         task_dir.mkdir()
@@ -245,10 +251,16 @@ def initialize_task(
                 title,
                 workspace_id,
                 task_dir,
+                task_last_used_at,
             ),
             encoding="utf-8",
         )
         save_task_path(task_index_path(workspace), task_dir)
+        history = record_task_use(
+            workspace, host=host or os.uname().nodename, task_id=task_id,
+            task_name=task_name, status="active", execution_folder=task_dir,
+            used_at=task_last_used_at,
+        )
     except Exception:
         if created_task:
             shutil.rmtree(task_dir)
@@ -261,6 +273,8 @@ def initialize_task(
         "workspace": str(workspace),
         "workspace_id": workspace_id,
         "workspace_name": title,
+        "history_host": history["host"],
+        "last_used_at": history["last_used_at"],
     }
 
 
@@ -272,6 +286,7 @@ def main() -> int:
     parser.add_argument("--config", type=Path)
     parser.add_argument("--execution-root", type=Path)
     parser.add_argument("--execution-folder", type=Path)
+    parser.add_argument("--host", help="host key for portable workspace task history")
     parser.add_argument("--format", choices=("text", "json"), default="text")
     arguments = parser.parse_args()
     try:
@@ -282,6 +297,7 @@ def main() -> int:
             config_path=arguments.config,
             execution_root=arguments.execution_root,
             execution_folder=arguments.execution_folder,
+            host=arguments.host,
         )
     except (FileExistsError, OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)

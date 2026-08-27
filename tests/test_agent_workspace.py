@@ -155,6 +155,10 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 "Execution output stays in execution-notes",
                 (workspace / "README.md").read_text(encoding="utf-8"),
             )
+            (workspace / "task-history.json").write_text(
+                json.dumps({"schema_version": 1, "hosts": {}}) + "\n",
+                encoding="utf-8",
+            )
 
             portable = root / "portable-copy"
             rehydrated = self.run_script(
@@ -169,6 +173,10 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             self.assertEqual(
                 (portable / "workspace.yaml").read_text(encoding="utf-8"),
                 manifest,
+            )
+            self.assertEqual(
+                (portable / "task-history.json").read_text(encoding="utf-8"),
+                (workspace / "task-history.json").read_text(encoding="utf-8"),
             )
             repeated = self.run_script(
                 HYDRATE_WORKSPACE,
@@ -273,8 +281,11 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 ).stdout
             )
             self.assertEqual(
-                [task["task_name"] for task in discovered["tasks"]],
-                ["custom-location", "model-serving"],
+                {task["task_name"] for task in discovered["tasks"]},
+                {"custom-location", "model-serving"},
+            )
+            self.assertTrue(
+                all(task["last_used_at"] for task in discovered["tasks"])
             )
             self.assertEqual(discovered["missing_paths"], [])
             self.assertEqual(
@@ -332,6 +343,56 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 [record["task_name"] for record in active["tasks"]],
                 ["custom-location"],
             )
+
+    def test_task_history_is_keyed_by_host_and_lists_remote_records_first(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            workspace = self.prepare_workspace(root)
+            execution_root = root / "execution-notes"
+            execution_root.mkdir()
+            config = root / "config.json"
+            config.write_text(
+                json.dumps({"execution_root": str(execution_root)}), encoding="utf-8"
+            )
+            first = json.loads(
+                self.run_script(
+                    START_TASK,
+                    "--workspace", str(workspace), "--name", "older-task",
+                    "--config", str(config), "--host", "host-a", "--format", "json",
+                ).stdout
+            )
+            second = json.loads(
+                self.run_script(
+                    START_TASK,
+                    "--workspace", str(workspace), "--name", "newer-task",
+                    "--config", str(config), "--host", "host-b", "--format", "json",
+                ).stdout
+            )
+            history = json.loads((workspace / "task-history.json").read_text(encoding="utf-8"))
+            self.assertEqual(set(history["hosts"]), {"host-a", "host-b"})
+            self.assertEqual(history["hosts"]["host-a"]["tasks"]["older-task"]["id"], first["task_id"])
+            self.assertEqual(history["hosts"]["host-b"]["tasks"]["newer-task"]["id"], second["task_id"])
+            history["hosts"]["host-a"]["tasks"]["older-task"]["last_used_at"] = "2026-01-01T00:00:00+00:00"
+            history["hosts"]["host-b"]["tasks"]["newer-task"]["last_used_at"] = "2026-01-02T00:00:00+00:00"
+            (workspace / "task-history.json").write_text(
+                json.dumps(history, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+
+            portable_workspace = root / "portable-workspace"
+            portable_workspace.mkdir()
+            shutil.copy2(workspace / "workspace.yaml", portable_workspace / "workspace.yaml")
+            shutil.copy2(workspace / "task-history.json", portable_workspace / "task-history.json")
+            subprocess.run(["git", "init", "-q", "-b", "main", str(portable_workspace)], check=True)
+            listed = json.loads(
+                self.run_script(
+                    LIST_TASKS, "--workspace", str(portable_workspace),
+                    "--execution-root", str(root / "portable-execution-notes"),
+                    "--format", "json",
+                ).stdout
+            )["tasks"]
+            self.assertEqual([task["task_name"] for task in listed], ["newer-task", "older-task"])
+            self.assertEqual([task["host"] for task in listed], ["host-b", "host-a"])
+            self.assertTrue(all(task["history_only"] == "1" for task in listed))
 
     @unittest.skipUnless(shutil.which("tmux"), "tmux is required")
     def test_workspace_task_can_start_isolated_tmux_session(self) -> None:
