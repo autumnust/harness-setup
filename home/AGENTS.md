@@ -7,6 +7,7 @@
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
   - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
 - [Banned words](#banned-words)
+- [Installed harness context](#installed-harness-context)
 - [Agent Workflow](#agent-workflow)
 - [Long-Running Work Structure](#long-running-work-structure)
 - [Learning Calibration Mode](#learning-calibration-mode-quiz)
@@ -311,6 +312,28 @@ everything. It is not limited by the Communication-style scope note above.
   Example: "a natural seam to refactor along" → "a natural split point to
   refactor along". "the seam between the two modules" → "the interface
   between the two modules".
+
+# Installed harness context
+
+This machine's installed harness is part of the local execution context. At
+the beginning of a task that concerns agent behavior, skills, workflows,
+global instructions, installation, deployment, or local agent configuration,
+first identify the active deployed release and read the relevant source files
+from it:
+
+```bash
+AGENT_HARNESS_HOME="${AGENT_HARNESS_HOME:-$HOME/.agent-harness}"
+readlink "$AGENT_HARNESS_HOME/current"
+```
+
+`$AGENT_HARNESS_HOME/current/source/` is the immutable copy of the harness
+release installed on this destination machine. For example, read its
+`README.md` for deployment behavior, `home/AGENTS.md` for the portable global
+instructions, and the relevant `agent-workflows/` or `agent-skills/` file for
+the behavior being changed. Do this before proposing or modifying harness
+configuration, so the work follows the deployment actually active here rather
+than an assumed checkout or a different machine's configuration. For unrelated
+application work, do not read the whole harness merely because it is present.
 
 # Agent Workflow
 
