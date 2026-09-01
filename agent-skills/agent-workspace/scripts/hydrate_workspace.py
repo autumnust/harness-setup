@@ -312,6 +312,7 @@ def write_workspace_files(
     )
     (workspace / "README.md").write_text(readme(name, repositories), encoding="utf-8")
     (workspace / "AGENTS.md").write_text(agent_instructions(), encoding="utf-8")
+    (workspace / "CLAUDE.md").write_text("@AGENTS.md\n", encoding="utf-8")
     (workspace / ".gitignore").write_text(gitignore(repositories), encoding="utf-8")
 
 
