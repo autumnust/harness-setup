@@ -14,6 +14,7 @@ import sys
 import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 
 MANIFEST_FIELDS = {"schema_version", "skills"}
@@ -29,17 +30,34 @@ SKILL_FIELDS = {
 NAME_PATTERN = re.compile(r"[a-z0-9][a-z0-9-]*")
 REVISION_PATTERN = re.compile(r"[0-9a-f]{40}")
 HASH_PATTERN = re.compile(r"[0-9a-f]{64}")
+LICENSE_NAMES = (
+    "LICENSE",
+    "LICENSE.md",
+    "LICENSE.txt",
+    "COPYING",
+    "COPYING.md",
+    "COPYING.txt",
+)
 
 
 def _run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, check=True, text=True, **kwargs)
 
 
-def _safe_relative_path(value: object, field: str) -> str:
+def _safe_relative_path(
+    value: object, field: str, allow_repository_root: bool = False
+) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{field} must be a non-empty string")
+    if allow_repository_root and value == ".":
+        return value
     path = PurePosixPath(value)
-    if path.is_absolute() or ".." in path.parts or "." in path.parts:
+    if (
+        path.is_absolute()
+        or ".." in path.parts
+        or "." in path.parts
+        or path.as_posix() != value
+    ):
         raise ValueError(f"{field} must be a normalized relative path")
     return value
 
@@ -75,7 +93,11 @@ def validate_manifest(value: object) -> dict[str, Any]:
             raise ValueError(f"{prefix}.revision must be a 40-character Git commit ID")
         if not HASH_PATTERN.fullmatch(str(skill["content_sha256"])):
             raise ValueError(f"{prefix}.content_sha256 must be a SHA-256 hash")
-        _safe_relative_path(skill["source_path"], f"{prefix}.source_path")
+        _safe_relative_path(
+            skill["source_path"],
+            f"{prefix}.source_path",
+            allow_repository_root=True,
+        )
         _safe_relative_path(skill["license_path"], f"{prefix}.license_path")
     return value
 
@@ -117,7 +139,21 @@ def tree_hash(directory: Path) -> str:
     return digest.hexdigest()
 
 
-def _checkout(skill: dict[str, str], destination: Path) -> None:
+def _checkout_paths(
+    repository: str,
+    revision: str,
+    tracking_ref: str,
+    paths: list[tuple[str, bool]],
+    destination: Path,
+) -> None:
+    sparse_paths = [
+        "/*"
+        if path == "." and is_directory
+        else f"/{path}/"
+        if is_directory
+        else f"/{path}"
+        for path, is_directory in paths
+    ]
     destination.mkdir(parents=True)
     _run(["git", "-C", str(destination), "init", "--quiet"])
     _run(
@@ -128,7 +164,7 @@ def _checkout(skill: dict[str, str], destination: Path) -> None:
             "remote",
             "add",
             "origin",
-            skill["repository"],
+            repository,
         ]
     )
     _run(
@@ -139,8 +175,7 @@ def _checkout(skill: dict[str, str], destination: Path) -> None:
             "sparse-checkout",
             "set",
             "--no-cone",
-            f"/{skill['source_path']}/",
-            f"/{skill['license_path']}",
+            *sparse_paths,
         ]
     )
     fetch = subprocess.run(
@@ -154,7 +189,7 @@ def _checkout(skill: dict[str, str], destination: Path) -> None:
             "1",
             "--filter=blob:none",
             "origin",
-            skill["revision"],
+            revision,
         ],
         text=True,
         capture_output=True,
@@ -169,7 +204,7 @@ def _checkout(skill: dict[str, str], destination: Path) -> None:
                 "--quiet",
                 "--filter=blob:none",
                 "origin",
-                skill["tracking_ref"],
+                tracking_ref,
             ]
         )
     _run(
@@ -180,22 +215,38 @@ def _checkout(skill: dict[str, str], destination: Path) -> None:
             "checkout",
             "--quiet",
             "--detach",
-            skill["revision"],
+            revision,
         ]
     )
 
 
-def _validate_skill_name(skill_directory: Path, expected_name: str) -> None:
+def _checkout(skill: dict[str, str], destination: Path) -> None:
+    _checkout_paths(
+        skill["repository"],
+        skill["revision"],
+        skill["tracking_ref"],
+        [(skill["source_path"], True), (skill["license_path"], False)],
+        destination,
+    )
+
+
+def _read_skill_name(skill_directory: Path) -> str:
     skill_file = skill_directory / "SKILL.md"
     if not skill_file.is_file():
-        raise ValueError(f"external skill {expected_name} has no SKILL.md")
+        raise ValueError(f"external skill directory has no SKILL.md: {skill_directory}")
     text = skill_file.read_text(encoding="utf-8")
     match = re.match(r"\A---\s*\n(.*?)\n---(?:\n|\Z)", text, re.DOTALL)
     if not match:
-        raise ValueError(f"external skill {expected_name} has invalid front matter")
+        raise ValueError(f"external skill has invalid front matter: {skill_file}")
     name_match = re.search(r"^name:\s*([^\s]+)\s*$", match.group(1), re.MULTILINE)
-    if not name_match or name_match.group(1) != expected_name:
-        actual = name_match.group(1) if name_match else "missing"
+    if not name_match:
+        raise ValueError(f"external skill front matter has no name: {skill_file}")
+    return name_match.group(1)
+
+
+def _validate_skill_name(skill_directory: Path, expected_name: str) -> None:
+    actual = _read_skill_name(skill_directory)
+    if actual != expected_name:
         raise ValueError(
             f"external skill directory is named {expected_name}, but SKILL.md names {actual}"
         )
@@ -212,10 +263,15 @@ def _copy_skill(checkout: Path, skill: dict[str, str], destination: Path) -> str
         raise ValueError(
             f"external skill {skill['name']} has no license {skill['license_path']}"
         )
-    for path in [source, *source.rglob("*"), license_source]:
+    source_paths = [
+        path
+        for path in source.rglob("*")
+        if ".git" not in path.relative_to(source).parts
+    ]
+    for path in [source, *source_paths, license_source]:
         if path.is_symlink():
             raise ValueError(f"external skills may not contain symbolic links: {path}")
-    shutil.copytree(source, destination)
+    shutil.copytree(source, destination, ignore=shutil.ignore_patterns(".git"))
     upstream_license = destination / "LICENSE.upstream"
     if upstream_license.exists():
         raise ValueError(
@@ -298,6 +354,70 @@ def _github_base(repository: str) -> str | None:
     return None
 
 
+def _remote_branches(repository: str) -> list[tuple[str, str]]:
+    result = _run(
+        ["git", "ls-remote", "--heads", repository],
+        capture_output=True,
+    )
+    branches: list[tuple[str, str]] = []
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) != 2 or not fields[1].startswith("refs/heads/"):
+            continue
+        branches.append((fields[1].removeprefix("refs/heads/"), fields[1]))
+    return branches
+
+
+def _parse_github_skill_url(
+    url: str,
+    repository_override: str | None = None,
+) -> tuple[str, str, str]:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or parsed.hostname != "github.com":
+        raise ValueError("add-url currently accepts github.com skill links")
+    parts = [unquote(part) for part in parsed.path.strip("/").split("/")]
+    if len(parts) < 4 or parts[2] not in {"blob", "tree"}:
+        raise ValueError(
+            "GitHub skill URL must use /OWNER/REPOSITORY/blob/BRANCH/.../SKILL.md "
+            "or /OWNER/REPOSITORY/tree/BRANCH/..."
+        )
+    owner, repository_name, view = parts[:3]
+    if not owner or not repository_name:
+        raise ValueError("GitHub skill URL must identify an owner and repository")
+    repository = repository_override or f"https://github.com/{owner}/{repository_name}.git"
+    remainder = parts[3:]
+    if any(not part for part in remainder):
+        raise ValueError("GitHub skill URL path must not contain empty segments")
+    matches: list[tuple[int, str, str, list[str]]] = []
+    for branch, tracking_ref in _remote_branches(repository):
+        branch_parts = branch.split("/")
+        if remainder[: len(branch_parts)] == branch_parts:
+            source_parts = remainder[len(branch_parts) :]
+            matches.append((len(branch_parts), branch, tracking_ref, source_parts))
+    if not matches:
+        raise ValueError("GitHub skill URL does not reference a current upstream branch")
+    _, _, tracking_ref, source_parts = max(matches, key=lambda item: item[0])
+    if view == "blob":
+        if not source_parts or source_parts[-1] != "SKILL.md":
+            raise ValueError("GitHub blob URL must point to SKILL.md")
+        source_parts = source_parts[:-1]
+    source_path = "/".join(source_parts) if source_parts else "."
+    _safe_relative_path(source_path, "source_path", allow_repository_root=True)
+    return repository, tracking_ref, source_path
+
+
+def _license_candidates(source_path: str) -> list[str]:
+    source = PurePosixPath(source_path)
+    candidates: list[str] = []
+    for directory in (source, *source.parents):
+        for filename in LICENSE_NAMES:
+            if str(directory) == ".":
+                candidates.append(filename)
+            else:
+                candidates.append(str(directory / filename))
+    return candidates
+
+
 def _write_report(path: Path, changes: list[dict[str, str]]) -> None:
     lines = [
         "Automated external skill refresh.",
@@ -321,18 +441,18 @@ def _write_report(path: Path, changes: list[dict[str, str]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def add_skill(
+def _add_resolved_skill(
     manifest_path: Path,
     name: str,
     repository: str,
     tracking_ref: str,
+    revision: str,
     source_path: str,
     license_path: str,
 ) -> dict[str, str]:
     manifest = load_manifest(manifest_path)
     if any(skill["name"] == name for skill in manifest["skills"]):
         raise ValueError(f"external skill already exists: {name}")
-    revision = _resolve_tracking_revision(repository, tracking_ref)
     skill = {
         "name": name,
         "repository": repository,
@@ -354,6 +474,69 @@ def add_skill(
     _write_manifest(manifest_path, manifest)
     print(f"added {name} at {revision}")
     return skill
+
+
+def add_skill(
+    manifest_path: Path,
+    name: str,
+    repository: str,
+    tracking_ref: str,
+    source_path: str,
+    license_path: str,
+) -> dict[str, str]:
+    revision = _resolve_tracking_revision(repository, tracking_ref)
+    return _add_resolved_skill(
+        manifest_path,
+        name,
+        repository,
+        tracking_ref,
+        revision,
+        source_path,
+        license_path,
+    )
+
+
+def add_skill_from_github_url(
+    manifest_path: Path,
+    url: str,
+    license_path: str | None = None,
+    repository_override: str | None = None,
+) -> dict[str, str]:
+    repository, tracking_ref, source_path = _parse_github_skill_url(
+        url,
+        repository_override,
+    )
+    revision = _resolve_tracking_revision(repository, tracking_ref)
+    candidates = [license_path] if license_path else _license_candidates(source_path)
+    for candidate in candidates:
+        _safe_relative_path(candidate, "license_path")
+    with tempfile.TemporaryDirectory(prefix="external-skill-url.") as temp:
+        checkout = Path(temp) / "repository"
+        _checkout_paths(
+            repository,
+            revision,
+            tracking_ref,
+            [(source_path, True), *((candidate, False) for candidate in candidates)],
+            checkout,
+        )
+        selected_license = next(
+            (candidate for candidate in candidates if (checkout / candidate).is_file()),
+            None,
+        )
+        if selected_license is None:
+            raise ValueError(
+                "could not find an upstream license; pass --license-path explicitly"
+            )
+        name = _read_skill_name(checkout / source_path)
+    return _add_resolved_skill(
+        manifest_path,
+        name,
+        repository,
+        tracking_ref,
+        revision,
+        source_path,
+        selected_license,
+    )
 
 
 def refresh_lock(manifest_path: Path, write: bool, report: Path | None = None) -> int:
@@ -422,6 +605,11 @@ def main() -> int:
     add.add_argument("--source-path", required=True)
     add.add_argument("--license-path", required=True)
 
+    add_url = commands.add_parser("add-url")
+    add_url.add_argument("--manifest", type=Path, required=True)
+    add_url.add_argument("--url", required=True)
+    add_url.add_argument("--license-path")
+
     refresh = commands.add_parser("refresh-lock")
     refresh.add_argument("--manifest", type=Path, required=True)
     mode = refresh.add_mutually_exclusive_group(required=True)
@@ -446,6 +634,12 @@ def main() -> int:
                 arguments.repository,
                 arguments.tracking_ref,
                 arguments.source_path,
+                arguments.license_path,
+            )
+        elif arguments.command == "add-url":
+            add_skill_from_github_url(
+                arguments.manifest,
+                arguments.url,
                 arguments.license_path,
             )
         else:

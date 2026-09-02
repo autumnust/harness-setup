@@ -225,6 +225,151 @@ class ExternalSkillTests(unittest.TestCase):
                     "LICENSE",
                 )
 
+    def test_adds_from_a_github_blob_url_and_discovers_parent_license(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, revision = self.make_repository(root)
+            manifest = root / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": []}) + "\n",
+                encoding="utf-8",
+            )
+
+            added = external_skills.add_skill_from_github_url(
+                manifest,
+                "https://github.com/example/upstream/blob/main/"
+                "pstack/skills/unslop/SKILL.md",
+                repository_override=str(repository),
+            )
+
+            self.assertEqual(added["name"], "unslop")
+            self.assertEqual(added["revision"], revision)
+            self.assertEqual(added["tracking_ref"], "refs/heads/main")
+            self.assertEqual(added["source_path"], "pstack/skills/unslop")
+            self.assertEqual(added["license_path"], "pstack/LICENSE")
+            resolved = root / "resolved"
+            external_skills.materialize_manifest(manifest, resolved)
+            self.assertEqual(
+                (resolved / "unslop/LICENSE.upstream").read_text(),
+                "MIT test license\n",
+            )
+
+    def test_adds_from_a_tree_url_with_a_slash_in_the_branch_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, _ = self.make_repository(root)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repository),
+                    "switch",
+                    "--quiet",
+                    "-c",
+                    "feature/skill-update",
+                ],
+                check=True,
+            )
+            skill_file = repository / "pstack/skills/unslop/SKILL.md"
+            skill_file.write_text(skill_file.read_text() + "Branch version.\n")
+            revision = self.commit(repository, "update skill on feature branch")
+            manifest = root / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": []}) + "\n",
+                encoding="utf-8",
+            )
+
+            added = external_skills.add_skill_from_github_url(
+                manifest,
+                "https://github.com/example/upstream/tree/feature/skill-update/"
+                "pstack/skills/unslop",
+                repository_override=str(repository),
+            )
+
+            self.assertEqual(added["tracking_ref"], "refs/heads/feature/skill-update")
+            self.assertEqual(added["revision"], revision)
+
+    def test_adds_a_skill_stored_at_the_repository_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository = root / "root-skill"
+            repository.mkdir()
+            subprocess.run(
+                ["git", "-C", str(repository), "init", "--quiet", "-b", "main"],
+                check=True,
+            )
+            (repository / "SKILL.md").write_text(
+                "---\nname: root-skill\ndescription: Root skill.\n---\n\n# Root skill\n",
+                encoding="utf-8",
+            )
+            (repository / "LICENSE.txt").write_text(
+                "Root test license\n", encoding="utf-8"
+            )
+            revision = self.commit(repository, "add root skill")
+            manifest = root / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": []}) + "\n",
+                encoding="utf-8",
+            )
+
+            added = external_skills.add_skill_from_github_url(
+                manifest,
+                "https://github.com/example/root-skill/blob/main/SKILL.md",
+                repository_override=str(repository),
+            )
+
+            self.assertEqual(added["revision"], revision)
+            self.assertEqual(added["source_path"], ".")
+            self.assertEqual(added["license_path"], "LICENSE.txt")
+            resolved = root / "resolved"
+            external_skills.materialize_manifest(manifest, resolved)
+            self.assertTrue((resolved / "root-skill/SKILL.md").is_file())
+            self.assertFalse((resolved / "root-skill/.git").exists())
+
+    def test_url_add_uses_an_explicit_license_and_does_not_write_on_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, _ = self.make_repository(root)
+            manifest = root / "external-skills.json"
+            empty_manifest = json.dumps({"schema_version": 1, "skills": []}) + "\n"
+            manifest.write_text(empty_manifest, encoding="utf-8")
+            url = (
+                "https://github.com/example/upstream/blob/main/"
+                "pstack/skills/unslop/SKILL.md"
+            )
+
+            with self.assertRaisesRegex(
+                ValueError, "could not find an upstream license"
+            ):
+                external_skills.add_skill_from_github_url(
+                    manifest,
+                    url,
+                    license_path="missing/LICENSE",
+                    repository_override=str(repository),
+                )
+            self.assertEqual(manifest.read_text(), empty_manifest)
+
+            added = external_skills.add_skill_from_github_url(
+                manifest,
+                url,
+                license_path="pstack/LICENSE",
+                repository_override=str(repository),
+            )
+            self.assertEqual(added["license_path"], "pstack/LICENSE")
+
+    def test_url_add_rejects_unsupported_links(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            manifest = Path(temp) / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": []}) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "github.com"):
+                external_skills.add_skill_from_github_url(
+                    manifest,
+                    "https://example.com/project/skills/example/SKILL.md",
+                )
+
     def test_rejects_a_moving_revision(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

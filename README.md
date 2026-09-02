@@ -288,7 +288,26 @@ which the installer preserves beside the installed skill as `LICENSE.upstream`.
 
 ## Adding and refreshing external skills
 
-Add any public or credential-accessible Git repository skill with one command:
+For a GitHub-hosted skill, give the helper the same `blob` link to `SKILL.md` or
+`tree` link to its directory that a user would paste into an agent:
+
+```bash
+python3 scripts/external-skills.py add-url \
+  --manifest dependencies/external-skills.json \
+  --url https://github.com/OWNER/REPOSITORY/blob/BRANCH/path/to/SKILL.md
+```
+
+The helper reads the skill name from `SKILL.md`, distinguishes the branch from
+the source path even when the branch name contains `/`, and searches from the
+skill directory up to the repository root for the nearest `LICENSE` or
+`COPYING` file. It resolves the branch to an exact commit, calculates the
+deployed content hash, and writes the sorted manifest entry. Inspect the skill
+instructions and applicable license before running it. If the applicable
+license has an unusual name or location, add
+`--license-path <repository-relative-path>`.
+
+For another Git host or a repository layout the URL helper cannot interpret,
+provide the inspected fields directly:
 
 ```bash
 python3 scripts/external-skills.py add \
@@ -299,12 +318,13 @@ python3 scripts/external-skills.py add \
   --license-path <repository-path-to-license>
 ```
 
-The command reads the current `main` commit by default, verifies that the
-selected directory contains a matching `SKILL.md`, computes the content hash,
-and adds a sorted manifest entry. Use `--tracking-ref refs/heads/<branch>` when
-the upstream skill follows another branch. The installer, broadcaster, release
-manager, and scheduled updater process every manifest entry; none of those
-paths contains skill-specific names.
+The field-based command reads the current `main` commit by default, verifies
+that the selected directory contains a matching `SKILL.md`, computes the
+content hash, and adds a sorted manifest entry. Use
+`--tracking-ref refs/heads/<branch>` when the upstream skill follows another
+branch. The installer, broadcaster, release manager, and scheduled updater
+process every manifest entry; none of those paths contains skill-specific
+names.
 
 Review the new entry and upstream license before committing it. The source
 repository remains responsible for the skill contents. The harness records
