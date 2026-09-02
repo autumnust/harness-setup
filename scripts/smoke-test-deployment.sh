@@ -130,7 +130,7 @@ run_inside_sandbox() {
   local install_repo="$root/repository"
   local resolved_external="$install_repo/.resolved-external-skills"
   rsync -a --exclude='.git' "$REPO_ROOT/" "$install_repo/"
-  mkdir -p "$resolved_external/unslop"
+  mkdir -p "$resolved_external/unslop" "$resolved_external/plain-language"
   printf '%s\n' \
     '---' \
     'name: unslop' \
@@ -144,13 +144,37 @@ run_inside_sandbox() {
     > "$resolved_external/unslop/SKILL.md"
   printf '%s\n' 'MIT test license' \
     > "$resolved_external/unslop/LICENSE.upstream"
+  printf '%s\n' \
+    '---' \
+    'name: plain-language' \
+    'description: Second deployment smoke external skill.' \
+    '---' \
+    '' \
+    '# Plain language' \
+    '' \
+    'This fixture proves that deployment processes every manifest entry.' \
+    > "$resolved_external/plain-language/SKILL.md"
+  printf '%s\n' 'Apache test license' \
+    > "$resolved_external/plain-language/LICENSE.upstream"
   local external_hash
+  local second_external_hash
   external_hash="$(python3 "$install_repo/scripts/external-skills.py" hash \
     --directory "$resolved_external/unslop")"
+  second_external_hash="$(python3 "$install_repo/scripts/external-skills.py" hash \
+    --directory "$resolved_external/plain-language")"
   printf '%s\n' \
     '{' \
     '  "schema_version": 1,' \
     '  "skills": [' \
+    '    {' \
+    '      "name": "plain-language",' \
+    '      "repository": "https://example.invalid/other-upstream.git",' \
+    '      "tracking_ref": "refs/heads/main",' \
+    '      "revision": "1111111111111111111111111111111111111111",' \
+    '      "source_path": "skills/plain-language",' \
+    '      "license_path": "LICENSE",' \
+    "      \"content_sha256\": \"$second_external_hash\"" \
+    '    },' \
     '    {' \
     '      "name": "unslop",' \
     '      "repository": "https://example.invalid/upstream.git",' \

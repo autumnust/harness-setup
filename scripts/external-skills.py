@@ -44,11 +44,7 @@ def _safe_relative_path(value: object, field: str) -> str:
     return value
 
 
-def load_manifest(path: Path) -> dict[str, Any]:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"cannot read external skill manifest {path}: {exc}") from exc
+def validate_manifest(value: object) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) != MANIFEST_FIELDS:
         raise ValueError(
             "external skill manifest must contain exactly schema_version and skills"
@@ -56,8 +52,8 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if value["schema_version"] != 1:
         raise ValueError("external skill manifest schema_version must be 1")
     skills = value["skills"]
-    if not isinstance(skills, list) or not skills:
-        raise ValueError("external skill manifest skills must be a non-empty list")
+    if not isinstance(skills, list):
+        raise ValueError("external skill manifest skills must be a list")
 
     names: set[str] = set()
     for index, skill in enumerate(skills):
@@ -82,6 +78,21 @@ def load_manifest(path: Path) -> dict[str, Any]:
         _safe_relative_path(skill["source_path"], f"{prefix}.source_path")
         _safe_relative_path(skill["license_path"], f"{prefix}.license_path")
     return value
+
+
+def load_manifest(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"cannot read external skill manifest {path}: {exc}") from exc
+    return validate_manifest(value)
+
+
+def _write_manifest(path: Path, manifest: dict[str, Any]) -> None:
+    validate_manifest(manifest)
+    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    temporary.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
 
 
 def tree_hash(directory: Path) -> str:
@@ -310,6 +321,41 @@ def _write_report(path: Path, changes: list[dict[str, str]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def add_skill(
+    manifest_path: Path,
+    name: str,
+    repository: str,
+    tracking_ref: str,
+    source_path: str,
+    license_path: str,
+) -> dict[str, str]:
+    manifest = load_manifest(manifest_path)
+    if any(skill["name"] == name for skill in manifest["skills"]):
+        raise ValueError(f"external skill already exists: {name}")
+    revision = _resolve_tracking_revision(repository, tracking_ref)
+    skill = {
+        "name": name,
+        "repository": repository,
+        "tracking_ref": tracking_ref,
+        "revision": revision,
+        "source_path": source_path,
+        "license_path": license_path,
+        "content_sha256": "0" * 64,
+    }
+    validate_manifest({"schema_version": 1, "skills": [skill]})
+    with tempfile.TemporaryDirectory(prefix="external-skill-add.") as temp:
+        skill["content_sha256"] = materialize_skill(
+            skill,
+            Path(temp) / name,
+            verify_hash=False,
+        )
+    manifest["skills"].append(skill)
+    manifest["skills"].sort(key=lambda item: item["name"])
+    _write_manifest(manifest_path, manifest)
+    print(f"added {name} at {revision}")
+    return skill
+
+
 def refresh_lock(manifest_path: Path, write: bool, report: Path | None = None) -> int:
     manifest = load_manifest(manifest_path)
     changes: list[dict[str, str]] = []
@@ -342,9 +388,7 @@ def refresh_lock(manifest_path: Path, write: bool, report: Path | None = None) -
     if report is not None:
         _write_report(report, changes)
     if changes and write:
-        temporary = manifest_path.with_name(f".{manifest_path.name}.tmp.{os.getpid()}")
-        temporary.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, manifest_path)
+        _write_manifest(manifest_path, manifest)
     for change in changes:
         print(
             f"updated {change['name']}: "
@@ -370,6 +414,14 @@ def main() -> int:
     digest = commands.add_parser("hash")
     digest.add_argument("--directory", type=Path, required=True)
 
+    add = commands.add_parser("add")
+    add.add_argument("--manifest", type=Path, required=True)
+    add.add_argument("--name", required=True)
+    add.add_argument("--repository", required=True)
+    add.add_argument("--tracking-ref", default="refs/heads/main")
+    add.add_argument("--source-path", required=True)
+    add.add_argument("--license-path", required=True)
+
     refresh = commands.add_parser("refresh-lock")
     refresh.add_argument("--manifest", type=Path, required=True)
     mode = refresh.add_mutually_exclusive_group(required=True)
@@ -387,6 +439,15 @@ def main() -> int:
             print(f"verified external skills in {arguments.directory}")
         elif arguments.command == "hash":
             print(tree_hash(arguments.directory))
+        elif arguments.command == "add":
+            add_skill(
+                arguments.manifest,
+                arguments.name,
+                arguments.repository,
+                arguments.tracking_ref,
+                arguments.source_path,
+                arguments.license_path,
+            )
         else:
             changed = refresh_lock(
                 arguments.manifest, write=arguments.write, report=arguments.report

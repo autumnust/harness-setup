@@ -155,6 +155,76 @@ class ExternalSkillTests(unittest.TestCase):
             external_skills.materialize_manifest(manifest, resolved)
             self.assertIn("Upstream change.", (resolved / "unslop/SKILL.md").read_text())
 
+    def test_adds_and_materializes_a_skill_from_another_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, revision = self.make_repository(root)
+            manifest = root / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": []}) + "\n",
+                encoding="utf-8",
+            )
+
+            other_repository = root / "other-upstream"
+            other_repository.mkdir()
+            subprocess.run(
+                ["git", "-C", str(other_repository), "init", "--quiet", "-b", "main"],
+                check=True,
+            )
+            other_skill = other_repository / "skills/plain-language"
+            other_skill.mkdir(parents=True)
+            (other_skill / "SKILL.md").write_text(
+                "---\nname: plain-language\ndescription: Prefer plain language.\n---\n\n# Plain language\n",
+                encoding="utf-8",
+            )
+            (other_repository / "LICENSE").write_text(
+                "Apache test license\n", encoding="utf-8"
+            )
+            other_revision = self.commit(other_repository, "add plain-language skill")
+
+            added = external_skills.add_skill(
+                manifest,
+                "plain-language",
+                str(other_repository),
+                "refs/heads/main",
+                "skills/plain-language",
+                "LICENSE",
+            )
+            external_skills.add_skill(
+                manifest,
+                "unslop",
+                str(repository),
+                "refs/heads/main",
+                "pstack/skills/unslop",
+                "pstack/LICENSE",
+            )
+
+            self.assertEqual(added["revision"], other_revision)
+            self.assertEqual(
+                external_skills.load_manifest(manifest)["skills"][1]["revision"],
+                revision,
+            )
+            locked = external_skills.load_manifest(manifest)["skills"]
+            self.assertEqual([skill["name"] for skill in locked], ["plain-language", "unslop"])
+            resolved = root / "resolved"
+            external_skills.materialize_manifest(manifest, resolved)
+            self.assertTrue((resolved / "plain-language/SKILL.md").is_file())
+            self.assertTrue((resolved / "unslop/SKILL.md").is_file())
+            self.assertEqual(
+                (resolved / "plain-language/LICENSE.upstream").read_text(),
+                "Apache test license\n",
+            )
+
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                external_skills.add_skill(
+                    manifest,
+                    "plain-language",
+                    str(other_repository),
+                    "refs/heads/main",
+                    "skills/plain-language",
+                    "LICENSE",
+                )
+
     def test_rejects_a_moving_revision(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -286,7 +286,29 @@ The externally resolved `unslop` skill comes from
 under its [MIT license](https://github.com/cursor/plugins/blob/main/pstack/LICENSE),
 which the installer preserves beside the installed skill as `LICENSE.upstream`.
 
-## Refreshing external skills
+## Adding and refreshing external skills
+
+Add any public or credential-accessible Git repository skill with one command:
+
+```bash
+python3 scripts/external-skills.py add \
+  --manifest dependencies/external-skills.json \
+  --name <skill-name> \
+  --repository <git-url> \
+  --source-path <repository-path-to-skill> \
+  --license-path <repository-path-to-license>
+```
+
+The command reads the current `main` commit by default, verifies that the
+selected directory contains a matching `SKILL.md`, computes the content hash,
+and adds a sorted manifest entry. Use `--tracking-ref refs/heads/<branch>` when
+the upstream skill follows another branch. The installer, broadcaster, release
+manager, and scheduled updater process every manifest entry; none of those
+paths contains skill-specific names.
+
+Review the new entry and upstream license before committing it. The source
+repository remains responsible for the skill contents. The harness records
+only retrieval and verification information.
 
 The scheduled
 [`refresh-external-skills.yml`](.github/workflows/refresh-external-skills.yml)
