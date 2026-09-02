@@ -125,6 +125,45 @@ run_inside_sandbox() {
   export OTEL_SDK_DISABLED=true
   unset SSH_AUTH_SOCK
 
+  # Build the same self-contained deployment copy used by remote broadcast.
+  # Its external skill fixture is local so offline mode remains deterministic.
+  local install_repo="$root/repository"
+  local resolved_external="$install_repo/.resolved-external-skills"
+  rsync -a --exclude='.git' "$REPO_ROOT/" "$install_repo/"
+  mkdir -p "$resolved_external/unslop"
+  printf '%s\n' \
+    '---' \
+    'name: unslop' \
+    'description: Deployment smoke external skill.' \
+    'disable-model-invocation: true' \
+    '---' \
+    '' \
+    '# Unslop' \
+    '' \
+    'Smoke fixture resolved before offline installation.' \
+    > "$resolved_external/unslop/SKILL.md"
+  printf '%s\n' 'MIT test license' \
+    > "$resolved_external/unslop/LICENSE.upstream"
+  local external_hash
+  external_hash="$(python3 "$install_repo/scripts/external-skills.py" hash \
+    --directory "$resolved_external/unslop")"
+  printf '%s\n' \
+    '{' \
+    '  "schema_version": 1,' \
+    '  "skills": [' \
+    '    {' \
+    '      "name": "unslop",' \
+    '      "repository": "https://example.invalid/upstream.git",' \
+    '      "tracking_ref": "refs/heads/main",' \
+    '      "revision": "0000000000000000000000000000000000000000",' \
+    '      "source_path": "skills/unslop",' \
+    '      "license_path": "LICENSE",' \
+    "      \"content_sha256\": \"$external_hash\"" \
+    '    }' \
+    '  ]' \
+    '}' \
+    > "$install_repo/dependencies/external-skills.json"
+
   printf '%s\n' \
     'smoke_sentinel = "preserved"' \
     '' \
@@ -140,7 +179,7 @@ run_inside_sandbox() {
   printf '%s\n' \
     '{"enabledPlugins":{"smoke-only@example":false},"env":{"SMOKE_HOST_ONLY":"preserved","CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS":"1"}}' \
     > "$CLAUDE_CONFIG_DIR/settings.json"
-  "$REPO_ROOT/install.sh" --overwrite --instance example-workstation > "$root/install.log"
+  "$install_repo/install.sh" --overwrite --instance example-workstation > "$root/install.log"
 
   [[ -f "$AGENT_HARNESS_HOME/config.json" ]] || {
     echo "error: installer did not initialize runtime configuration" >&2
@@ -170,8 +209,8 @@ run_inside_sandbox() {
     > "$CLAUDE_CONFIG_DIR/agents/lei-harness/educator.md"
   printf '%s\n' 'name = "educator"' \
     > "$CODEX_HOME/agents/lei-harness-educator.toml"
-  "$REPO_ROOT/install.sh" --update > "$root/stale-update.log"
-  "$REPO_ROOT/install.sh" --update > "$root/update.log"
+  "$install_repo/install.sh" --update > "$root/stale-update.log"
+  "$install_repo/install.sh" --update > "$root/update.log"
 
   mkdir -p "$root/fake-codex-plugin/scripts"
   printf '%s\n' '// smoke plugin runtime' \
@@ -191,9 +230,10 @@ run_inside_sandbox() {
   "$AGENT_HARNESS_HOME/bin/harness-release" rollback "$active_release" \
     > "$root/rollback.log"
 
-  python3 "$REPO_ROOT/tests/deployment-smoke/verify-smoke.py" install \
-    --repo "$REPO_ROOT" \
+  python3 "$install_repo/tests/deployment-smoke/verify-smoke.py" install \
+    --repo "$install_repo" \
     --home "$fake_home" \
+    --external-skills "$resolved_external" \
     --update-log "$root/update.log"
 
   claude --version > "$root/claude-version.log"
@@ -297,6 +337,7 @@ fi
 require_command sandbox-exec
 require_command python3
 require_command curl
+require_command rsync
 require_command claude
 require_command codex
 

@@ -1,0 +1,71 @@
+name: Refresh external skills
+
+on:
+  schedule:
+    - cron: "17 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-external-skills
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Resolve tracked upstream revisions
+        id: refresh
+        shell: bash
+        run: |
+          report="$RUNNER_TEMP/external-skills-update.md"
+          python3 scripts/external-skills.py refresh-lock \
+            --manifest dependencies/external-skills.json \
+            --write \
+            --report "$report"
+          if git diff --quiet -- dependencies/external-skills.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "report=$report" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the dependency pull request
+        if: steps.refresh.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT_PATH: ${{ steps.refresh.outputs.report }}
+        shell: bash
+        run: |
+          branch="automation/refresh-external-skills"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$branch"
+          git add dependencies/external-skills.json
+          git commit -m "dependencies: refresh external skills"
+          git push --force origin "HEAD:refs/heads/$branch"
+
+          pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          if [[ -n "$pr_number" ]]; then
+            gh pr edit "$pr_number" \
+              --title "dependencies: refresh external skills" \
+              --body-file "$REPORT_PATH"
+          else
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "dependencies: refresh external skills" \
+              --body-file "$REPORT_PATH"
+          fi

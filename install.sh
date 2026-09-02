@@ -79,6 +79,10 @@ Usage:
                                 store its source under
                                 ~/.agent-harness/dependencies/tss, and install
                                 its tss command into ~/bin/tss.
+
+The installer also resolves the external skills recorded in
+dependencies/external-skills.json. A normal local install needs Git and network
+access. Broadcast bundles and release rollback carry the already resolved files.
 HELP
       exit 0 ;;
     *)
@@ -141,6 +145,31 @@ TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/harness-install.XXXXXX")"
 cleanup() { rm -rf "$TEMP_ROOT"; }
 trap cleanup EXIT
 
+EXTERNAL_SKILLS_MANIFEST="${HARNESS_EXTERNAL_SKILLS_MANIFEST:-$REPO_ROOT/dependencies/external-skills.json}"
+if [[ -n "${HARNESS_RESOLVED_EXTERNAL_SKILLS_DIR:-}" ]]; then
+  EXTERNAL_SKILLS_STAGED="$HARNESS_RESOLVED_EXTERNAL_SKILLS_DIR"
+elif [[ -d "$REPO_ROOT/.resolved-external-skills" ]]; then
+  EXTERNAL_SKILLS_STAGED="$REPO_ROOT/.resolved-external-skills"
+else
+  EXTERNAL_SKILLS_STAGED="$TEMP_ROOT/external-skills"
+  python3 "$REPO_ROOT/scripts/external-skills.py" materialize \
+    --manifest "$EXTERNAL_SKILLS_MANIFEST" \
+    --destination "$EXTERNAL_SKILLS_STAGED"
+fi
+python3 "$REPO_ROOT/scripts/external-skills.py" verify \
+  --manifest "$EXTERNAL_SKILLS_MANIFEST" \
+  --directory "$EXTERNAL_SKILLS_STAGED"
+
+for external_skill in "$EXTERNAL_SKILLS_STAGED"/*/; do
+  [[ -d "$external_skill" ]] || continue
+  external_name="$(basename "$external_skill")"
+  for managed_root in "$REPO_ROOT/agent-skills" "$INSTANCE_SKILLS_DIR"; do
+    [[ -n "$managed_root" && -d "$managed_root/$external_name" ]] || continue
+    echo "External skill name conflicts with a managed skill: $external_name" >&2
+    exit 2
+  done
+done
+
 TSS_STAGED=""
 if (( WITH_TSS )); then
   TSS_STAGED="$TEMP_ROOT/tss"
@@ -162,7 +191,8 @@ if (( PRESERVE_RELEASE )); then
   RELEASE_ID="$(python3 "$REPO_ROOT/scripts/harness-release.py" \
     --home "$AGENT_HARNESS_HOME" prepare \
     --source "$REPO_ROOT" \
-    --destination "$RELEASE_STAGED")"
+    --destination "$RELEASE_STAGED" \
+    --resolved-external-skills "$EXTERNAL_SKILLS_STAGED")"
 fi
 
 # Validate the provider-neutral topology and render provider-native agent files
@@ -239,7 +269,7 @@ if (( CODEX_PRESENT )); then
     [[ -e "$agent_file" ]] && record_conflict "$agent_file"
   done
 fi
-for skill_root in "$REPO_ROOT/agent-skills" "$INSTANCE_SKILLS_DIR"; do
+for skill_root in "$REPO_ROOT/agent-skills" "$INSTANCE_SKILLS_DIR" "$EXTERNAL_SKILLS_STAGED"; do
   [[ -n "$skill_root" && -d "$skill_root" ]] || continue
   for skill_dir in "$skill_root"/*/; do
     [[ -d "$skill_dir" ]] || continue
@@ -498,7 +528,7 @@ if [[ ! -e "$AGENT_HARNESS_HOME/state/learner-profiles" ]]; then
   fi
 fi
 
-# --- 4. Skills (portable plus selected-profile skills → every tool) --------
+# --- 4. Skills (portable, external, and selected-profile → every tool) -----
 # agent-skills/ is the portable source of truth.  A selected instance profile
 # may add private skills from instances/<profile>/agent-skills/. Claude Code
 # and Codex CLI use the same on-disk convention (a directory per skill holding
@@ -511,10 +541,12 @@ if (( CODEX_PRESENT )); then
   mkdir -p "$PORTABLE_SKILLS_DIR"
   mkdir -p "$CODEX_DIR/skills"
 fi
-for skill_root in "$REPO_ROOT/agent-skills" "$INSTANCE_SKILLS_DIR"; do
+for skill_root in "$REPO_ROOT/agent-skills" "$INSTANCE_SKILLS_DIR" "$EXTERNAL_SKILLS_STAGED"; do
   [[ -n "$skill_root" && -d "$skill_root" ]] || continue
   if [[ "$skill_root" == "$INSTANCE_SKILLS_DIR" ]]; then
     say "Installing skills for the selected instance profile"
+  elif [[ "$skill_root" == "$EXTERNAL_SKILLS_STAGED" ]]; then
+    say "Installing revision-pinned external skills"
   fi
   for skill_dir in "$skill_root"/*/; do
     [[ -d "$skill_dir" ]] || continue

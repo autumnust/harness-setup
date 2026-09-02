@@ -12,6 +12,7 @@ itself a software project to build or test.
 | `home/AGENTS.md` | The global agent prompt deployed to `~/AGENTS.md` on every machine |
 | `claude/settings.json` | Claude Code settings deployed to `~/.claude/settings.json` |
 | `agent-skills/` | Skills deployed to `~/.claude/skills/`; when Codex is present they also deploy to current `~/.agents/skills/` and legacy-compatible `~/.codex/skills/` |
+| `dependencies/external-skills.json` | Commit-pinned skills resolved from upstream during installation and preserved in each harness release |
 | `agent-workflows/` | Provider-neutral role prompts, topology, workflows, contracts, runtime-config schema/defaults, and adapter mappings rendered into native Claude and Codex custom agents |
 | `scripts/render-agents.py` | Validates the topology and renders provider-native custom-agent files during installation |
 | `install.sh` / `update.sh` | Installers that copy the above onto a target machine |

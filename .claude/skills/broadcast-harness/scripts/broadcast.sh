@@ -126,6 +126,20 @@ say "Targets: ${HOSTS[*]}"
 [[ -n "$INSTANCE_PROFILE" ]] && say "Instance profile: $INSTANCE_PROFILE"
 echo
 
+# Resolve external skills on the source machine, then add them to a temporary
+# deployment copy. Remote machines therefore install the recorded revision
+# without needing GitHub access.
+BROADCAST_TEMP="$(mktemp -d "${TMPDIR:-/tmp}/harness-broadcast.XXXXXX")"
+cleanup_broadcast() { rm -rf "$BROADCAST_TEMP"; }
+trap cleanup_broadcast EXIT
+BUNDLE_ROOT="$BROADCAST_TEMP/repository"
+mkdir -p "$BUNDLE_ROOT"
+rsync -a --exclude='.git' --exclude='/.resolved-external-skills' \
+  "$REPO_ROOT/" "$BUNDLE_ROOT/"
+python3 "$REPO_ROOT/scripts/external-skills.py" materialize \
+  --manifest "$REPO_ROOT/dependencies/external-skills.json" \
+  --destination "$BUNDLE_ROOT/.resolved-external-skills"
+
 # --- per-host deploy ---------------------------------------------------------
 declare -a R_OK=() R_FAIL=()
 for host in "${HOSTS[@]}"; do
@@ -139,7 +153,7 @@ for host in "${HOSTS[@]}"; do
   if (( CHECK )); then
     say "[$host] rsync --dry-run:"
     rsync -az --delete --itemize-changes --dry-run "${RSYNC_RULES[@]}" \
-      -e "ssh ${SSH_OPTS[*]}" "$REPO_ROOT/" "$host:$REMOTE_DIR/" | sed 's/^/    /' || true
+      -e "ssh ${SSH_OPTS[*]}" "$BUNDLE_ROOT/" "$host:$REMOTE_DIR/" | sed 's/^/    /' || true
     ok "[$host] reachable; dry run complete (nothing written)"
     R_OK+=("$host (dry-run)")
     continue
@@ -147,7 +161,7 @@ for host in "${HOSTS[@]}"; do
 
   say "[$host] syncing repo…"
   if ! rsync -az --delete "${RSYNC_RULES[@]}" \
-        -e "ssh ${SSH_OPTS[*]}" "$REPO_ROOT/" "$host:$REMOTE_DIR/"; then
+        -e "ssh ${SSH_OPTS[*]}" "$BUNDLE_ROOT/" "$host:$REMOTE_DIR/"; then
     err "[$host] rsync failed — skipping install"
     R_FAIL+=("$host (rsync)")
     continue

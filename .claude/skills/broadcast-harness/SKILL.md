@@ -6,8 +6,9 @@ description: Push this harness-setup repo to SSH-reachable machines and run the 
 # Broadcast the harness to remote machines
 
 Rolls out the current `harness-setup` checkout to one or more ssh-reachable
-hosts: rsyncs the working tree to each, then runs `install.sh --update` there
-(diff + back up + no-op-when-synced). The remote needs no git or GitHub access.
+hosts: resolves commit-pinned external skills, rsyncs a temporary deployment
+copy to each, then runs `install.sh --update` there (diff + back up +
+no-op-when-synced). The remote needs no git or GitHub access for external skills.
 
 All work is done by `scripts/broadcast.sh`. Targets come from named `Host`
 entries in `~/.ssh/config`. `github.com` and wildcard patterns are never
@@ -24,6 +25,7 @@ targets.
    confirm reachability and show the itemized rsync delta without writing
    anything. Show the user the per-host result.
 4. **Deploy** — run `scripts/broadcast.sh HOST...` (or `--all`). The transfer
+   includes the external skills resolved from the approved dependency lock and
    excludes `instances/` by default. To install a profile-specific skill or
    instruction set, add `--instance <profile>`; the transfer then includes
    only `instances/<profile>.md` and its local fallback or local skill

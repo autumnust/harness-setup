@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "name": "unslop",
+      "repository": "https://github.com/cursor/plugins.git",
+      "tracking_ref": "refs/heads/main",
+      "revision": "efa2a531985e0a8084d36ff3cf87233be8a9f34b",
+      "source_path": "pstack/skills/unslop",
+      "license_path": "pstack/LICENSE",
+      "content_sha256": "386706a33b6a680f800906566efecfbdd4f04d731b87cbcad95b925647493c24"
+    }
+  ]
+}

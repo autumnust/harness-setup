@@ -25,6 +25,7 @@ PAYLOAD = (
     "scripts/render-agents.py",
     "scripts/render-claude-settings.py",
     "scripts/render-codex-config.py",
+    "scripts/external-skills.py",
     "scripts/harness-release.py",
     "scripts/prepare-git-dependency.py",
     "install.sh",
@@ -33,7 +34,10 @@ PAYLOAD = (
 )
 
 
-def payload_files(source: Path) -> list[tuple[str, Path]]:
+def payload_files(
+    source: Path,
+    resolved_external_skills: Path | None = None,
+) -> list[tuple[str, Path]]:
     files: list[tuple[str, Path]] = []
     for relative in PAYLOAD:
         path = source / relative
@@ -47,12 +51,25 @@ def payload_files(source: Path) -> list[tuple[str, Path]]:
             files.append((relative, path))
         else:
             raise FileNotFoundError(f"release payload is missing {path}")
+    if resolved_external_skills is not None:
+        if not resolved_external_skills.is_dir():
+            raise FileNotFoundError(
+                f"resolved external skills are missing {resolved_external_skills}"
+            )
+        files.extend(
+            (
+                str(Path(".resolved-external-skills") / child.relative_to(resolved_external_skills)),
+                child,
+            )
+            for child in sorted(resolved_external_skills.rglob("*"))
+            if child.is_file()
+        )
     return sorted(files)
 
 
-def content_id(source: Path) -> str:
+def content_id(source: Path, resolved_external_skills: Path | None = None) -> str:
     digest = hashlib.sha256()
-    for relative, path in payload_files(source):
+    for relative, path in payload_files(source, resolved_external_skills):
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
         digest.update(f"{path.stat().st_mode & 0o777:o}".encode("ascii"))
@@ -62,9 +79,13 @@ def content_id(source: Path) -> str:
     return digest.hexdigest()[:16]
 
 
-def stage_release(source: Path, destination: Path) -> str:
+def stage_release(
+    source: Path,
+    destination: Path,
+    resolved_external_skills: Path | None = None,
+) -> str:
     source = source.resolve()
-    release_id = content_id(source)
+    release_id = content_id(source, resolved_external_skills)
     if destination.exists():
         shutil.rmtree(destination)
     (destination / "source").mkdir(parents=True)
@@ -76,6 +97,11 @@ def stage_release(source: Path, destination: Path) -> str:
             shutil.copytree(src, dst)
         else:
             shutil.copy2(src, dst)
+    if resolved_external_skills is not None:
+        shutil.copytree(
+            resolved_external_skills,
+            destination / "source/.resolved-external-skills",
+        )
     metadata = {
         "version": 1,
         "release_id": release_id,
@@ -181,6 +207,7 @@ def main(argv: list[str] | None = None) -> int:
     prepare = commands.add_parser("prepare")
     prepare.add_argument("--source", type=Path, required=True)
     prepare.add_argument("--destination", type=Path, required=True)
+    prepare.add_argument("--resolved-external-skills", type=Path)
 
     register = commands.add_parser("register")
     register.add_argument("--staged", type=Path, required=True)
@@ -194,7 +221,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "prepare":
-            print(stage_release(args.source, args.destination))
+            print(
+                stage_release(
+                    args.source,
+                    args.destination,
+                    args.resolved_external_skills,
+                )
+            )
         elif args.command == "register":
             print(register_release(args.staged, args.home))
         elif args.command == "list":

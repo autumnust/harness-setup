@@ -33,7 +33,12 @@ def verify_frontmatter(path: Path, expected_name: str) -> None:
     assert "\nmodel: " in f"\n{frontmatter}"
 
 
-def verify_install(repo: Path, home: Path, update_log: Path) -> None:
+def verify_install(
+    repo: Path,
+    home: Path,
+    external_skills: Path,
+    update_log: Path,
+) -> None:
     manifest = json.loads((repo / "agent-workflows/manifest.json").read_text())
     claude_adapter = json.loads(
         (repo / "agent-workflows/adapters/claude.json").read_text()
@@ -169,6 +174,10 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     assert "Do not load a profile outside education" in coordinator_prompt
 
     expected_skills = file_hashes(repo / "agent-skills")
+    external_skill_files = file_hashes(external_skills)
+    overlap = set(expected_skills) & set(external_skill_files)
+    assert not overlap, f"external skills conflict with managed skills: {sorted(overlap)}"
+    expected_skills.update(external_skill_files)
     for skill_root in (
         home / ".claude/skills",
         home / ".agents/skills",
@@ -213,6 +222,8 @@ def verify_install(repo: Path, home: Path, update_log: Path) -> None:
     assert (home / ".agent-harness/current").resolve() == (
         releases / release_ids[0]
     ).resolve()
+    released_external = releases / release_ids[0] / "source/.resolved-external-skills"
+    assert file_hashes(released_external) == external_skill_files
     assert "restored harness release" in (root / "rollback.log").read_text()
 
     learner = home / ".agent-harness/state/learner-profiles/smoke.md"
@@ -245,6 +256,7 @@ def main() -> int:
     install = subparsers.add_parser("install")
     install.add_argument("--repo", type=Path, required=True)
     install.add_argument("--home", type=Path, required=True)
+    install.add_argument("--external-skills", type=Path, required=True)
     install.add_argument("--update-log", type=Path, required=True)
 
     doctors = subparsers.add_parser("doctors")
@@ -256,7 +268,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.command == "install":
-            verify_install(args.repo, args.home, args.update_log)
+            verify_install(
+                args.repo,
+                args.home,
+                args.external_skills,
+                args.update_log,
+            )
         else:
             verify_doctors(
                 args.claude_status,
