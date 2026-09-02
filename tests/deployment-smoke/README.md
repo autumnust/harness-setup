@@ -65,6 +65,8 @@ The offline test verifies:
 - Each role includes its declared shared contracts.
 - Complete skill directory trees deploy identically to Claude, portable, and
   Codex locations.
+- Revision-pinned external skills are verified, deployed to every skill
+  location, and stored in the release used by offline rollback.
 - Each install registers one immutable content-addressed release, identical
   updates reuse it, and rollback can restore that release without changing
   mutable state.

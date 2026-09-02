@@ -73,6 +73,27 @@ class HarnessReleaseTests(unittest.TestCase):
                 (home / "releases" / release_id).resolve(),
             )
 
+    def test_release_contains_resolved_external_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            resolved = root / "resolved"
+            skill = resolved / "unslop"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("upstream skill\n", encoding="utf-8")
+            staged = root / "staged"
+
+            first_id = harness_release.stage_release(REPO_ROOT, staged, resolved)
+            self.assertEqual(
+                (staged / "source/.resolved-external-skills/unslop/SKILL.md").read_text(),
+                "upstream skill\n",
+            )
+
+            (skill / "SKILL.md").write_text("new upstream skill\n", encoding="utf-8")
+            self.assertNotEqual(
+                first_id,
+                harness_release.content_id(REPO_ROOT, resolved),
+            )
+
     def test_rollback_switches_only_after_successful_install(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             home = Path(temp) / "home"

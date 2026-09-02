@@ -125,6 +125,69 @@ run_inside_sandbox() {
   export OTEL_SDK_DISABLED=true
   unset SSH_AUTH_SOCK
 
+  # Build the same self-contained deployment copy used by remote broadcast.
+  # Its external skill fixture is local so offline mode remains deterministic.
+  local install_repo="$root/repository"
+  local resolved_external="$install_repo/.resolved-external-skills"
+  rsync -a --exclude='.git' "$REPO_ROOT/" "$install_repo/"
+  mkdir -p "$resolved_external/unslop" "$resolved_external/plain-language"
+  printf '%s\n' \
+    '---' \
+    'name: unslop' \
+    'description: Deployment smoke external skill.' \
+    'disable-model-invocation: true' \
+    '---' \
+    '' \
+    '# Unslop' \
+    '' \
+    'Smoke fixture resolved before offline installation.' \
+    > "$resolved_external/unslop/SKILL.md"
+  printf '%s\n' 'MIT test license' \
+    > "$resolved_external/unslop/LICENSE.upstream"
+  printf '%s\n' \
+    '---' \
+    'name: plain-language' \
+    'description: Second deployment smoke external skill.' \
+    '---' \
+    '' \
+    '# Plain language' \
+    '' \
+    'This fixture proves that deployment processes every manifest entry.' \
+    > "$resolved_external/plain-language/SKILL.md"
+  printf '%s\n' 'Apache test license' \
+    > "$resolved_external/plain-language/LICENSE.upstream"
+  local external_hash
+  local second_external_hash
+  external_hash="$(python3 "$install_repo/scripts/external-skills.py" hash \
+    --directory "$resolved_external/unslop")"
+  second_external_hash="$(python3 "$install_repo/scripts/external-skills.py" hash \
+    --directory "$resolved_external/plain-language")"
+  printf '%s\n' \
+    '{' \
+    '  "schema_version": 1,' \
+    '  "skills": [' \
+    '    {' \
+    '      "name": "plain-language",' \
+    '      "repository": "https://example.invalid/other-upstream.git",' \
+    '      "tracking_ref": "refs/heads/main",' \
+    '      "revision": "1111111111111111111111111111111111111111",' \
+    '      "source_path": "skills/plain-language",' \
+    '      "license_path": "LICENSE",' \
+    "      \"content_sha256\": \"$second_external_hash\"" \
+    '    },' \
+    '    {' \
+    '      "name": "unslop",' \
+    '      "repository": "https://example.invalid/upstream.git",' \
+    '      "tracking_ref": "refs/heads/main",' \
+    '      "revision": "0000000000000000000000000000000000000000",' \
+    '      "source_path": "skills/unslop",' \
+    '      "license_path": "LICENSE",' \
+    "      \"content_sha256\": \"$external_hash\"" \
+    '    }' \
+    '  ]' \
+    '}' \
+    > "$install_repo/dependencies/external-skills.json"
+
   printf '%s\n' \
     'smoke_sentinel = "preserved"' \
     '' \
@@ -140,7 +203,33 @@ run_inside_sandbox() {
   printf '%s\n' \
     '{"enabledPlugins":{"smoke-only@example":false},"env":{"SMOKE_HOST_ONLY":"preserved","CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS":"1"}}' \
     > "$CLAUDE_CONFIG_DIR/settings.json"
-  "$REPO_ROOT/install.sh" --overwrite --instance example-workstation > "$root/install.log"
+  "$install_repo/install.sh" --overwrite --instance example-workstation > "$root/install.log"
+
+  cp "$resolved_external/unslop/SKILL.md" "$root/unslop-SKILL.md"
+  printf '%s\n' 'stale bundle content' >> "$resolved_external/unslop/SKILL.md"
+  set +e
+  "$install_repo/install.sh" --update > "$root/stale-external.log" 2>&1
+  local stale_external_status=$?
+  set -e
+  if (( stale_external_status == 0 )); then
+    echo "error: installer accepted altered pre-resolved external skills" >&2
+    return 1
+  fi
+  grep -q 'Recovery: rebuild this deployment copy' "$root/stale-external.log" || {
+    echo "error: stale pre-resolved copy did not report the recovery action" >&2
+    return 1
+  }
+  mv "$root/unslop-SKILL.md" "$resolved_external/unslop/SKILL.md"
+
+  local expected_external="$root/expected-external-skills"
+  mv "$resolved_external" "$expected_external"
+  resolved_external="$expected_external"
+  "$install_repo/install.sh" --update > "$root/offline-release-reuse.log"
+  grep -q 'Reusing verified external skills from the current harness release' \
+    "$root/offline-release-reuse.log" || {
+      echo "error: normal offline install did not reuse the verified current release" >&2
+      return 1
+    }
 
   [[ -f "$AGENT_HARNESS_HOME/config.json" ]] || {
     echo "error: installer did not initialize runtime configuration" >&2
@@ -170,8 +259,8 @@ run_inside_sandbox() {
     > "$CLAUDE_CONFIG_DIR/agents/lei-harness/educator.md"
   printf '%s\n' 'name = "educator"' \
     > "$CODEX_HOME/agents/lei-harness-educator.toml"
-  "$REPO_ROOT/install.sh" --update > "$root/stale-update.log"
-  "$REPO_ROOT/install.sh" --update > "$root/update.log"
+  "$install_repo/install.sh" --update > "$root/stale-update.log"
+  "$install_repo/install.sh" --update > "$root/update.log"
 
   mkdir -p "$root/fake-codex-plugin/scripts"
   printf '%s\n' '// smoke plugin runtime' \
@@ -191,9 +280,10 @@ run_inside_sandbox() {
   "$AGENT_HARNESS_HOME/bin/harness-release" rollback "$active_release" \
     > "$root/rollback.log"
 
-  python3 "$REPO_ROOT/tests/deployment-smoke/verify-smoke.py" install \
-    --repo "$REPO_ROOT" \
+  python3 "$install_repo/tests/deployment-smoke/verify-smoke.py" install \
+    --repo "$install_repo" \
     --home "$fake_home" \
+    --external-skills "$resolved_external" \
     --update-log "$root/update.log"
 
   claude --version > "$root/claude-version.log"
@@ -297,6 +387,7 @@ fi
 require_command sandbox-exec
 require_command python3
 require_command curl
+require_command rsync
 require_command claude
 require_command codex
 

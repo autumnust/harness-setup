@@ -32,6 +32,10 @@ class BroadcastHarnessTests(unittest.TestCase):
             )
             (source / "instances/other.local.md").write_text("do not transfer\n")
             (source / "instances/portable.md").write_text("do not transfer\n")
+            (source / ".resolved-external-skills/unslop").mkdir(parents=True)
+            (source / ".resolved-external-skills/unslop/SKILL.md").write_text(
+                "resolved external skill\n"
+            )
             (destination / "instances").mkdir(parents=True)
             remote_profile = destination / "instances/aws-bench.local.md"
             remote_profile.write_text("remote-only instructions\n")
@@ -51,6 +55,10 @@ class BroadcastHarnessTests(unittest.TestCase):
             )
             self.assertFalse((destination / "instances/other.local.md").exists())
             self.assertFalse((destination / "instances/portable.md").exists())
+            self.assertEqual(
+                (destination / ".resolved-external-skills/unslop/SKILL.md").read_text(),
+                "resolved external skill\n",
+            )
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ itself a software project to build or test.
 | `home/AGENTS.md` | The global agent prompt deployed to `~/AGENTS.md` on every machine |
 | `claude/settings.json` | Claude Code settings deployed to `~/.claude/settings.json` |
 | `agent-skills/` | Skills deployed to `~/.claude/skills/`; when Codex is present they also deploy to current `~/.agents/skills/` and legacy-compatible `~/.codex/skills/` |
+| `dependencies/external-skills.json` | Commit-pinned skills resolved from upstream during installation and preserved in each harness release |
 | `agent-workflows/` | Provider-neutral role prompts, topology, workflows, contracts, runtime-config schema/defaults, and adapter mappings rendered into native Claude and Codex custom agents |
 | `scripts/render-agents.py` | Validates the topology and renders provider-native custom-agent files during installation |
 | `install.sh` / `update.sh` | Installers that copy the above onto a target machine |
@@ -39,6 +40,14 @@ mechanism (e.g. the auto-memory system) with no fallback — since the same file
 also has to make sense read by Codex CLI. If a step is genuinely Claude-only,
 say so explicitly and give the other tool an alternative, rather than silently
 assuming the reader is Claude Code.
+
+**Adding a skill maintained in another repository:**
+When a user provides an external skill link, read the upstream `SKILL.md` and
+applicable license, then follow the registration and validation procedure in
+[`README.md`](README.md#adding-and-refreshing-external-skills). Track the
+upstream dependency instead of copying it into `agent-skills/`, inspect the
+generated manifest entry before committing, and do not commit resolved
+upstream files.
 
 **Editing agent workflows (`agent-workflows/`):**
 Keep role behavior and shared contracts in Markdown, topology and policy in

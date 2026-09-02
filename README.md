@@ -14,6 +14,10 @@ any developer. It has these layers:
   convention, so `install.sh` installs each skill into `~/.claude/skills/`
   always, and into `~/.agents/skills/` plus the legacy-compatible
   `~/.codex/skills/` whenever Codex CLI is already present.
+- **External skills — `dependencies/external-skills.json`.** Skills maintained
+  in another repository. The harness records an exact Git commit and content
+  hash, resolves the files during deployment, and includes them in its release
+  snapshot. Their `SKILL.md` files are not maintained in this repository.
 - **Agent workflows — `agent-workflows/`.** Provider-neutral role prompts,
   topology, handoff contracts, model policies, and workflow procedures.
   Installation renders these into native Claude Markdown agents and Codex TOML
@@ -91,6 +95,14 @@ cd ~/Documents/harness-setup
 ./install.sh
 ```
 
+A normal local install resolves the external skills recorded in
+[`dependencies/external-skills.json`](dependencies/external-skills.json), so it
+needs Git and network access the first time. A later install can reuse the
+resolved files from the current harness release when they verify against the
+committed manifest. Remote broadcast resolves those skills on the source
+machine and transfers them with the deployment copy. Restoring a harness
+release uses the resolved files stored in that release and needs no network.
+
 TSS is an optional companion dependency. It is not fetched by a normal
 installation. To install the revision recorded in
 [`dependencies/tss.json`](dependencies/tss.json), run:
@@ -156,6 +168,7 @@ Pick one of:
 | `instances/<name>.md` | Appended to `~/AGENTS.md` only when that profile is selected |
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
 | `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
+| revision-pinned entries in `dependencies/external-skills.json` | The same skill locations as portable skills; currently installs `unslop` from `cursor/plugins` |
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |
 | coordinator model and workflow depth | Codex Terra or Claude Code Sonnet plus medium effort; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
@@ -226,6 +239,11 @@ where to fetch them on first launch — they auto-install into
 the read-only adversarial-review runtime used by Reviewer in Claude Code
 sessions.
 
+The `unslop` skill is also not maintained as a copied source file here. Its
+dependency entry identifies the upstream directory, approved commit, expected
+content hash, and license. Installation copies the resolved upstream files into
+the normal skill locations because Claude Code and Codex discover skills there.
+
 ## Idempotency
 
 Re-running `install.sh` is safe: the default mode refuses conflicts, while
@@ -265,6 +283,77 @@ queues, and execution history remain outside release snapshots.
 
 This project is licensed under the [MIT License](./LICENSE). The vendored
 `frontend-slides` skill retains its own [MIT license](./agent-skills/frontend-slides/LICENSE).
+The externally resolved `unslop` skill comes from
+[`cursor/plugins`](https://github.com/cursor/plugins/tree/main/pstack/skills/unslop)
+under its [MIT license](https://github.com/cursor/plugins/blob/main/pstack/LICENSE),
+which the installer preserves beside the installed skill as `LICENSE.upstream`.
+
+## Adding and refreshing external skills
+
+For a GitHub-hosted skill, give the helper the same `blob` link to `SKILL.md` or
+`tree` link to its directory that a user would paste into an agent:
+
+```bash
+python3 scripts/external-skills.py add-url \
+  --manifest dependencies/external-skills.json \
+  --url https://github.com/OWNER/REPOSITORY/blob/BRANCH/path/to/SKILL.md
+```
+
+The helper reads the skill name from `SKILL.md`, distinguishes a branch or tag
+from the source path even when the ref name contains `/`, and also accepts an
+exact 40-character commit permalink. It searches from the skill directory up
+to the repository root for the nearest `LICENSE` or `COPYING` file, resolves
+the selected ref to an exact commit, calculates the deployed content hash, and
+writes the sorted manifest entry. Inspect the skill instructions and applicable
+license before running it. If the applicable license has an unusual name or
+location, add
+`--license-path <repository-relative-path>`.
+
+For another Git host or a repository layout the URL helper cannot interpret,
+provide the inspected fields directly:
+
+```bash
+python3 scripts/external-skills.py add \
+  --manifest dependencies/external-skills.json \
+  --name <skill-name> \
+  --repository <git-url> \
+  --source-path <repository-path-to-skill> \
+  --license-path <repository-path-to-license>
+```
+
+The field-based command reads the current `main` commit by default, verifies
+that the selected directory contains a matching `SKILL.md`, computes the
+content hash, and adds a sorted manifest entry. Use
+`--tracking-ref refs/heads/<branch>` when the upstream skill follows another
+branch. The installer, broadcaster, release manager, and scheduled updater
+process every manifest entry; none of those paths contains skill-specific
+names.
+
+Review the new entry and upstream license before committing it. The source
+repository remains responsible for the skill contents. The harness records
+only retrieval and verification information.
+
+The scheduled
+[`refresh-external-skills.yml`](.github/workflows/refresh-external-skills.yml)
+workflow checks the tracked upstream branch daily. It ignores upstream commits
+that do not change the selected skill or its license. When those files change,
+the workflow opens or updates a pull request containing the new commit and
+content hash, plus links to the upstream comparison and resolved source.
+
+Before committing, check the lock and deployment path:
+
+```bash
+python3 -m unittest tests.test_external_skills
+python3 scripts/external-skills.py refresh-lock \
+  --manifest dependencies/external-skills.json \
+  --check
+scripts/smoke-test-deployment.sh --offline
+```
+
+Exit status `3` means an upstream content change is available. To update the
+lock intentionally, replace `--check` with `--write`, inspect the upstream
+change, and commit the manifest update. Merging the lock change and running the
+normal harness update or broadcast distributes the approved revision.
 
 ## Keeping a machine in sync after the repo changes (repo → `~/`)
 
