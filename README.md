@@ -340,12 +340,14 @@ that do not change the selected skill or its license. When those files change,
 the workflow opens or updates a pull request containing the new commit and
 content hash, plus links to the upstream comparison and resolved source.
 
-To check manually without changing the lock:
+Before committing, check the lock and deployment path:
 
 ```bash
+python3 -m unittest tests.test_external_skills
 python3 scripts/external-skills.py refresh-lock \
   --manifest dependencies/external-skills.json \
   --check
+scripts/smoke-test-deployment.sh --offline
 ```
 
 Exit status `3` means an upstream content change is available. To update the

@@ -42,36 +42,11 @@ say so explicitly and give the other tool an alternative, rather than silently
 assuming the reader is Claude Code.
 
 **Adding a skill maintained in another repository:**
-When a user provides a GitHub link to an external `SKILL.md` or its directory,
-first read the upstream `SKILL.md` and the license that applies to it. Confirm
-that its instructions and license are suitable for this harness. Register it
-as a tracked dependency instead of copying it into `agent-skills/`:
-
-```bash
-python3 scripts/external-skills.py add-url \
-  --manifest dependencies/external-skills.json \
-  --url <github-blob-or-tree-link>
-```
-
-The command determines the repository, branch, tag, or exact commit; skill
-directory; skill name; nearest parent `LICENSE` or `COPYING` file; and content
-hash. If license discovery does not select the applicable file, pass its
-repository-relative path with `--license-path`. For a non-GitHub URL or an
-unusual repository layout, inspect the same source and license information,
-then use the field-based `add` command documented in
-[`README.md`](README.md#adding-and-refreshing-external-skills).
-
-After registration, inspect the new manifest entry, then run:
-
-```bash
-python3 -m unittest tests.test_external_skills
-python3 scripts/external-skills.py refresh-lock \
-  --manifest dependencies/external-skills.json --check
-scripts/smoke-test-deployment.sh --offline
-```
-
-This proves the skill is included in the same install, release, rollback, and
-remote-broadcast paths as the harness's other skills. Do not commit resolved
+When a user provides an external skill link, read the upstream `SKILL.md` and
+applicable license, then follow the registration and validation procedure in
+[`README.md`](README.md#adding-and-refreshing-external-skills). Track the
+upstream dependency instead of copying it into `agent-skills/`, inspect the
+generated manifest entry before committing, and do not commit resolved
 upstream files.
 
 **Editing agent workflows (`agent-workflows/`):**
