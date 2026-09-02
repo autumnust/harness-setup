@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -123,6 +124,60 @@ class ExternalSkillTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "hash mismatch"):
                 external_skills.verify_resolved(manifest, resolved)
+
+    def test_hash_is_stable_across_umasks_and_directory_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, revision = self.make_repository(root)
+            entry = self.entry(repository, revision, "0" * 64)
+
+            previous_umask = os.umask(0o077)
+            try:
+                first_parent = root / "first-parent"
+                first_parent.mkdir()
+                first = first_parent / "unslop"
+                expected_hash = external_skills.materialize_skill(
+                    entry, first, verify_hash=False
+                )
+            finally:
+                os.umask(previous_umask)
+
+            entry["content_sha256"] = expected_hash
+            manifest = root / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": [entry]}) + "\n",
+                encoding="utf-8",
+            )
+            first_parent.chmod(0o700)
+            first.chmod(0o700)
+            (first / "LICENSE.upstream").chmod(0o600)
+            external_skills.verify_resolved(manifest, first_parent)
+
+            previous_umask = os.umask(0o022)
+            try:
+                second_parent = root / "second-parent"
+                second_parent.mkdir()
+                external_skills.materialize_skill(entry, second_parent / "unslop")
+            finally:
+                os.umask(previous_umask)
+
+    def test_hash_tracks_only_the_executable_permission(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            skill = Path(temp) / "skill"
+            skill.mkdir()
+            skill_file = skill / "SKILL.md"
+            skill_file.write_text("test\n", encoding="utf-8")
+
+            skill_file.chmod(0o644)
+            non_executable = external_skills.tree_hash(skill)
+            skill_file.chmod(0o600)
+            self.assertEqual(external_skills.tree_hash(skill), non_executable)
+
+            skill_file.chmod(0o755)
+            executable = external_skills.tree_hash(skill)
+            skill_file.chmod(0o700)
+            self.assertEqual(external_skills.tree_hash(skill), executable)
+            self.assertNotEqual(executable, non_executable)
 
     def test_refresh_ignores_unrelated_commits_then_updates_changed_skill(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -287,6 +342,89 @@ class ExternalSkillTests(unittest.TestCase):
             )
 
             self.assertEqual(added["tracking_ref"], "refs/heads/feature/skill-update")
+            self.assertEqual(added["revision"], revision)
+
+    def test_adds_from_a_commit_permalink(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, revision = self.make_repository(root)
+            manifest = root / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": []}) + "\n",
+                encoding="utf-8",
+            )
+
+            added = external_skills.add_skill_from_github_url(
+                manifest,
+                f"https://github.com/example/upstream/blob/{revision}/"
+                "pstack/skills/unslop/SKILL.md",
+                repository_override=str(repository),
+            )
+
+            self.assertEqual(added["tracking_ref"], revision)
+            self.assertEqual(added["revision"], revision)
+
+    def test_adds_from_an_annotated_tag_with_a_slash(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, revision = self.make_repository(root)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repository),
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "tag",
+                    "-a",
+                    "release/v1",
+                    "-m",
+                    "release",
+                ],
+                check=True,
+            )
+            manifest = root / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": []}) + "\n",
+                encoding="utf-8",
+            )
+
+            added = external_skills.add_skill_from_github_url(
+                manifest,
+                "https://github.com/example/upstream/tree/release/v1/"
+                "pstack/skills/unslop",
+                repository_override=str(repository),
+            )
+
+            self.assertEqual(added["tracking_ref"], "refs/tags/release/v1")
+            self.assertEqual(added["revision"], revision)
+
+    def test_adds_a_skill_with_a_quoted_frontmatter_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, _ = self.make_repository(root)
+            skill_file = repository / "pstack/skills/unslop/SKILL.md"
+            skill_file.write_text(
+                skill_file.read_text().replace("name: unslop", 'name: "unslop"'),
+                encoding="utf-8",
+            )
+            revision = self.commit(repository, "quote skill name")
+            manifest = root / "external-skills.json"
+            manifest.write_text(
+                json.dumps({"schema_version": 1, "skills": []}) + "\n",
+                encoding="utf-8",
+            )
+
+            added = external_skills.add_skill_from_github_url(
+                manifest,
+                "https://github.com/example/upstream/blob/main/"
+                "pstack/skills/unslop/SKILL.md",
+                repository_override=str(repository),
+            )
+
+            self.assertEqual(added["name"], "unslop")
             self.assertEqual(added["revision"], revision)
 
     def test_adds_a_skill_stored_at_the_repository_root(self) -> None:

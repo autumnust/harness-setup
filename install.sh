@@ -81,8 +81,9 @@ Usage:
                                 its tss command into ~/bin/tss.
 
 The installer also resolves the external skills recorded in
-dependencies/external-skills.json. A normal local install needs Git and network
-access. Broadcast bundles and release rollback carry the already resolved files.
+dependencies/external-skills.json. The first local install needs Git and network
+access; later installs can reuse a verified copy from the current release.
+Broadcast bundles and release rollback carry the already resolved files.
 HELP
       exit 0 ;;
     *)
@@ -146,19 +147,50 @@ cleanup() { rm -rf "$TEMP_ROOT"; }
 trap cleanup EXIT
 
 EXTERNAL_SKILLS_MANIFEST="${HARNESS_EXTERNAL_SKILLS_MANIFEST:-$REPO_ROOT/dependencies/external-skills.json}"
+EXTERNAL_SKILLS_STAGED=""
+EXTERNAL_SKILLS_SOURCE=""
 if [[ -n "${HARNESS_RESOLVED_EXTERNAL_SKILLS_DIR:-}" ]]; then
   EXTERNAL_SKILLS_STAGED="$HARNESS_RESOLVED_EXTERNAL_SKILLS_DIR"
+  EXTERNAL_SKILLS_SOURCE="explicit"
 elif [[ -d "$REPO_ROOT/.resolved-external-skills" ]]; then
   EXTERNAL_SKILLS_STAGED="$REPO_ROOT/.resolved-external-skills"
-else
+  EXTERNAL_SKILLS_SOURCE="bundle"
+elif [[ -d "$AGENT_HARNESS_HOME/current/source/.resolved-external-skills" ]]; then
+  current_release_external="$AGENT_HARNESS_HOME/current/source/.resolved-external-skills"
+  if python3 "$REPO_ROOT/scripts/external-skills.py" verify \
+    --manifest "$EXTERNAL_SKILLS_MANIFEST" \
+    --directory "$current_release_external" >/dev/null 2>&1; then
+    EXTERNAL_SKILLS_STAGED="$current_release_external"
+    EXTERNAL_SKILLS_SOURCE="current-release"
+    echo "Reusing verified external skills from the current harness release"
+  else
+    echo "Current release external skills do not match the committed manifest." >&2
+    echo "Recovery: reconnect to the upstream Git repositories, or provide a freshly resolved copy with HARNESS_RESOLVED_EXTERNAL_SKILLS_DIR." >&2
+  fi
+fi
+if [[ -z "$EXTERNAL_SKILLS_STAGED" ]]; then
   EXTERNAL_SKILLS_STAGED="$TEMP_ROOT/external-skills"
   python3 "$REPO_ROOT/scripts/external-skills.py" materialize \
     --manifest "$EXTERNAL_SKILLS_MANIFEST" \
     --destination "$EXTERNAL_SKILLS_STAGED"
+  EXTERNAL_SKILLS_SOURCE="network"
 fi
-python3 "$REPO_ROOT/scripts/external-skills.py" verify \
+if ! python3 "$REPO_ROOT/scripts/external-skills.py" verify \
   --manifest "$EXTERNAL_SKILLS_MANIFEST" \
-  --directory "$EXTERNAL_SKILLS_STAGED"
+  --directory "$EXTERNAL_SKILLS_STAGED"; then
+  case "$EXTERNAL_SKILLS_SOURCE" in
+    explicit)
+      echo "Recovery: regenerate $EXTERNAL_SKILLS_STAGED from $EXTERNAL_SKILLS_MANIFEST, or unset HARNESS_RESOLVED_EXTERNAL_SKILLS_DIR to resolve from upstream." >&2
+      ;;
+    bundle)
+      echo "Recovery: rebuild this deployment copy so .resolved-external-skills matches dependencies/external-skills.json." >&2
+      ;;
+    *)
+      echo "Recovery: reconnect to the upstream Git repositories and rerun the installer." >&2
+      ;;
+  esac
+  exit 1
+fi
 
 for external_skill in "$EXTERNAL_SKILLS_STAGED"/*/; do
   [[ -d "$external_skill" ]] || continue

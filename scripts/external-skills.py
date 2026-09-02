@@ -125,6 +125,8 @@ def tree_hash(directory: Path) -> str:
     for path in entries:
         if path.is_symlink():
             raise ValueError(f"external skills may not contain symbolic links: {path}")
+    # Git does not record directory permissions. Relative file paths preserve
+    # the directory structure, while only the executable bit affects file mode.
     files = [path for path in entries if path.is_file()]
     if not files:
         raise ValueError(f"skill directory contains no files: {directory}")
@@ -132,7 +134,8 @@ def tree_hash(directory: Path) -> str:
         relative = path.relative_to(directory).as_posix()
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(f"{path.stat().st_mode & 0o777:o}".encode("ascii"))
+        normalized_mode = b"755" if path.stat().st_mode & 0o111 else b"644"
+        digest.update(normalized_mode)
         digest.update(b"\0")
         digest.update(path.read_bytes())
         digest.update(b"\0")
@@ -238,10 +241,23 @@ def _read_skill_name(skill_directory: Path) -> str:
     match = re.match(r"\A---\s*\n(.*?)\n---(?:\n|\Z)", text, re.DOTALL)
     if not match:
         raise ValueError(f"external skill has invalid front matter: {skill_file}")
-    name_match = re.search(r"^name:\s*([^\s]+)\s*$", match.group(1), re.MULTILINE)
+    name_match = re.search(r"^name:\s*(.*?)\s*$", match.group(1), re.MULTILINE)
     if not name_match:
         raise ValueError(f"external skill front matter has no name: {skill_file}")
-    return name_match.group(1)
+    raw_name = name_match.group(1)
+    if len(raw_name) >= 2 and raw_name[0] == raw_name[-1] == "'":
+        return raw_name[1:-1].replace("''", "'")
+    if len(raw_name) >= 2 and raw_name[0] == raw_name[-1] == '"':
+        try:
+            parsed_name = json.loads(raw_name)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"external skill has an invalid quoted name: {skill_file}"
+            ) from exc
+        if not isinstance(parsed_name, str):
+            raise ValueError(f"external skill name is not text: {skill_file}")
+        return parsed_name
+    return raw_name
 
 
 def _validate_skill_name(skill_directory: Path, expected_name: str) -> None:
@@ -337,14 +353,22 @@ def verify_resolved(manifest_path: Path, directory: Path) -> None:
 
 
 def _resolve_tracking_revision(repository: str, tracking_ref: str) -> str:
+    if REVISION_PATTERN.fullmatch(tracking_ref):
+        return tracking_ref
     result = _run(
-        ["git", "ls-remote", repository, tracking_ref],
+        ["git", "ls-remote", repository, tracking_ref, f"{tracking_ref}^{{}}"],
         capture_output=True,
     )
     rows = [line.split() for line in result.stdout.splitlines() if line.strip()]
-    if len(rows) != 1 or len(rows[0]) != 2 or not REVISION_PATTERN.fullmatch(rows[0][0]):
+    revisions = {
+        fields[1]: fields[0]
+        for fields in rows
+        if len(fields) == 2 and REVISION_PATTERN.fullmatch(fields[0])
+    }
+    revision = revisions.get(f"{tracking_ref}^{{}}") or revisions.get(tracking_ref)
+    if revision is None:
         raise ValueError(f"could not resolve {tracking_ref} from {repository}")
-    return rows[0][0]
+    return revision
 
 
 def _github_base(repository: str) -> str | None:
@@ -354,18 +378,21 @@ def _github_base(repository: str) -> str | None:
     return None
 
 
-def _remote_branches(repository: str) -> list[tuple[str, str]]:
+def _remote_named_refs(repository: str) -> list[tuple[str, str]]:
     result = _run(
-        ["git", "ls-remote", "--heads", repository],
+        ["git", "ls-remote", "--heads", "--tags", repository],
         capture_output=True,
     )
-    branches: list[tuple[str, str]] = []
+    refs: list[tuple[str, str]] = []
     for line in result.stdout.splitlines():
         fields = line.split()
-        if len(fields) != 2 or not fields[1].startswith("refs/heads/"):
+        if len(fields) != 2 or fields[1].endswith("^{}"):
             continue
-        branches.append((fields[1].removeprefix("refs/heads/"), fields[1]))
-    return branches
+        if fields[1].startswith("refs/heads/"):
+            refs.append((fields[1].removeprefix("refs/heads/"), fields[1]))
+        elif fields[1].startswith("refs/tags/"):
+            refs.append((fields[1].removeprefix("refs/tags/"), fields[1]))
+    return refs
 
 
 def _parse_github_skill_url(
@@ -389,14 +416,20 @@ def _parse_github_skill_url(
     if any(not part for part in remainder):
         raise ValueError("GitHub skill URL path must not contain empty segments")
     matches: list[tuple[int, str, str, list[str]]] = []
-    for branch, tracking_ref in _remote_branches(repository):
-        branch_parts = branch.split("/")
-        if remainder[: len(branch_parts)] == branch_parts:
-            source_parts = remainder[len(branch_parts) :]
-            matches.append((len(branch_parts), branch, tracking_ref, source_parts))
-    if not matches:
-        raise ValueError("GitHub skill URL does not reference a current upstream branch")
-    _, _, tracking_ref, source_parts = max(matches, key=lambda item: item[0])
+    if remainder and REVISION_PATTERN.fullmatch(remainder[0]):
+        tracking_ref = remainder[0]
+        source_parts = remainder[1:]
+    else:
+        for ref_name, tracking_ref in _remote_named_refs(repository):
+            ref_parts = ref_name.split("/")
+            if remainder[: len(ref_parts)] == ref_parts:
+                source_parts = remainder[len(ref_parts) :]
+                matches.append((len(ref_parts), ref_name, tracking_ref, source_parts))
+        if not matches:
+            raise ValueError(
+                "GitHub skill URL does not reference a current upstream branch or tag"
+            )
+        _, _, tracking_ref, source_parts = max(matches, key=lambda item: item[0])
     if view == "blob":
         if not source_parts or source_parts[-1] != "SKILL.md":
             raise ValueError("GitHub blob URL must point to SKILL.md")

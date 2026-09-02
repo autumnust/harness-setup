@@ -53,12 +53,12 @@ python3 scripts/external-skills.py add-url \
   --url <github-blob-or-tree-link>
 ```
 
-The command determines the repository, branch, skill directory, skill name,
-nearest parent `LICENSE` or `COPYING` file, exact Git commit, and content hash.
-If license discovery does not select the applicable file, pass its repository-
-relative path with `--license-path`. For a non-GitHub URL or an unusual
-repository layout, inspect the same source and license information, then use
-the field-based `add` command documented in
+The command determines the repository, branch, tag, or exact commit; skill
+directory; skill name; nearest parent `LICENSE` or `COPYING` file; and content
+hash. If license discovery does not select the applicable file, pass its
+repository-relative path with `--license-path`. For a non-GitHub URL or an
+unusual repository layout, inspect the same source and license information,
+then use the field-based `add` command documented in
 [`README.md`](README.md#adding-and-refreshing-external-skills).
 
 After registration, inspect the new manifest entry, then run:

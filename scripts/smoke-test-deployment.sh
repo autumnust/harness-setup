@@ -205,6 +205,32 @@ run_inside_sandbox() {
     > "$CLAUDE_CONFIG_DIR/settings.json"
   "$install_repo/install.sh" --overwrite --instance example-workstation > "$root/install.log"
 
+  cp "$resolved_external/unslop/SKILL.md" "$root/unslop-SKILL.md"
+  printf '%s\n' 'stale bundle content' >> "$resolved_external/unslop/SKILL.md"
+  set +e
+  "$install_repo/install.sh" --update > "$root/stale-external.log" 2>&1
+  local stale_external_status=$?
+  set -e
+  if (( stale_external_status == 0 )); then
+    echo "error: installer accepted altered pre-resolved external skills" >&2
+    return 1
+  fi
+  grep -q 'Recovery: rebuild this deployment copy' "$root/stale-external.log" || {
+    echo "error: stale pre-resolved copy did not report the recovery action" >&2
+    return 1
+  }
+  mv "$root/unslop-SKILL.md" "$resolved_external/unslop/SKILL.md"
+
+  local expected_external="$root/expected-external-skills"
+  mv "$resolved_external" "$expected_external"
+  resolved_external="$expected_external"
+  "$install_repo/install.sh" --update > "$root/offline-release-reuse.log"
+  grep -q 'Reusing verified external skills from the current harness release' \
+    "$root/offline-release-reuse.log" || {
+      echo "error: normal offline install did not reuse the verified current release" >&2
+      return 1
+    }
+
   [[ -f "$AGENT_HARNESS_HOME/config.json" ]] || {
     echo "error: installer did not initialize runtime configuration" >&2
     return 1

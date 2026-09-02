@@ -97,8 +97,10 @@ cd ~/Documents/harness-setup
 
 A normal local install resolves the external skills recorded in
 [`dependencies/external-skills.json`](dependencies/external-skills.json), so it
-needs Git and network access. Remote broadcast resolves those skills on the
-source machine and transfers them with the deployment copy. Restoring a harness
+needs Git and network access the first time. A later install can reuse the
+resolved files from the current harness release when they verify against the
+committed manifest. Remote broadcast resolves those skills on the source
+machine and transfers them with the deployment copy. Restoring a harness
 release uses the resolved files stored in that release and needs no network.
 
 TSS is an optional companion dependency. It is not fetched by a normal
@@ -297,13 +299,14 @@ python3 scripts/external-skills.py add-url \
   --url https://github.com/OWNER/REPOSITORY/blob/BRANCH/path/to/SKILL.md
 ```
 
-The helper reads the skill name from `SKILL.md`, distinguishes the branch from
-the source path even when the branch name contains `/`, and searches from the
-skill directory up to the repository root for the nearest `LICENSE` or
-`COPYING` file. It resolves the branch to an exact commit, calculates the
-deployed content hash, and writes the sorted manifest entry. Inspect the skill
-instructions and applicable license before running it. If the applicable
-license has an unusual name or location, add
+The helper reads the skill name from `SKILL.md`, distinguishes a branch or tag
+from the source path even when the ref name contains `/`, and also accepts an
+exact 40-character commit permalink. It searches from the skill directory up
+to the repository root for the nearest `LICENSE` or `COPYING` file, resolves
+the selected ref to an exact commit, calculates the deployed content hash, and
+writes the sorted manifest entry. Inspect the skill instructions and applicable
+license before running it. If the applicable license has an unusual name or
+location, add
 `--license-path <repository-relative-path>`.
 
 For another Git host or a repository layout the URL helper cannot interpret,
