@@ -278,6 +278,9 @@ record_conflict "$AGENT_HARNESS_HOME/bin/harness-release"
 record_conflict "$AGENT_HARNESS_HOME/bin/task-catalog"
 record_conflict "$AGENT_HARNESS_HOME/bin/agent-task"
 record_conflict "$AGENT_HARNESS_HOME/bin/agent-workspace"
+record_conflict "$HOME/bin/task-catalog"
+record_conflict "$HOME/bin/agent-task"
+record_conflict "$HOME/bin/agent-workspace"
 if (( WITH_TSS )); then
   record_conflict "$AGENT_HARNESS_HOME/dependencies/tss"
   record_conflict "$HOME/bin/tss"
@@ -523,6 +526,10 @@ place_file \
 place_file \
   "$REPO_ROOT/scripts/agent-workspace.py" \
   "$AGENT_HARNESS_HOME/bin/agent-workspace"
+mkdir -p "$HOME/bin"
+place_symlink "$AGENT_HARNESS_HOME/bin/task-catalog" "$HOME/bin/task-catalog"
+place_symlink "$AGENT_HARNESS_HOME/bin/agent-task" "$HOME/bin/agent-task"
+place_symlink "$AGENT_HARNESS_HOME/bin/agent-workspace" "$HOME/bin/agent-workspace"
 
 # Runtime configuration is mutable, confirmed by the coordinator, and never
 # managed by place_file after initialization.
@@ -680,6 +687,9 @@ printf '\n%s\n' \
   "  $AGENT_HARNESS_HOME/bin/task-catalog" \
   "  $AGENT_HARNESS_HOME/bin/agent-task" \
   "  $AGENT_HARNESS_HOME/bin/agent-workspace" \
+  "  $HOME/bin/task-catalog   (symlink)" \
+  "  $HOME/bin/agent-task    (symlink)" \
+  "  $HOME/bin/agent-workspace  (symlink)" \
   "  $AGENT_HARNESS_HOME/config.json  (initialized once, never overwritten)" \
   "  $AGENT_HARNESS_HOME/state/task-catalog  (initialized, never overwritten)" \
   "  $AGENT_HARNESS_HOME/state/learner-profiles  (initialized, never overwritten)"

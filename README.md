@@ -44,7 +44,7 @@ make the task available to a TSS metadata reader without a separate
 registration request. The same deterministic operation is available directly:
 
 ```bash
-~/.agent-harness/bin/agent-task init \
+agent-task init \
   --name personal-finance \
   --objective "Organize accounts and tax records" \
   --destination "$HOME/Documents"
@@ -52,9 +52,8 @@ registration request. The same deterministic operation is available directly:
 
 Each workspace keeps small discovery metadata in `README.md`, including a
 stable ID, status, and update date. Ask "show me all my agent tasks," or run
-`~/.agent-harness/bin/agent-task list`, to query the local catalog with one
-fixed SQL statement. Use `~/.agent-harness/bin/agent-task reconcile <root>...`
-to backfill older folders or repair paths
+`agent-task list`, to query the local catalog with one fixed SQL statement.
+Use `agent-task reconcile <root>...` to backfill older folders or repair paths
 after a manual move. The workspace files and their Git history remain
 authoritative; SQLite stores only this machine's locations and cached metadata.
 
@@ -67,7 +66,7 @@ that TSS can discover. The session opens in the workspace root. Generated output
 goes to the task's execution folder unless the user asks otherwise. Durable
 material enters `context/` only when the user explicitly requests it. Ask
 `list-tasks`, or run
-`~/.agent-harness/bin/agent-workspace list-tasks --workspace <path>`, to query
+`agent-workspace list-tasks --workspace <path>`, to query
 task records associated with the workspace without requiring tmux, including
 folders created at an explicitly overridden location.
 Repository worktrees remain a later per-repository operation. The richer
@@ -181,7 +180,7 @@ Pick one of:
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |
 | coordinator model and workflow depth | Codex Terra or Claude Code Sonnet plus medium effort; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
-| deterministic task commands | `~/.agent-harness/bin/agent-task`, `~/.agent-harness/bin/agent-workspace`, and `~/.agent-harness/bin/task-catalog` |
+| deterministic task commands | Stored under `~/.agent-harness/bin/` and linked into `~/bin/` as `agent-task`, `agent-workspace`, and `task-catalog` |
 | versioned harness releases | `~/.agent-harness/releases/<release-id>/` with `~/.agent-harness/current` selecting the active release |
 | machine-local task catalog | `~/.agent-harness/state/task-catalog/catalog.sqlite3` (initialized on first catalog command and never overwritten) |
 | mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates or rollback) |
@@ -191,10 +190,13 @@ own files and Git history remain the source for task state. Register one folder
 or rebuild local registrations from explicit roots with:
 
 ```bash
-~/.agent-harness/bin/task-catalog register --path /path/to/task
-~/.agent-harness/bin/task-catalog reconcile ~/Documents --format json
-~/.agent-harness/bin/task-catalog list --format json
+task-catalog register --path /path/to/task
+task-catalog reconcile ~/Documents --format json
+task-catalog list --format json
 ```
+
+The installer uses `~/bin` for these command links, matching the existing TSS
+installation. Add `~/bin` to `PATH` on a host that does not already include it.
 
 Catalog listing always executes one fixed, parameter-free SQL query. Kind and
 workspace filters, along with display ordering, are applied by the command
