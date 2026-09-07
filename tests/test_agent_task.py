@@ -145,6 +145,10 @@ class AgentTaskTests(unittest.TestCase):
             self.assertTrue(payload["catalog_registered"])
             self.assertTrue((task / "inbox").is_dir())
             self.assertIn("Organize accounts", (task / "README.md").read_text())
+            instructions = (task / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("agent-task set-state", instructions)
+            self.assertIn("start or resume to `active`", instructions)
+            self.assertIn("cancel or abandon to `cancelled`", instructions)
 
             repeated = self.run_script(
                 HYDRATE, "--name", "personal finance", "--destination",

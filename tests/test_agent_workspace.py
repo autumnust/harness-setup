@@ -291,8 +291,8 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             )
             self.assertTrue((task / "README.md").is_file())
             self.assertEqual(
-                [entry.name for entry in task.iterdir()],
-                ["README.md"],
+                sorted(entry.name for entry in task.iterdir()),
+                ["AGENTS.md", "README.md"],
             )
             self.assertFalse((workspace / "tasks").exists())
             task_index = workspace / ".git" / "agent-workspace" / "task-paths.json"
@@ -306,6 +306,11 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             self.assertNotIn("workspace_path:", readme)
             self.assertIn("Measure serving latency.", readme)
             self.assertNotIn("tmux", readme.casefold())
+            instructions = (task / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("agent-task set-state", instructions)
+            self.assertIn("start or resume to", instructions)
+            self.assertIn("cancel or abandon to", instructions)
+            self.assertIn("--status <status> --summary", instructions)
 
             repeated = self.run_script(
                 START_TASK,

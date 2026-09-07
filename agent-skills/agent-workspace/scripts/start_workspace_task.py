@@ -181,6 +181,19 @@ Read this file, then continue from the immediate next task.
 """
 
 
+def task_agent_instructions() -> str:
+    return (
+        "# Task instructions\n\n"
+        "For an explicit natural-language task-state request, map start or resume "
+        "to `active`, pause to `paused`, waiting to `waiting`, a blocker to "
+        "`blocked`, finish to `done`, and cancel or abandon to `cancelled`, then "
+        "run `agent-task set-state --task-dir \"<this-task-folder>\" --status "
+        "<status> --summary \"<current state or outcome>\" [--next-step \"<next "
+        "action or resume trigger>\"] --format json`; never infer state from a "
+        "conversation or runtime ending.\n"
+    )
+
+
 def current_timestamp() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -214,19 +227,23 @@ def initialize_task(
     task_id = str(uuid.uuid4())
     task_last_used_at = current_timestamp()
     task_dir.mkdir()
+    files = {
+        "README.md": task_readme(
+            task_id,
+            task_name,
+            objective,
+            title,
+            workspace_id,
+            task_last_used_at,
+        ),
+        "AGENTS.md": task_agent_instructions(),
+    }
     try:
-        (task_dir / "README.md").write_text(
-            task_readme(
-                task_id,
-                task_name,
-                objective,
-                title,
-                workspace_id,
-                task_last_used_at,
-            ),
-            encoding="utf-8",
-        )
+        for name, content in files.items():
+            (task_dir / name).write_text(content, encoding="utf-8")
     except Exception:
+        for name in files:
+            (task_dir / name).unlink(missing_ok=True)
         task_dir.rmdir()
         raise
     catalog_registered, catalog_warning = register_path(task_dir)

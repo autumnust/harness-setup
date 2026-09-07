@@ -50,7 +50,8 @@ agent-workspace list-tasks \
 
 `start-task` creates and registers the task context. It does not start a coding
 agent, TSS, or tmux. If no folder option is provided, it uses the configured
-execution root. Use `-H` for direct terminal reading.
+execution root. Read the returned folder's `README.md` and `AGENTS.md`. Use
+`-H` for direct terminal reading.
 
 Use `agent-task set-state` for explicit lifecycle changes. Use `task-session`
 only when the user asks to start a runtime.

@@ -10,4 +10,4 @@
 8. Put intermediate artifacts in `work/` and final deliverables in `outputs/`.
 9. Preserve existing user content; never silently discard conflicting information.
 10. Keep the workspace concise by consolidating outdated or duplicate context while preserving important history.
-11. Keep `README.md` status, updated date, current state, and immediate next task current so the workspace remains discoverable.
+11. For an explicit natural-language task-state request, map start or resume to `active`, pause to `paused`, waiting to `waiting`, a blocker to `blocked`, finish to `done`, and cancel or abandon to `cancelled`, then run `agent-task set-state --task-dir "<this-task-folder>" --status <status> --summary "<current state or outcome>" [--next-step "<next action or resume trigger>"] --format json`; never infer state from a conversation or runtime ending.
