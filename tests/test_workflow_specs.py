@@ -272,10 +272,10 @@ class WorkflowSpecTests(unittest.TestCase):
         )
         coordinator = (self.source / "roles/coordinator.md").read_text()
         coordinator_normalized = " ".join(coordinator.split())
-        self.assertEqual(coordinator.count("Present its readiness result"), 1)
         self.assertIn("**Fast**", coordinator)
         self.assertIn("**Full**", coordinator)
-        self.assertNotIn("Present its readiness result", global_docs)
+        self.assertIn("Only an explicitly invoked `agent-workspace` task", coordinator)
+        self.assertNotIn("execution folder first", global_docs)
 
         education_other = "\n".join(
             (self.source / relative).read_text()
@@ -352,7 +352,7 @@ class WorkflowSpecTests(unittest.TestCase):
         render_agents.validate_runtime_config_document(config, "test")
 
         del config["learner_profile_update_policy"]
-        del config["task_runtime"]
+        config.pop("task_runtime", None)
         del config["task_catalog"]
         render_agents.validate_runtime_config_document(config, "legacy test")
 

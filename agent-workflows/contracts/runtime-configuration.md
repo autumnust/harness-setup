@@ -10,7 +10,6 @@ configuration questions or write this file.
 The configuration resolves:
 
 - the default execution root, or that every large goal asks for a location;
-- the optional local TSS host label used when creating task sessions;
 - the local task-catalog scan roots; the execution root is also included when
   it is configured;
 - the learner-state root and any external-memory mirror;
@@ -29,10 +28,9 @@ relevant resolved values to children in their context packets. A child reports
 a missing prerequisite or proposed configuration change to the coordinator; it
 never asks the human user directly and never edits global configuration.
 
-Older configurations may omit `task_runtime`. When present,
-`task_runtime.tss.host_alias` is the label a user enters in
-`tss <host>:<session>` for this machine. It does not store an execution path or
-change TSS configuration.
+Validation accepts the retired TSS-default field in older installed files so
+upgrades do not fail, but current workflows ignore it. TSS runtime targets are
+explicit inputs to `tss start` and do not belong in harness configuration.
 
 Older configurations may also omit `task_catalog`. Its default scan root is
 `~/Documents`. A non-null `execution_root` is added to the effective roots, and

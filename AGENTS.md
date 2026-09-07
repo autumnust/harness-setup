@@ -28,6 +28,11 @@ it as a text artifact you are editing on behalf of the user.
 
 ## How to work in this repo
 
+Ordinary work in this repository never creates execution notes. Use that
+structure only when the user explicitly invokes an `agent-workspace` task; a
+large change, several repositories, a PR, or full workflow selection is not
+enough.
+
 **Editing the harness prompt:**
 Edit `home/AGENTS.md` directly. The file uses Markdown. Keep sections
 consistent with the existing structure (ToC, section headers, smell tests).

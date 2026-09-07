@@ -88,6 +88,8 @@ def load_runtime_config(path: Path | None) -> dict[str, Any]:
             os.environ.get("AGENT_HARNESS_HOME", Path.home() / ".agent-harness")
         ).expanduser()
         path = harness_home / "config.json"
+        if not path.is_file():
+            return {}
     if not path.is_file():
         raise ValueError(f"runtime configuration does not exist: {path}")
     try:
@@ -135,10 +137,8 @@ def task_readme(
     task_id: str,
     task_name: str,
     objective: str,
-    workspace: Path,
     workspace_title: str,
     workspace_id: str,
-    task_dir: Path,
     last_used_at: str,
 ) -> str:
     today = date.today().isoformat()
@@ -169,19 +169,15 @@ when the work requires them.
 
 ## Current state
 
-The task record is initialized and ready for work. If the coordinator selects
-the full workflow, it creates the additional execution structure before work
-begins.
+The task record is initialized and ready for work.
 
 ## Immediate next task
 
-1. Connect to the recorded tmux session.
-2. Confirm the first concrete work item and begin execution.
+Confirm the first concrete work item and begin execution.
 
 ## Resume
 
-Read this file, then continue from the immediate next task. The tmux host and
-session are recorded in the front matter after session creation.
+Read this file, then continue from the immediate next task.
 """
 
 
@@ -196,7 +192,6 @@ def initialize_task(
     config_path: Path | None = None,
     execution_root: Path | None = None,
     execution_folder: Path | None = None,
-    host: str | None = None,
 ) -> dict[str, str | bool]:
     workspace = workspace.expanduser().resolve()
     if not NAME_PATTERN.fullmatch(task_name):
@@ -225,10 +220,8 @@ def initialize_task(
                 task_id,
                 task_name,
                 objective,
-                workspace,
                 title,
                 workspace_id,
-                task_dir,
                 task_last_used_at,
             ),
             encoding="utf-8",
@@ -259,7 +252,6 @@ def main() -> int:
     parser.add_argument("--config", type=Path)
     parser.add_argument("--execution-root", type=Path)
     parser.add_argument("--execution-folder", type=Path)
-    parser.add_argument("--host", help=argparse.SUPPRESS)
     parser.add_argument("--format", choices=("text", "json"), default="text")
     arguments = parser.parse_args()
     try:
@@ -270,7 +262,6 @@ def main() -> int:
             config_path=arguments.config,
             execution_root=arguments.execution_root,
             execution_folder=arguments.execution_folder,
-            host=arguments.host,
         )
     except (FileExistsError, OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)

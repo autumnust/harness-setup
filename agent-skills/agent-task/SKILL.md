@@ -1,67 +1,57 @@
 ---
 name: agent-task
-description: Initialize, operate, discover, summarize, and run portable filesystem-backed task workspaces with TSS-reachable tmux sessions and explicit lifecycle state. Use for personal or professional task folders that are not multi-repository development workspaces.
+description: Create, discover, and update portable filesystem-backed task contexts. Use for general or personal tasks that are not explicit multi-repository agent-workspace tasks.
 ---
 
-# Agent Task
+# Agent task
 
-The task folder and its Git history are authoritative. The machine-local SQLite
-catalog records this host's path and session data.
+The folder and its Git history are the durable task record. Runtime sessions are
+optional and managed separately.
 
-## Create a task
+## Create
 
-Resolve the name, objective, destination, and any TSS host or session override,
-then run:
+Resolve the name, objective, and existing parent directory, then run:
 
 ```bash
-"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-task" init \
+agent-task init \
   --name "<folder-name>" \
   --objective "<objective>" \
-  --destination "<existing-parent>" \
+  --destination "<parent>" \
   --format json
 ```
 
-The CLI reads the default TSS host from
-`$AGENT_HARNESS_HOME/config.json`, with `AGENT_HARNESS_HOME` defaulting to
-`~/.agent-harness`. Pass `--tss-host` or `--session-name` only for an override.
-If required values remain unresolved, ask for them together.
+The command creates and registers the folder. If registration fails, preserve
+the folder and report `task-catalog register --path <folder>` as the repair.
+Never rerun `init` against an existing path. Read its `README.md`, `tasks.md`,
+`AGENTS.md`, and relevant context before work.
 
-The CLI creates the folder, registers it, and starts tmux. A nonzero result may
-still contain a valid folder; use `catalog_registered` and `session_started` to
-identify the failed step, and retry only that step. Never rerun `init` against
-an existing path.
-
-Read the generated `README.md`, `tasks.md`, `AGENTS.md`, and relevant context
-before starting work. Return the task path and printed TSS target.
-
-## Find tasks
-
-Use JSON for agent or script consumption:
+## Discover or import
 
 ```bash
-"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-task" list \
-  [<root> ...] --format json
+agent-task list [<root> ...] --format json
+agent-task reconcile <root> [<root> ...] --format json
 ```
 
-Use `-H` for human terminal output. A root filters registered paths; it does not
-scan the filesystem. Only repair registration after a manual copy, move, or old
-installation:
+Use `-H` for direct terminal reading. Roots filter registered paths; only
+`reconcile` scans them. Reconcile after an old installation or a manual copy or
+move.
+
+## Change lifecycle state
+
+Only after explicit user intent, run:
 
 ```bash
-"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-task" reconcile \
-  <root> [<root> ...] --format json
+agent-task set-state \
+  --task-dir "<folder>" \
+  --status active|paused|waiting|blocked|done|cancelled \
+  --summary "<current state or outcome>" \
+  --next-step "<next action or resume trigger>" \
+  --format json
 ```
 
-Report blocked tasks first, followed by active, waiting, paused, done,
-cancelled, and archived tasks. Treat missing or stale metadata as unknown.
+`active`, `paused`, `waiting`, and `blocked` require `--next-step`; terminal
+states do not. The operation works for general and workspace tasks. A stopped
+agent process, lost tmux server, reboot, or conversation ending does not change
+task state.
 
-## Work and lifecycle
-
-Follow the task's `AGENTS.md`. Keep `README.md` status, updated date, current
-state, and immediate next task current. Preserve its stable ID.
-
-Initialization starts the session. Use `task-session` only to restore a missing
-session or apply an explicit request to pause, wait, block, resume, finish, or
-cancel. Ending a conversation, losing tmux, or rebooting does not change task
-state. Leave finished sessions available for inspection; TSS may remove them
-later with `tss prune --finished`.
+Use `task-session` only when the user asks to start a runtime for the task.

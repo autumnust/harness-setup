@@ -391,15 +391,14 @@ and Codex agent files are generated during harness installation.
 
 # Long-Running Work Structure
 
-This applies only to **large, multi-step** executions — a multi-part feature, a
-migration, anything spanning more than one session. **Skip all of it for small
-or spotty changes** (a quick fix, a single-file tweak, a one-off): the overhead
-isn't worth it there. For the large ones, keep a small set of running artifacts
-so the work stays auditable as it goes:
+This applies only when the user explicitly starts an `agent-workspace` task.
+Size, duration, several repositories, remote work, or full workflow selection
+do not select this structure by themselves. For ordinary repository work and
+general `agent-task` folders, create none of these files.
 
-- **Pick an execution folder first.** All the files below live in one folder. If
-  I start an execution without telling you where, proactively ask before
-  creating anything — don't scatter files across the repo or guess a location.
+- **Use the workspace task folder.** `agent-workspace start-task` returns the
+  execution folder. Keep all files below there; do not create another notes
+  folder.
 - **Link all references.** Any generated HTML or Markdown file that references
   another file, section, PR, or external resource must use a clickable
   hyperlink — never bare text. Generated files are read in a rendered context

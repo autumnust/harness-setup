@@ -36,27 +36,18 @@ def text_value(record: dict[str, Any], *keys: str) -> str:
 
 
 def normalize_record(record: dict[str, Any]) -> dict[str, str]:
-    runtime_host = text_value(record, "runtime_host", "host")
-    tmux_session = text_value(record, "tmux_session")
-    tss_target = text_value(record, "tss_target")
-    if not tss_target and runtime_host and tmux_session:
-        tss_target = f"{runtime_host}:{tmux_session}"
     task_name = text_value(record, "task_name", "name", "title")
     path = text_value(record, "path", "local_path")
     present = record.get("present", True)
     return {
         "created": text_value(record, "created"),
         "history_only": "",
-        "host": runtime_host,
         "id": text_value(record, "id", "task_id"),
         "last_used_at": text_value(record, "last_used", "last_used_at", "updated"),
         "path": path,
         "present": "1" if present else "0",
-        "runtime_host": runtime_host,
         "status": text_value(record, "status") or "unknown",
         "task_name": task_name or Path(path).name,
-        "tmux_session": tmux_session,
-        "tss_target": tss_target,
         "updated": text_value(record, "updated"),
     }
 
@@ -110,8 +101,8 @@ def render_markdown(tasks: list[dict[str, str]], missing_paths: list[str]) -> st
         output = "No workspace tasks found."
     else:
         lines = [
-            "| Host | Task | Status | Last used | Recorded TSS target | Path |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| Task | Status | Last used | Path |",
+            "| --- | --- | --- | --- |",
         ]
         for task in tasks:
             lines.append(
@@ -119,11 +110,9 @@ def render_markdown(tasks: list[dict[str, str]], missing_paths: list[str]) -> st
                 + " | ".join(
                     escape_cell(task[key])
                     for key in (
-                        "host",
                         "task_name",
                         "status",
                         "last_used_at",
-                        "tss_target",
                         "path",
                     )
                 )
@@ -151,8 +140,6 @@ def render_human(
         details = []
         if task["last_used_at"]:
             details.append(f"last used {task['last_used_at']}")
-        if task["tss_target"]:
-            details.append(f"session tss {task['tss_target']}")
         if details:
             lines.append(
                 textwrap.fill(
