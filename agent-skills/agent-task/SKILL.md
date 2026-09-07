@@ -38,7 +38,9 @@ move.
 
 ## Change lifecycle state
 
-Only after explicit user intent, run:
+Only after explicit user intent, map start or resume to `active`, pause to
+`paused`, waiting to `waiting`, a blocker to `blocked`, finish to `done`, and
+cancel or abandon to `cancelled`, then run:
 
 ```bash
 agent-task set-state \
