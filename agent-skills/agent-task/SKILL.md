@@ -5,8 +5,10 @@ description: Initialize, operate, discover, summarize, and run portable filesyst
 
 # Agent Task
 
-Use the filesystem as the canonical task record. Keep raw inputs, stable context,
-decisions, work in progress, and deliverables inspectable without chat history.
+Use the task folder as the authoritative task record. Keep raw inputs, stable
+context, decisions, work in progress, and deliverables inspectable without chat
+history. The machine-local task catalog records where this host has the folder;
+it does not replace the folder or its Git history.
 
 ## Initialize a workspace
 
@@ -18,30 +20,34 @@ decisions, work in progress, and deliverables inspectable without chat history.
    is missing, ask for all missing values together; offer `~/Documents` for the
    destination and offer to save a confirmed host label as this machine's
    default.
-3. Run the bundled hydrator, resolving `<skill-dir>` to this skill's directory:
+2. Run the installed CLI. It creates the folder, registers it, and starts its
+   tmux session as one scripted operation:
 
    ```bash
-   python3 <skill-dir>/scripts/hydrate_task.py \
+   "$AGENT_HARNESS_HOME/bin/agent-task" init \
      --name "<folder name>" \
      --objective "<objective>" \
-     --destination "<existing parent directory>"
-   ```
-
-4. Start the session through the installed `task-session` skill. The task
-   folder is both its task record and tmux working directory:
-
-   ```bash
-   python3 <task-session-skill-dir>/scripts/start_task_session.py \
-     --task-dir "/path/to/task" \
+     --destination "<existing parent directory>" \
      --tss-host "<host-label>" \
-     --session-name "<session-name>"
+     --session-name "<session-name>" \
+     --format json
    ```
 
-   This writes the task ID, task name, task kind, task path, status, and TSS
-   host as tmux custom options. A TSS metadata reader can inspect those options
-   without a separate registration request. It also records the host and session
-   in the task README and returns `tss <host>:<session>`.
-5. Read the generated `README.md`, `tasks.md`, `AGENTS.md`, and relevant
+   Default `AGENT_HARNESS_HOME` to `~/.agent-harness` when constructing this
+   command. The CLI reads the configured TSS host when `--tss-host` is omitted;
+   pass every resolved value explicitly when deterministic replay matters.
+
+   The low-level hydrator creates the complete folder and then registers its path through
+   `$AGENT_HARNESS_HOME/bin/task-catalog`, defaulting `AGENT_HARNESS_HOME` to
+   `~/.agent-harness`. If catalog registration or session setup fails, the CLI
+   returns a nonzero status and leaves the valid folder intact. Read its JSON
+   fields to distinguish `catalog_registered` from `session_started`. Do not run
+   `init` again against that path; run the failed operation directly.
+
+   Session setup writes the task ID, task name, task kind, task path, status,
+   and TSS host as tmux custom options. It also records the host and session in
+   the task README and returns the `tss_target` value.
+3. Read the generated `README.md`, `tasks.md`, `AGENTS.md`, and relevant
    context before beginning work. Return the task path and the TSS connection
    command.
 
@@ -72,17 +78,31 @@ the session is currently running.
 
 ## Discover workspaces
 
-Scan the roots named by the user. If none are named, scan `~/Documents`:
+Query the machine-local catalog. With no roots, this lists every registered
+general task on the current host. Named roots filter the catalog result by local
+path; they do not start a filesystem scan:
 
 ```bash
-python3 <skill-dir>/scripts/discover_tasks.py <root> [<root> ...]
+"$AGENT_HARNESS_HOME/bin/agent-task" list \
+  [<root> ...] --format json
 ```
 
+Normal discovery always invokes the catalog's fixed agent-task list operation.
 Use `--format json` when another tool or board will consume the result. The JSON
-contains `schema_version`, scan roots, generation time, and task records with
-identity, status, summaries, absolute paths, and any recorded tmux/TSS
-association. It is an interchange format, not a second source of truth;
-regenerate it from the filesystem instead of maintaining a central cache.
+contains `schema_version`, catalog source, optional path filters, generation
+time, and task records with identity, status, summaries, absolute paths, and
+any recorded tmux/TSS association.
+
+Manual clones, moves outside the skill, and older task folders may not yet be
+registered. Repair registration explicitly by scanning only chosen roots:
+
+```bash
+"$AGENT_HARNESS_HOME/bin/agent-task" reconcile \
+  <root> [<root> ...] --format json
+```
+
+Reconciliation reads folder metadata and updates the local catalog. It is a
+repair or backfill action, not part of normal discovery.
 
 When reporting tasks to the user, group or sort them by actionable state:
 blocked first, then active, waiting, paused, done, cancelled, and archived.
