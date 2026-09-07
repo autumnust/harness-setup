@@ -4,13 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
-import shutil
 import subprocess
 import sys
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+
+from catalog_client import register_path
 
 
 NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -312,6 +314,7 @@ def write_workspace_files(
     )
     (workspace / "README.md").write_text(readme(name, repositories), encoding="utf-8")
     (workspace / "AGENTS.md").write_text(agent_instructions(), encoding="utf-8")
+    (workspace / "CLAUDE.md").write_text("@AGENTS.md\n", encoding="utf-8")
     (workspace / ".gitignore").write_text(gitignore(repositories), encoding="utf-8")
 
 
@@ -438,9 +441,6 @@ def rehydrate(manifest_path: Path, destination: Path) -> Path:
             manifest.workspace_id,
             manifest.repositories,
         )
-        source_history = manifest_path.parent / "task-history.json"
-        if source_history.is_file():
-            shutil.copy2(source_history, destination / "task-history.json")
         run("git", "init", "-b", "main", str(destination))
 
     for repository in manifest.repositories:
@@ -469,6 +469,7 @@ def main() -> int:
         default=[],
         help="name|url|branch|role; branch and role are optional",
     )
+    parser.add_argument("--format", choices=("text", "json"), default="text")
     arguments = parser.parse_args()
     try:
         if arguments.rehydrate_from:
@@ -488,7 +489,24 @@ def main() -> int:
     except (FileExistsError, RuntimeError, ValueError, subprocess.CalledProcessError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    print(workspace.resolve())
+    resolved = workspace.resolve()
+    catalog_registered, catalog_warning = register_path(resolved)
+    if catalog_warning:
+        print(f"warning: {catalog_warning}", file=sys.stderr)
+    if arguments.format == "json":
+        print(
+            json.dumps(
+                {
+                    "catalog_registered": catalog_registered,
+                    "catalog_warning": catalog_warning,
+                    "workspace": str(resolved),
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(resolved)
     return 0
 
 

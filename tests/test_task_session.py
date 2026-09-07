@@ -39,12 +39,41 @@ SET_TASK_STATE = (
     / "scripts"
     / "set_task_state.py"
 )
+TASK_CATALOG = REPO_ROOT / "scripts" / "task-catalog.py"
+
+
+def catalog_env(root: Path) -> dict[str, str]:
+    harness_home = root / "harness-home"
+    bin_dir = harness_home / "bin"
+    bin_dir.mkdir(parents=True)
+    installed = bin_dir / "task-catalog"
+    shutil.copy2(TASK_CATALOG, installed)
+    installed.chmod(0o755)
+    env = os.environ.copy()
+    env["AGENT_HARNESS_HOME"] = str(harness_home)
+    return env
+
+
+def register(env: dict[str, str], path: Path) -> None:
+    subprocess.run(
+        [
+            str(Path(env["AGENT_HARNESS_HOME"]) / "bin" / "task-catalog"),
+            "register",
+            "--path",
+            str(path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+        env=env,
+    )
 
 
 class TaskFinishWithoutSessionTests(unittest.TestCase):
     def test_filesystem_completion_succeeds_without_a_recorded_session(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
+            env = catalog_env(root)
             subprocess.run(
                 [
                     sys.executable,
@@ -59,7 +88,9 @@ class TaskFinishWithoutSessionTests(unittest.TestCase):
                 check=True,
                 text=True,
                 capture_output=True,
+                env=env,
             )
+            register(env, root / "offline-task")
             result = subprocess.run(
                 [
                     sys.executable,
@@ -74,6 +105,7 @@ class TaskFinishWithoutSessionTests(unittest.TestCase):
                 check=True,
                 text=True,
                 capture_output=True,
+                env=env,
             )
             payload = json.loads(result.stdout)
             self.assertEqual(payload["status"], "done")
@@ -84,6 +116,70 @@ class TaskFinishWithoutSessionTests(unittest.TestCase):
             )
             self.assertIn("status: done", readme)
             self.assertIn("## Outcome", readme)
+            records = json.loads(
+                subprocess.run(
+                    [
+                        str(Path(env["AGENT_HARNESS_HOME"]) / "bin" / "task-catalog"),
+                        "list",
+                        "--kind",
+                        "agent-task",
+                        "--format",
+                        "json",
+                    ],
+                    check=True,
+                    text=True,
+                    capture_output=True,
+                    env=env,
+                ).stdout
+            )["records"]
+            self.assertEqual(records[0]["status"], "done")
+
+    def test_completion_survives_catalog_refresh_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            env = catalog_env(root)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(HYDRATE_TASK),
+                    "--name",
+                    "catalog-offline",
+                    "--objective",
+                    "Complete while the catalog command is unavailable",
+                    "--destination",
+                    str(root),
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+                env=env,
+            )
+            task = root / "catalog-offline"
+            register(env, task)
+            (Path(env["AGENT_HARNESS_HOME"]) / "bin" / "task-catalog").unlink()
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(FINISH_TASK),
+                    "--task-dir",
+                    str(task),
+                    "--outcome",
+                    "The durable work is complete.",
+                    "--format",
+                    "json",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+                env=env,
+            )
+            payload = json.loads(result.stdout)
+            self.assertFalse(payload["catalog_registered"])
+            self.assertIn("could not run", payload["catalog_warning"])
+            self.assertIn(
+                "status: done", (task / "README.md").read_text(encoding="utf-8")
+            )
 
 
 @unittest.skipUnless(shutil.which("tmux"), "tmux is required")
@@ -111,6 +207,7 @@ class TaskSessionTests(unittest.TestCase):
     def test_agent_task_session_uses_existing_folder_and_reports_to_discovery(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
+            env = catalog_env(root)
             self.run_script(
                 HYDRATE_TASK,
                 "--name",
@@ -119,8 +216,10 @@ class TaskSessionTests(unittest.TestCase):
                 "Organize tax records",
                 "--destination",
                 str(root),
+                env=env,
             )
             task = root / "personal finance"
+            register(env, task)
             config = root / "config.json"
             config.write_text(
                 json.dumps(
@@ -130,7 +229,6 @@ class TaskSessionTests(unittest.TestCase):
             )
             tmux_tmp = root / "tmux"
             tmux_tmp.mkdir()
-            env = os.environ.copy()
             env["TMUX_TMPDIR"] = str(tmux_tmp)
             socket_name = f"at-{uuid.uuid4().hex[:6]}"
             try:
@@ -186,7 +284,11 @@ class TaskSessionTests(unittest.TestCase):
 
                 discovered = json.loads(
                     self.run_script(
-                        DISCOVER_TASKS, str(root), "--format", "json"
+                        DISCOVER_TASKS,
+                        str(root),
+                        "--format",
+                        "json",
+                        env=env,
                     ).stdout
                 )["tasks"][0]
                 self.assertEqual(discovered["runtime_host"], "local")
@@ -337,7 +439,11 @@ class TaskSessionTests(unittest.TestCase):
 
                 finished_discovery = json.loads(
                     self.run_script(
-                        DISCOVER_TASKS, str(root), "--format", "json"
+                        DISCOVER_TASKS,
+                        str(root),
+                        "--format",
+                        "json",
+                        env=env,
                     ).stdout
                 )["tasks"][0]
                 self.assertEqual(finished_discovery["status"], "done")
@@ -392,7 +498,9 @@ class TaskSessionTests(unittest.TestCase):
                     "Verify session-name collision handling",
                     "--destination",
                     str(root),
+                    env=env,
                 )
+                register(env, root / "another task")
                 collision = self.run_script(
                     START_SESSION,
                     "--task-dir",

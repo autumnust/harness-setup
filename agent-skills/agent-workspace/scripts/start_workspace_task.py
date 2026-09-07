@@ -7,15 +7,13 @@ import argparse
 import json
 import os
 import re
-import shutil
 import sys
-import tempfile
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from task_history import current_timestamp, record_task_use
+from catalog_client import list_records, register_path
 
 
 NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -60,6 +58,28 @@ def workspace_identity(workspace_file: Path) -> tuple[str, str]:
     if not name:
         raise ValueError(f"workspace name is missing from {workspace_file}")
     return name, workspace_id
+
+
+def catalog_workspace_id(workspace: Path) -> str:
+    registered, warning = register_path(workspace)
+    if not registered:
+        raise ValueError(
+            "legacy workspace registration failed before task creation: " + warning
+        )
+    matching_ids = {
+        str(record.get("id") or record.get("workspace_id") or "")
+        for record in list_records("--kind", "workspace")
+        if str(record.get("path") or record.get("local_path") or "")
+        and Path(str(record.get("path") or record.get("local_path")))
+        .expanduser()
+        .resolve()
+        == workspace
+    } - {""}
+    if len(matching_ids) != 1:
+        raise ValueError(
+            "legacy workspace registration did not return one stable workspace id"
+        )
+    return matching_ids.pop()
 
 
 def load_runtime_config(path: Path | None) -> dict[str, Any]:
@@ -111,10 +131,6 @@ def resolve_execution_folder(
     return root / task_name
 
 
-def relative_link(source_dir: Path, target: Path) -> str:
-    return os.path.relpath(target, start=source_dir)
-
-
 def task_readme(
     task_id: str,
     task_name: str,
@@ -126,7 +142,6 @@ def task_readme(
     last_used_at: str,
 ) -> str:
     today = date.today().isoformat()
-    workspace_href = relative_link(task_dir, workspace)
     return f"""---
 workspace_task: 1
 id: {yaml_scalar(task_id)}
@@ -135,7 +150,6 @@ title: {yaml_scalar(task_name)}
 status: active
 workspace: {yaml_scalar(workspace_title)}
 workspace_id: {yaml_scalar(workspace_id)}
-workspace_path: {yaml_scalar(str(workspace))}
 created: {today}
 updated: {today}
 last_used_at: {yaml_scalar(last_used_at)}
@@ -149,9 +163,9 @@ last_used_at: {yaml_scalar(last_used_at)}
 
 ## Workspace
 
-This execution belongs to [{workspace_title}]({workspace_href}). Repository
-changes follow that workspace's instructions and are created only when the work
-requires them.
+This execution belongs to workspace `{workspace_title}` (`{workspace_id}`).
+Repository changes follow that workspace's instructions and are created only
+when the work requires them.
 
 ## Current state
 
@@ -171,44 +185,8 @@ session are recorded in the front matter after session creation.
 """
 
 
-def task_index_path(workspace: Path) -> Path:
-    git_dir = workspace / ".git"
-    if not git_dir.is_dir():
-        raise ValueError(f"workspace root is not a Git repository: {workspace}")
-    return git_dir / "agent-workspace" / "task-paths.json"
-
-
-def load_task_paths(index_path: Path) -> list[str]:
-    if not index_path.is_file():
-        return []
-    try:
-        payload = json.loads(index_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"cannot read workspace task index {index_path}: {exc}") from exc
-    paths = payload.get("paths") if isinstance(payload, dict) else None
-    if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
-        raise ValueError(f"workspace task index has an invalid paths list: {index_path}")
-    return paths
-
-
-def save_task_path(index_path: Path, task_dir: Path) -> None:
-    paths = load_task_paths(index_path)
-    task_value = str(task_dir)
-    if task_value not in paths:
-        paths.append(task_value)
-    payload = {"schema_version": 1, "paths": sorted(paths)}
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix="task-paths.", suffix=".tmp", dir=index_path.parent
-    )
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as output:
-            json.dump(payload, output, indent=2, sort_keys=True)
-            output.write("\n")
-        os.replace(temporary_name, index_path)
-    except Exception:
-        Path(temporary_name).unlink(missing_ok=True)
-        raise
+def current_timestamp() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def initialize_task(
@@ -219,7 +197,7 @@ def initialize_task(
     execution_root: Path | None = None,
     execution_folder: Path | None = None,
     host: str | None = None,
-) -> dict[str, str]:
+) -> dict[str, str | bool]:
     workspace = workspace.expanduser().resolve()
     if not NAME_PATTERN.fullmatch(task_name):
         raise ValueError(
@@ -229,6 +207,8 @@ def initialize_task(
     if not workspace_file.is_file():
         raise ValueError(f"not an initialized agent workspace: {workspace}")
     title, workspace_id = workspace_identity(workspace_file)
+    if not workspace_id:
+        workspace_id = catalog_workspace_id(workspace)
     config = load_runtime_config(config_path)
     task_dir = resolve_execution_folder(
         task_name, config, execution_root, execution_folder
@@ -238,10 +218,8 @@ def initialize_task(
 
     task_id = str(uuid.uuid4())
     task_last_used_at = current_timestamp()
-    created_task = False
+    task_dir.mkdir()
     try:
-        task_dir.mkdir()
-        created_task = True
         (task_dir / "README.md").write_text(
             task_readme(
                 task_id,
@@ -255,26 +233,21 @@ def initialize_task(
             ),
             encoding="utf-8",
         )
-        save_task_path(task_index_path(workspace), task_dir)
-        history = record_task_use(
-            workspace, host=host or os.uname().nodename, task_id=task_id,
-            task_name=task_name, status="active", execution_folder=task_dir,
-            used_at=task_last_used_at,
-        )
     except Exception:
-        if created_task:
-            shutil.rmtree(task_dir)
+        task_dir.rmdir()
         raise
+    catalog_registered, catalog_warning = register_path(task_dir)
 
     return {
+        "catalog_registered": catalog_registered,
+        "catalog_warning": catalog_warning,
         "execution_folder": str(task_dir),
         "task_id": task_id,
         "task_name": task_name,
         "workspace": str(workspace),
         "workspace_id": workspace_id,
         "workspace_name": title,
-        "history_host": history["host"],
-        "last_used_at": history["last_used_at"],
+        "last_used_at": task_last_used_at,
     }
 
 
@@ -286,7 +259,7 @@ def main() -> int:
     parser.add_argument("--config", type=Path)
     parser.add_argument("--execution-root", type=Path)
     parser.add_argument("--execution-folder", type=Path)
-    parser.add_argument("--host", help="host key for portable workspace task history")
+    parser.add_argument("--host", help=argparse.SUPPRESS)
     parser.add_argument("--format", choices=("text", "json"), default="text")
     arguments = parser.parse_args()
     try:
@@ -302,6 +275,9 @@ def main() -> int:
     except (FileExistsError, OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+
+    if result["catalog_warning"]:
+        print(f"warning: {result['catalog_warning']}", file=sys.stderr)
 
     if arguments.format == "json":
         print(json.dumps(result, indent=2, sort_keys=True))

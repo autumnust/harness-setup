@@ -63,6 +63,13 @@ def verify_install(
     assert (home / ".claude/CLAUDE.md").resolve() == (home / "AGENTS.md").resolve()
     assert (home / ".codex/AGENTS.md").resolve() == (home / "AGENTS.md").resolve()
 
+    for command in ("task-catalog", "agent-task", "agent-workspace"):
+        executable = home / ".agent-harness/bin" / command
+        command_link = home / "bin" / command
+        assert executable.is_file()
+        assert command_link.is_symlink()
+        assert command_link.resolve() == executable.resolve()
+
     claude_settings = json.loads((home / ".claude/settings.json").read_text())
     assert claude_settings["enabledPlugins"]["smoke-only@example"] is False
     assert claude_settings["env"]["SMOKE_HOST_ONLY"] == "preserved"

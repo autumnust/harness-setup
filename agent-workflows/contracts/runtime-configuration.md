@@ -11,6 +11,8 @@ The configuration resolves:
 
 - the default execution root, or that every large goal asks for a location;
 - the optional local TSS host label used when creating task sessions;
+- the local task-catalog scan roots; the execution root is also included when
+  it is configured;
 - the learner-state root and any external-memory mirror;
 - the learner-profile update policy: `ask`, `auto`, or `off`, defaulting to
   `ask` when absent from an older installation;
@@ -31,3 +33,9 @@ Older configurations may omit `task_runtime`. When present,
 `task_runtime.tss.host_alias` is the label a user enters in
 `tss <host>:<session>` for this machine. It does not store an execution path or
 change TSS configuration.
+
+Older configurations may also omit `task_catalog`. Its default scan root is
+`~/Documents`. A non-null `execution_root` is added to the effective roots, and
+duplicate resolved paths are scanned once. The SQLite catalog lives at
+`$AGENT_HARNESS_HOME/state/task-catalog/catalog.sqlite3`; it stores local paths
+and observations and is never copied through Git.

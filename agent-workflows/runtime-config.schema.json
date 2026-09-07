@@ -32,6 +32,18 @@
         }
       }
     },
+    "task_catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scan_roots"],
+      "properties": {
+        "scan_roots": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    },
     "learner_state_root": {"type": ["string", "null"]},
     "learner_profile_update_policy": {
       "type": "string",

@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Discover agent-task workspaces and summarize their live filesystem state."""
+"""List agent-task workspaces registered in the machine-local task catalog."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
+import sys
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from catalog_client import CatalogError, run_catalog_json
 
-IGNORED_DIRECTORIES = {
-    ".git", ".hg", ".svn", ".venv", "__pycache__", "node_modules",
-}
+
 STATUS_ORDER = {
     "blocked": 0,
     "active": 1,
@@ -26,93 +26,95 @@ STATUS_ORDER = {
 }
 
 
-def parse_front_matter(text: str) -> tuple[dict[str, str], str]:
-    lines = text.splitlines()
-    if not lines or lines[0].strip() != "---":
-        return {}, text
-    try:
-        end = next(index for index in range(1, len(lines)) if lines[index].strip() == "---")
-    except StopIteration:
-        return {}, text
-    metadata: dict[str, str] = {}
-    for line in lines[1:end]:
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        metadata[key.strip()] = value.strip()
-    return metadata, "\n".join(lines[end + 1 :])
+def string_value(record: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = record.get(key)
+        if value is not None:
+            return str(value)
+    return ""
 
 
-def markdown_section(text: str, title: str) -> str:
-    lines = text.splitlines()
-    heading = f"## {title}".casefold()
-    start = next(
-        (index + 1 for index, line in enumerate(lines) if line.strip().casefold() == heading),
-        None,
+def normalize_record(record: dict[str, Any]) -> dict[str, str]:
+    runtime = record.get("runtime")
+    if not isinstance(runtime, dict):
+        runtime = {}
+    runtime_host = string_value(record, "runtime_host") or string_value(
+        runtime, "host", "runtime_host"
     )
-    if start is None:
-        return ""
-    collected: list[str] = []
-    for line in lines[start:]:
-        if line.startswith("## "):
-            break
-        if line.strip():
-            collected.append(line.strip())
-    return " ".join(collected)
-
-
-def task_from_readme(readme: Path) -> dict[str, str] | None:
-    try:
-        text = readme.read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
-        return None
-    metadata, body = parse_front_matter(text)
-    if metadata.get("agent_task") != "1":
-        return None
-    runtime_host = metadata.get("runtime_host", "")
-    tmux_session = metadata.get("tmux_session", "")
+    tmux_session = string_value(record, "tmux_session") or string_value(
+        runtime, "session", "tmux_session"
+    )
+    tss_target = string_value(record, "tss_target") or string_value(
+        runtime, "tss_target"
+    )
+    if not tss_target and runtime_host and tmux_session:
+        tss_target = f"{runtime_host}:{tmux_session}"
     return {
-        "id": metadata.get("id", "unknown"),
-        "title": metadata.get("title", readme.parent.name),
-        "status": metadata.get("status", "unknown"),
-        "created": metadata.get("created", ""),
-        "updated": metadata.get("updated", ""),
+        "id": string_value(record, "id", "task_id") or "unknown",
+        "title": string_value(record, "title", "name") or "unknown",
+        "status": string_value(record, "status") or "unknown",
+        "created": string_value(record, "created", "created_at"),
+        "updated": string_value(record, "updated", "updated_at"),
         "runtime_host": runtime_host,
         "tmux_session": tmux_session,
-        "tss_target": (
-            f"{runtime_host}:{tmux_session}"
-            if runtime_host and tmux_session
-            else ""
-        ),
-        "objective": markdown_section(body, "Current objective"),
-        "current_state": markdown_section(body, "Current state"),
-        "next_task": markdown_section(body, "Immediate next task"),
-        "path": str(readme.parent.resolve()),
+        "tss_target": tss_target,
+        "objective": string_value(record, "objective"),
+        "current_state": string_value(record, "current_state"),
+        "next_task": string_value(record, "next_task"),
+        "path": string_value(record, "path", "local_path"),
     }
 
 
-def discover(roots: list[Path]) -> list[dict[str, str]]:
-    tasks: list[dict[str, str]] = []
-    seen: set[Path] = set()
-    for raw_root in roots:
-        root = raw_root.expanduser().resolve()
-        if not root.is_dir() or root in seen:
-            continue
-        seen.add(root)
-        for current, directories, files in os.walk(root):
-            directories[:] = [name for name in directories if name not in IGNORED_DIRECTORIES]
-            if "README.md" not in files:
-                continue
-            task = task_from_readme(Path(current) / "README.md")
-            if task is not None:
-                tasks.append(task)
-                directories[:] = []
+def path_is_within(path: str, roots: list[Path]) -> bool:
+    if not roots:
+        return True
+    try:
+        candidate = Path(path).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return False
+    return any(candidate == root or candidate.is_relative_to(root) for root in roots)
+
+
+def records_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    records = payload.get("records")
+    if not isinstance(records, list):
+        raise CatalogError("task catalog JSON does not contain a records list")
+    return [record for record in records if isinstance(record, dict)]
+
+
+def discover(*, catalog_cli: Path | None, roots: list[Path]) -> list[dict[str, str]]:
+    # Keep this invocation fixed. SQL selection belongs to task-catalog itself.
+    payload = run_catalog_json(
+        ("list", "--format", "json", "--kind", "agent-task"),
+        executable=catalog_cli,
+    )
+    resolved_roots = [root.expanduser().resolve() for root in roots]
+    tasks = [
+        normalize_record(record)
+        for record in records_from_payload(payload)
+        if string_value(record, "kind", "task_kind") in {"", "agent-task"}
+        and path_is_within(string_value(record, "path", "local_path"), resolved_roots)
+    ]
     return sorted(
         tasks,
         key=lambda task: (
             STATUS_ORDER.get(task["status"], STATUS_ORDER["unknown"]),
             task["title"].casefold(),
         ),
+    )
+
+
+def reconcile(*, catalog_cli: Path | None, roots: list[Path]) -> dict[str, Any]:
+    if not roots:
+        raise CatalogError("reconciliation requires at least one root")
+    return run_catalog_json(
+        (
+            "reconcile",
+            *(str(root.expanduser().resolve()) for root in roots),
+            "--format",
+            "json",
+        ),
+        executable=catalog_cli,
     )
 
 
@@ -146,10 +148,38 @@ def render_markdown(tasks: list[dict[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def render_human(tasks: list[dict[str, str]]) -> str:
+    if not tasks:
+        return "No general tasks found."
+    lines = [f"General tasks: {len(tasks)}"]
+    for task in tasks:
+        status = " ".join(task["status"].split()) or "unknown"
+        lines.extend(("", f"[{status}] {' '.join(task['title'].split())}"))
+        details = []
+        if task["updated"]:
+            details.append(f"updated {task['updated']}")
+        if task["tss_target"]:
+            details.append(f"session tss {task['tss_target']}")
+        if details:
+            lines.append("  " + " | ".join(details))
+        lines.append(f"  Path: {task['path']}")
+        if task["next_task"]:
+            lines.append(
+                textwrap.fill(
+                    " ".join(task["next_task"].split()),
+                    width=100,
+                    initial_indent="  Next: ",
+                    subsequent_indent="        ",
+                )
+            )
+    return "\n".join(lines)
+
+
 def render_json(roots: list[Path], tasks: list[dict[str, str]]) -> str:
     payload: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source": "task-catalog",
         "roots": [str(root.expanduser().resolve()) for root in roots],
         "tasks": tasks,
     }
@@ -158,12 +188,47 @@ def render_json(roots: list[Path], tasks: list[dict[str, str]]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("roots", nargs="*", type=Path)
-    parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    parser.add_argument(
+        "roots",
+        nargs="*",
+        type=Path,
+        help="optional local path filters; no filesystem scan is performed",
+    )
+    formats = parser.add_mutually_exclusive_group()
+    formats.add_argument("--format", choices=("markdown", "json", "human"))
+    formats.add_argument(
+        "-H",
+        "--human",
+        dest="format",
+        action="store_const",
+        const="human",
+        help="show compact records for terminal reading",
+    )
+    parser.set_defaults(format="markdown")
+    parser.add_argument(
+        "--catalog-cli",
+        type=Path,
+        help="task-catalog executable (defaults to the installed harness command)",
+    )
+    parser.add_argument(
+        "--reconcile",
+        action="store_true",
+        help="explicitly scan the given roots through task-catalog before listing",
+    )
     args = parser.parse_args()
-    roots = args.roots or [Path.home() / "Documents"]
-    tasks = discover(roots)
-    print(render_json(roots, tasks) if args.format == "json" else render_markdown(tasks))
+    try:
+        if args.reconcile:
+            reconcile(catalog_cli=args.catalog_cli, roots=args.roots)
+        tasks = discover(catalog_cli=args.catalog_cli, roots=args.roots)
+    except CatalogError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if args.format == "json":
+        print(render_json(args.roots, tasks))
+    elif args.format == "human":
+        print(render_human(tasks))
+    else:
+        print(render_markdown(tasks))
     return 0
 
 

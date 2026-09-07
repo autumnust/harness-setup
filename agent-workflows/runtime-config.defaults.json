@@ -7,6 +7,11 @@
       "host_alias": null
     }
   },
+  "task_catalog": {
+    "scan_roots": [
+      "~/Documents"
+    ]
+  },
   "learner_state_root": null,
   "learner_profile_update_policy": "ask",
   "review_backends": [],

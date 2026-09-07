@@ -30,59 +30,42 @@ Drop this onto a new device and run `install.sh` to restore the global setup.
 
 ## Filesystem agent tasks
 
-The installed `agent-task` skill creates portable workspaces for personal or
-professional tasks, starts a TSS-reachable tmux session, and discovers their
-current state directly from the filesystem. Ask an agent, for example:
+The public CLIs perform task and workspace operations. Skills translate natural
+language requests into these commands and retain only the human decisions that
+cannot be scripted.
 
-> Initialize an agent task for organizing my personal finances.
+```bash
+# General task
+agent-task init --name "<name>" --objective "<text>" --destination "<parent>"
+agent-task list -H
 
-The agent resolves a name, objective, destination, TSS host label, and session
-name with you, then hydrates a workspace containing raw inputs, stable context,
-decisions, task tracking, working artifacts, and final outputs. It starts tmux
-in that task folder and returns `tss <host>:<session>`. The tmux custom options
-make the task available to a TSS metadata reader without a separate
-registration request. There is no user-facing command to remember; the
-deterministic scripts are internal skill resources.
+# Multi-repository workspace
+agent-workspace init --name "<name>" --destination "<parent>" \
+  --repo '<name>|<url>|<branch>|active'
+agent-workspace rehydrate --manifest "<workspace.yaml>" --destination "<path>"
+agent-workspace start-task --workspace "<path>" --name "<task>" --objective "<text>"
+agent-workspace list-tasks --workspace "<path>" --status active -H
+```
 
-Each workspace keeps small discovery metadata in `README.md`, including a
-stable ID, status, and update date. Ask "show me all my agent tasks" to scan
-one or more filesystem roots and summarize them. The scanner can also emit
-versioned JSON with paths, statuses, objectives, current state, and immediate
-next tasks, providing a future task-board integration point without adding a
-database or cached index. The workspace files remain authoritative.
+Use `--format json` when an agent or script consumes the result and `-H` for
+terminal output. `reference` is the alternative repository role.
+Workspace creation and rehydration register the workspace. Rehydration uses the
+exact destination, verifies workspace metadata, repository origins, and primary
+branches, then clones only missing repositories. Task creation starts or reuses
+tmux in the workspace root, writes generated task output to the execution
+folder, and returns the TSS target. Use
+`agent-task reconcile <root>...` only to import older folders or repair
+registration after a manual copy or move.
 
-For multi-repository development environments, the installed `agent-workspace`
-skill creates a versioned workspace root, clones the selected repositories,
-and prepares separate Git worktree containers for isolated changes. From an
-initialized workspace, ask `start-task <task-name>` to create a structured
-execution folder under the configured execution root and start a tmux session
-that TSS can discover. The session opens in the workspace root. Generated output
-goes to the task's execution folder unless the user asks otherwise. Durable
-material enters `context/` only when the user explicitly requests it. Ask
-`list-tasks` to find task records associated with the workspace without
-requiring tmux, including folders created at an explicitly overridden location.
-Repository worktrees remain a later per-repository operation. The richer
-long-running-work structure is created only when the coordinator selects that
-workflow. Its committed source is
-`agent-skills/agent-workspace/`; the copies installed under the supported agent
-runtime directories are generated outputs.
+Task folders and Git history remain authoritative. The SQLite catalog stores
+this host's paths and runtime observations. Stable task and workspace IDs keep
+the relationship portable when another host uses a different absolute path.
 
-New workspace manifests carry a stable ID so the workspace can be rehydrated at
-a different absolute path on another host. Rehydration asks for the exact
-destination and validates existing workspace metadata, repository origins, and
-primary branches before cloning missing repositories.
-
-The shared `task-session` skill can restore a TSS-reachable tmux session for an
-existing `agent-task` folder. In that case the task folder is reused as the
-working directory and no execution folder is added.
-
-From either task type, explicit requests to pause, wait, block, resume, finish,
-or cancel update the filesystem task record and then mirror that state into
-tmux when its session exists. TSS displays the recorded task state, and
-`tss prune --finished` removes only detached sessions carrying a task ID,
-terminal state, and completion timestamp. From an initialized professional
-workspace, ask `list active tasks` to filter its filesystem records to
-`status: active`.
+Lifecycle changes require explicit intent. The `task-session` skill applies
+pause, wait, block, resume, finish, or cancel requests through deterministic
+helpers. A disconnect or missing tmux process does not change task state.
+Repository worktrees and the full long-running execution structure are created
+only when the requested work needs them.
 
 > Project-local skills and project `AGENTS.md` files are **not** included here;
 > they belong in their respective project repositories.
@@ -172,8 +155,26 @@ Pick one of:
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |
 | coordinator model and workflow depth | Codex Terra or Claude Code Sonnet plus medium effort; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
+| deterministic task commands | Stored under `~/.agent-harness/bin/` and linked into `~/bin/` as `agent-task`, `agent-workspace`, and `task-catalog` |
 | versioned harness releases | `~/.agent-harness/releases/<release-id>/` with `~/.agent-harness/current` selecting the active release |
+| machine-local task catalog | `~/.agent-harness/state/task-catalog/catalog.sqlite3` (initialized on first catalog command and never overwritten) |
 | mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates or rollback) |
+
+The catalog stores local paths and observations; task folders and Git remain
+authoritative. Normal creation registers automatically. Use these commands only
+for an imported or moved folder:
+
+```bash
+task-catalog register --path /path/to/task
+task-catalog reconcile ~/Documents --format json
+```
+
+The installer uses `~/bin` for these command links, matching the existing TSS
+installation. Add `~/bin` to `PATH` on a host that does not already include it.
+
+Catalog listing uses one fixed, parameter-free SQL query. The CLI filters and
+orders its result. Use `task-catalog list -H` for terminal output or
+`--format json` for agents and scripts.
 
 ## Portable agent workflow
 

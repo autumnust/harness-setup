@@ -17,6 +17,18 @@ The command is fail-closed: it exits instead of running without Seatbelt. It
 prints `PASS` only after the sandbox has denied real-home and checkout writes
 and network access; the temporary root is cleaned on normal exit and failure.
 
+For a manual check that project `AGENTS.md` content is actually picked up by
+the real `claude` CLI (not just present on disk) via each `CLAUDE.md`'s
+`@AGENTS.md` import — the repo root, a hydrated `agent-task` workspace, and a
+hydrated `agent-workspace` — run:
+
+```bash
+tests/deployment-smoke/verify-claude-md-import.sh
+```
+
+It makes real, low-cost `claude -p --model haiku` calls and is not part of the
+offline Seatbelt suite or CI.
+
 For a manual runtime-awareness probe using fresh API requests:
 
 ```bash

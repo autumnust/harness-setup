@@ -5,72 +5,58 @@ description: Recover the task-to-workspace map after a reboot or lost tmux serve
 
 # Crash Recovery
 
-Use this skill when a reboot, terminal failure, or lost tmux server leaves the
-human user unsure which workspace and task belong to a former session. The
-filesystem task record is the source of truth. tmux only confirms whether a
-recorded session is currently available.
+The task folder and catalog survive a lost tmux server. tmux only reports
+whether a recorded session is currently available.
 
-## Report task records
+## Find prior work
 
-Run the bundled report without `--validate-tss` first. It reads the configured
-execution root from `$AGENT_HARNESS_HOME/config.json`, defaulting
-`AGENT_HARNESS_HOME` to `~/.agent-harness`:
+Start with the local catalog:
 
 ```bash
-python3 <skill-dir>/scripts/recover_task_sessions.py
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/task-catalog" list \
+  --format json
 ```
 
-The report lists each task's status, execution folder, workspace folder when
-one is recorded, and its saved `host:session` TSS target. It does not create,
-resume, attach to, rename, or remove any session.
-
-For an execution root that is not configured on this machine, pass it
-explicitly:
+If a manual copy, move, or old installation is missing, repair registration
+before listing again:
 
 ```bash
-python3 <skill-dir>/scripts/recover_task_sessions.py \
-  --execution-root "/absolute/path/to/execution-notes"
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/task-catalog" reconcile \
+  <root> [<root> ...] --format json
 ```
 
-## Verify recorded TSS sessions
-
-Only when the human user asks to validate live availability, add
-`--validate-tss`:
+For a report that also resolves local workspace paths, run:
 
 ```bash
-python3 <skill-dir>/scripts/recover_task_sessions.py --validate-tss
+python3 <skill-dir>/scripts/recover_task_sessions.py --format json
 ```
 
-It runs `tss <host>` once for every recorded host and adds a `TSS state`
-column: `present`, `missing`, or `unknown`. This does not attach to a session,
-but scanning a remote host can refresh its authentication. Report that fact if
-it occurs.
+These commands do not contact TSS or create, attach to, rename, or remove a
+session. Use `-H` with `task-catalog list` only for direct human terminal use.
 
-## Recreate a missing task session
+## Check or recreate sessions
 
-After the human user identifies a missing non-terminal task, recreate only the
-named task using its recorded workspace, host, and session name:
+Only after the user asks for live validation, run:
 
 ```bash
 python3 <skill-dir>/scripts/recover_task_sessions.py \
-  --recreate --task "review_context_api_plumbing"
+  --validate-tss --format json
 ```
 
-This starts a new detached tmux session through the `task-session` helper, so
-the session is again visible through `tss <host>`. It restores the working
-directory and task metadata, not the former tmux processes, pane contents, or
-Codex process. The command refuses `done`, `cancelled`, and `archived` tasks,
-requires an explicit task name, and will not take over a tmux session belonging
-to a different task.
+This contacts each recorded host without attaching and may refresh remote
+authentication; report when that occurs. To recreate one missing, nonterminal
+session after the user selects it:
 
-## Codex conversations
+```bash
+python3 <skill-dir>/scripts/recover_task_sessions.py \
+  --recreate --task "<task-name>" --format json
+```
 
-Task records do not currently store a Codex conversation identifier. To find
-a candidate conversation, search `~/.codex/sessions/` for records whose
-`session_meta.cwd` equals the task's workspace path, then confirm the task name
-or a task-specific action in the conversation. Treat that as an evidence-based
-association, not proof that it occupied a particular tmux pane.
+Recreation restores the working directory and metadata, not old processes,
+panes, buffers, or the prior agent process. It refuses finished, cancelled, and
+archived tasks and never takes over another task's session.
 
-Do not recreate a replacement tmux session or resume Codex unless the human
-user explicitly asks. A rebooted local tmux server cannot restore its old
-processes or pane buffers when no tmux-resurrect save exists.
+Task records do not store an agent conversation ID. A matching working
+directory in `~/.codex/sessions/` is evidence of a possible conversation, not
+proof that it occupied a particular tmux pane. Do not recreate a session or
+resume an agent process without an explicit request.

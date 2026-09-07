@@ -59,6 +59,9 @@ class HarnessReleaseTests(unittest.TestCase):
             home = root / "home"
             release_id = harness_release.stage_release(REPO_ROOT, staged)
 
+            for command in ("task-catalog.py", "agent-task.py", "agent-workspace.py"):
+                self.assertTrue((staged / "source/scripts" / command).is_file())
+
             self.assertEqual(
                 harness_release.register_release(staged, home),
                 release_id,

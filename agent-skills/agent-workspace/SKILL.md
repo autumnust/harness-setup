@@ -5,176 +5,91 @@ description: Create or rehydrate a professional multi-repository development wor
 
 # Agent Workspace
 
-Create a professional development environment whose root records the workspace
-layout while each nested repository keeps its own history and upstream.
-`agent-task` is for personal and general task folders; do not use it here.
+An agent workspace records a multi-repository layout. Each nested repository
+keeps its own Git history. Use `agent-task` for general or personal work.
 
-For example, a workspace with `sdm-benchmark` and `structured-data-models`
-contains their normal checkouts plus `sdm-benchmark-worktree/` and
-`structured-data-models-worktree/`. A serving task works in
-`sdm-benchmark-worktree/serving-measurements/`, leaving the normal checkout on
-its primary branch.
+## Create or rehydrate
 
-## Initialize
-
-1. Resolve the workspace name, destination parent, and repository list. Ask
-   for the destination when it is missing. For each repository, collect its
-   Git URL, local name, optional primary branch, and role: `active` or
-   `reference`.
-2. Summarize the proposed destination and repository list before cloning when
-   the user has not already authorized creation. The workspace path may already
-   exist when it is an empty directory; reject a path that contains files.
-3. Run the bundled initializer. A repository specification has the form
-   `name|url|branch|role`; omit the last two fields to detect the default
-   branch and use `active`.
-
-   ```bash
-   python3 <skill-dir>/scripts/hydrate_workspace.py \
-     --name "structured-data-models" \
-     --destination "/path/to/parent" \
-     --repo "sdm-benchmark|ssh://git@example.com/team/sdm-benchmark.git|main|active" \
-     --repo "pytorch-geometric|https://github.com/pyg-team/pytorch_geometric.git||reference"
-   ```
-
-4. Read the generated `README.md`, `AGENTS.md`, and `workspace.yaml` before
-   starting repository work. `workspace.yaml` is the source list for the
-   repositories that belong in the workspace. The generated `context/` folder
-   stores durable workspace material; `inbox/` holds documents that still need
-   review and routing.
-
-The initializer preflights every remote, uses a new or empty target directory,
-and initializes the workspace root as a Git repository. If cloning fails after
-creation, report the partial workspace and let the user decide whether to retry
-or remove it.
-
-## Rehydrate on another host
-
-When the user asks to rehydrate or place an existing workspace on this host,
-ask for the exact destination path. Also resolve the source `workspace.yaml`.
-Show both paths before making changes.
-
-Check that the destination parent exists. A new or empty destination is valid.
-A nonempty destination is valid only when it contains the same workspace ID and
-repository definitions. Existing repository folders must be Git checkouts whose
-`origin` URL and current primary branch match the manifest. The helper performs
-these checks before cloning missing repositories:
+For a new workspace, resolve its name, destination, and repository definitions.
+Each repeatable `--repo` value is `name|url|branch|role`; an omitted branch uses
+the remote default, and an omitted role means `active`.
 
 ```bash
-python3 <skill-dir>/scripts/hydrate_workspace.py \
-  --rehydrate-from "/path/to/source/workspace.yaml" \
-  --destination "/exact/path/on/this/host"
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" init \
+  --name "<workspace-name>" \
+  --destination "<parent>" \
+  --repo "<name>|<url>|<branch>|active" \
+  --format json
 ```
 
-Never reuse an unrelated nonempty directory. A stable workspace ID makes task
-discovery portable even when the absolute workspace path differs by host.
+Confirm the destination and repositories before cloning unless the user already
+did so. The CLI accepts only a new or empty target, checks remotes, clones the
+repositories, creates the workspace Git repository, and registers the result.
+If it reports a partial result, preserve the folder and report the failed step.
 
-## Start a task
+To place an existing workspace on another host, resolve and confirm both paths:
 
-Use this workflow when the user says `start-task <task-name>` from an initialized
-workspace. This operation creates a minimal task record and a tmux session; it
-does not create repository worktrees or the full long-running-work structure.
+```bash
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" rehydrate \
+  --manifest "/path/to/workspace.yaml" \
+  --destination "/exact/path/on/this-host" \
+  --format json
+```
 
-1. Resolve the task name and a one-sentence objective.
-2. Read `$AGENT_HARNESS_HOME/config.json`, defaulting `AGENT_HARNESS_HOME` to
-   `~/.agent-harness`. Use `execution_root/<task-name>` as the proposed execution
-   folder. Let the user supply a different absolute folder.
-3. Resolve the TSS host label from `task_runtime.tss.host_alias` when configured,
-   and default the tmux session name to the task name. Ask for all missing or
-   overridden values together and show the proposed folder before creating it.
-   When `execution_root` or the host label is missing, offer to save the
-   confirmed value as this machine's default; only the coordinator writes the
-   mutable runtime configuration.
-4. Run the bundled task initializer:
+The CLI rejects unrelated nonempty destinations and verifies existing
+repository origins and primary branches before cloning anything missing. Read
+the resulting `README.md`, `AGENTS.md`, and `workspace.yaml` before work begins.
 
-   ```bash
-python3 <skill-dir>/scripts/start_workspace_task.py \
+## Start and find tasks
+
+Resolve the task name, objective, and any explicit path, TSS host, or session
+override. The CLI reads configured defaults:
+
+```bash
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" start-task \
   --workspace "/path/to/workspace" \
   --name "<task-name>" \
   --objective "<objective>" \
-  --host "<tss-host-label>"
-   ```
-
-   Pass `--execution-folder "/other/path"` when the user overrides the default.
-   The initializer creates the execution folder with a metadata-bearing
-   `README.md`. It records the path in machine-local Git metadata so task
-   discovery can retain an execution-folder override without committing an
-   absolute path to the workspace repository.
-5. Use the installed `task-session` skill with the new execution folder, current
-   workspace path, resolved TSS host label, and session name. The tmux working
-   directory is the workspace root; `@agent_task_path` still points to the
-   external execution folder. Return the execution-folder path and the printed
-   `tss <host>:<session>` command.
-6. When the coordinator selects the full workflow, create its canonical
-   execution entry points and then invoke the execution-environment preparation
-   flow. Fast tasks keep only the minimal task record unless their work needs
-   additional files.
-
-If task-session setup fails, report the initialized execution folder and the
-exact failure. Do not remove task records unless the user asks.
-
-## List tasks
-
-Use this workflow when the user says `list-tasks` from an initialized workspace.
-Run the bundled discovery script:
-
-```bash
-python3 <skill-dir>/scripts/list_workspace_tasks.py \
-  --workspace "/path/to/workspace"
+  --format json
 ```
 
-When the user asks for active tasks, pass `--status active`. Repeat `--status`
-to include several requested states.
+Use `--execution-folder`, `--tss-host`, or `--session-name` only for overrides.
+If a required default is absent, ask for all missing values together; only the
+coordinator may save them in global configuration.
+The command creates and registers the task, then starts or reuses tmux. A
+nonzero result may still contain a valid task folder; report it and retry only
+the failed step. The task record stores portable task and workspace IDs without
+machine paths; the local catalog maps both IDs to this host's folders. tmux
+starts in the workspace root and records the external execution folder
+separately. Return that folder and the printed TSS target.
 
-The script reads the workspace-root `task-history.json`, whose records are keyed
-by host and task name, then merges it with task metadata found in the configured
-execution root and the machine-local path index. It orders results by each
-task's own `last_used_at` timestamp, newest first. The history remains available
-when the same workspace is materialized on another host; a remote execution
-folder is a recorded path, not a claim that the folder exists locally.
-Commit `task-history.json` in the workspace repository when the history must
-travel through the normal Git-based workspace exchange; rehydration also copies
-it when it is next to the source `workspace.yaml`.
-The task `README.md` remains the authoritative record, so task resolution does
-not require tmux metadata. Match by stable workspace ID when available, with
-name/path compatibility for older records. A displayed TSS target is the saved
-connection value; discovery does not contact TSS or confirm that the session is
-running. Report missing indexed folders separately.
+List the workspace's registered tasks with:
 
-Resolve an omitted task name in this order: an explicit name, the sole matching
-active task from `list_workspace_tasks.py`, then the current tmux task path as a
-runtime hint. If multiple filesystem records still match, ask which task the
-user means.
+```bash
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" list-tasks \
+  --workspace "/path/to/workspace" \
+  --format json
+```
 
-## Change task state
+Repeat `--status` to filter states. Use `-H` for human terminal output. A saved
+TSS target is recorded connection data; listing does not contact TSS. Report
+missing registered folders.
 
-Only change lifecycle state from an explicit user request. Phrases such as
-"pause this task", "wait for review", "this is blocked", "resume the task",
-"finish this task", and "cancel this task" are explicit. Ending a conversation,
-disconnecting TSS, losing tmux, or rebooting a host does not change task state.
+Resolve an omitted task name from an explicit name, then a sole matching active
+catalog record, then the current tmux task path. Ask when several records still
+match.
 
-Resolve the execution folder with the list workflow, then use the installed
-`task-session` state workflow. For `paused`, `waiting`, `blocked`, and `active`,
-collect a current-state summary plus a concrete next step or resume trigger.
-For `done` or `cancelled`, collect the outcome. The helper writes the task file
-first and then mirrors the state into tmux when the recorded session exists.
+## Lifecycle and repository work
 
-## Finish a task
+Use `task-session` only after an explicit request to pause, wait, block, resume,
+finish, or cancel. A disconnect, reboot, or missing tmux session does not change
+task state. When the coordinator selects the full workflow, it creates the
+required execution records after `start-task` succeeds.
 
-When the user says `finish-task [<task-name>]`, resolve the execution folder
-with workspace task discovery, summarize the outcome, and use the installed
-`task-session` finish workflow. It updates the filesystem state and marks the
-tmux session for later `tss prune --finished` cleanup without terminating it.
-
-## Work in a professional workspace
-
-Follow the workspace `AGENTS.md`. Unless the user asks otherwise, write
-generated output to the current task's execution folder, not the workspace.
-
-Before changing a nested repository, create a Git worktree under
+Write generated output to the task's execution folder unless the user requests
+otherwise. Add durable workspace material to `context/` only when requested.
+Before modifying a nested repository, create its task worktree under
 `<repository>-worktree/<task-name>/`. Keep the named checkout on its primary
-branch for inspection, fetches, and creating further worktrees. Remove a task
-worktree after merge or abandonment; preserve useful experiment source on an
-archive branch first.
-
-Do not add nested repositories, task worktrees, virtual environments, or
-generated caches to the workspace root's Git index.
+branch. Remove the task worktree after merge or abandonment, preserving useful
+experiments on a branch first. Do not add nested repositories, task worktrees,
+virtual environments, or generated caches to the workspace root's Git index.

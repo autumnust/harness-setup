@@ -14,6 +14,7 @@ itself a software project to build or test.
 | `agent-skills/` | Skills deployed to `~/.claude/skills/`; when Codex is present they also deploy to current `~/.agents/skills/` and legacy-compatible `~/.codex/skills/` |
 | `dependencies/external-skills.json` | Commit-pinned skills resolved from upstream during installation and preserved in each harness release |
 | `agent-workflows/` | Provider-neutral role prompts, topology, workflows, contracts, runtime-config schema/defaults, and adapter mappings rendered into native Claude and Codex custom agents |
+| `scripts/agent-task.py`, `scripts/agent-workspace.py`, `scripts/task-catalog.py` | Public task commands installed under `~/.agent-harness/bin/` and linked from `~/bin/` |
 | `scripts/render-agents.py` | Validates the topology and renders provider-native custom-agent files during installation |
 | `install.sh` / `update.sh` | Installers that copy the above onto a target machine |
 | `tests/deployment-smoke/` | macOS Seatbelt deployment, CLI launch, and optional runtime-awareness checks |
