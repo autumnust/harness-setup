@@ -60,7 +60,11 @@ def optional_path(arguments: list[str], flag: str, value: Path | None) -> None:
         arguments.extend((flag, str(value)))
 
 
-def run_init(args: argparse.Namespace, root: Path) -> dict[str, Any]:
+def registration_status(payload: dict[str, Any]) -> int:
+    return 0 if payload.get("catalog_registered") is True else 2
+
+
+def run_init(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any], int]:
     command = [
         "--name",
         args.name,
@@ -76,10 +80,12 @@ def run_init(args: argparse.Namespace, root: Path) -> dict[str, Any]:
     )
     payload = json_output(result, "workspace initialization")
     payload["operation"] = "init"
-    return payload
+    status = registration_status(payload)
+    payload["outcome"] = "complete" if status == 0 else "partial"
+    return payload, status
 
 
-def run_rehydrate(args: argparse.Namespace, root: Path) -> dict[str, Any]:
+def run_rehydrate(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any], int]:
     result = run_helper(
         helper(root, "agent-workspace", "hydrate_workspace.py"),
         [
@@ -93,10 +99,12 @@ def run_rehydrate(args: argparse.Namespace, root: Path) -> dict[str, Any]:
     )
     payload = json_output(result, "workspace rehydration")
     payload["operation"] = "rehydrate"
-    return payload
+    status = registration_status(payload)
+    payload["outcome"] = "complete" if status == 0 else "partial"
+    return payload, status
 
 
-def run_list(args: argparse.Namespace, root: Path) -> dict[str, Any]:
+def run_list(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any], int]:
     command = ["--workspace", str(args.workspace), "--format", "json"]
     for status in args.status:
         command.extend(("--status", status))
@@ -105,10 +113,11 @@ def run_list(args: argparse.Namespace, root: Path) -> dict[str, Any]:
     )
     payload = json_output(result, "workspace task listing")
     payload["operation"] = "list-tasks"
-    return payload
+    payload["outcome"] = "complete"
+    return payload, 0
 
 
-def run_start_task(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any], bool]:
+def run_start_task(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any], int]:
     initialize_command = [
         "--workspace",
         str(args.workspace),
@@ -127,6 +136,19 @@ def run_start_task(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any]
         initialize_command,
     )
     task = json_output(initialized, "workspace task initialization")
+
+    if registration_status(task) != 0:
+        return (
+            {
+                "operation": "start-task",
+                "outcome": "partial",
+                "session_started": False,
+                "session": None,
+                "session_error": "session start was not attempted because task registration failed",
+                "task": task,
+            },
+            2,
+        )
 
     session_command = [
         "--task-dir",
@@ -154,12 +176,17 @@ def run_start_task(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any]
     if started.returncode == 0:
         payload["session"] = json_output(started, "task session start")
         payload["session_error"] = ""
-        return payload, True
+        if registration_status(payload["session"]) == 0:
+            payload["outcome"] = "complete"
+            return payload, 0
+        payload["outcome"] = "partial"
+        return payload, 2
     payload["session"] = None
     payload["session_error"] = (
         started.stderr or started.stdout or f"exit {started.returncode}"
     ).strip()
-    return payload, False
+    payload["outcome"] = "partial"
+    return payload, 1
 
 
 def add_format(parser: argparse.ArgumentParser) -> None:
@@ -167,13 +194,19 @@ def add_format(parser: argparse.ArgumentParser) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(prog="agent-workspace", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     initialize = subparsers.add_parser("init", help="create a workspace")
     initialize.add_argument("--name", required=True)
     initialize.add_argument("--destination", required=True, type=Path)
-    initialize.add_argument("--repo", action="append", default=[], required=True)
+    initialize.add_argument(
+        "--repo",
+        action="append",
+        default=[],
+        required=True,
+        help="name|url|branch|role; repeat for multiple repositories",
+    )
     add_format(initialize)
 
     rehydrate = subparsers.add_parser(
@@ -234,15 +267,14 @@ def main() -> int:
     args = parser.parse_args()
     try:
         root = source_root()
-        succeeded = True
         if args.command == "init":
-            payload = run_init(args, root)
+            payload, status = run_init(args, root)
         elif args.command == "rehydrate":
-            payload = run_rehydrate(args, root)
+            payload, status = run_rehydrate(args, root)
         elif args.command == "list-tasks":
-            payload = run_list(args, root)
+            payload, status = run_list(args, root)
         else:
-            payload, succeeded = run_start_task(args, root)
+            payload, status = run_start_task(args, root)
     except (OSError, ValueError) as exc:
         if getattr(args, "format", "text") == "json":
             print(json.dumps({"error": str(exc), "operation": args.command}, sort_keys=True))
@@ -253,7 +285,7 @@ def main() -> int:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
         print(render_text(payload))
-    return 0 if succeeded else 1
+    return status
 
 
 if __name__ == "__main__":

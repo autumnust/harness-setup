@@ -51,7 +51,10 @@ def records() -> list[TaskRecord]:
     catalog_records = list_records()
     workspace_paths: dict[str, list[str]] = {}
     for record in catalog_records:
-        if record.get("kind") != "workspace" or not record.get("present", True):
+        if (
+            record.get("record_type") != "workspace"
+            or not record.get("present", True)
+        ):
             continue
         workspace_id = text_value(record, "id", "workspace_id")
         workspace_path = text_value(record, "path", "local_path")
