@@ -24,7 +24,7 @@ it does not replace the folder or its Git history.
    tmux session as one scripted operation:
 
    ```bash
-   "$AGENT_HARNESS_HOME/bin/agent-task" init \
+   "${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-task" init \
      --name "<folder name>" \
      --objective "<objective>" \
      --destination "<existing parent directory>" \
@@ -83,7 +83,7 @@ general task on the current host. Named roots filter the catalog result by local
 path; they do not start a filesystem scan:
 
 ```bash
-"$AGENT_HARNESS_HOME/bin/agent-task" list \
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-task" list \
   [<root> ...] --format json
 ```
 
@@ -97,7 +97,7 @@ Manual clones, moves outside the skill, and older task folders may not yet be
 registered. Repair registration explicitly by scanning only chosen roots:
 
 ```bash
-"$AGENT_HARNESS_HOME/bin/agent-task" reconcile \
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-task" reconcile \
   <root> [<root> ...] --format json
 ```
 

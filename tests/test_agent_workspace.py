@@ -599,6 +599,48 @@ last_used_at: 2026-09-01T00:00:00+00:00
                 ["legacy-task"],
             )
 
+    def test_start_task_uses_catalog_id_for_legacy_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            env = self.catalog_env(root)
+            workspace = self.prepare_workspace(root)
+            manifest = workspace / "workspace.yaml"
+            lines = manifest.read_text(encoding="utf-8").splitlines()
+            manifest.write_text(
+                "\n".join(line for line in lines if not line.strip().startswith("id:"))
+                + "\n",
+                encoding="utf-8",
+            )
+            execution_root = root / "execution-notes"
+            execution_root.mkdir()
+            config = root / "config.json"
+            config.write_text(
+                json.dumps({"execution_root": str(execution_root)}),
+                encoding="utf-8",
+            )
+
+            result = json.loads(
+                self.run_script(
+                    START_TASK,
+                    "--workspace",
+                    str(workspace),
+                    "--name",
+                    "legacy-start",
+                    "--config",
+                    str(config),
+                    "--format",
+                    "json",
+                    env=env,
+                ).stdout
+            )
+
+            self.assertTrue(result["catalog_registered"])
+            self.assertTrue(str(result["workspace_id"]).startswith("legacy-"))
+            readme = (execution_root / "legacy-start" / "README.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn(f"workspace_id: '{result['workspace_id']}'", readme)
+
     def test_public_cli_returns_partial_when_task_registration_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

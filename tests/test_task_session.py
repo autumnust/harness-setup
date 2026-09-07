@@ -284,7 +284,11 @@ class TaskSessionTests(unittest.TestCase):
 
                 discovered = json.loads(
                     self.run_script(
-                        DISCOVER_TASKS, str(root), "--format", "json"
+                        DISCOVER_TASKS,
+                        str(root),
+                        "--format",
+                        "json",
+                        env=env,
                     ).stdout
                 )["tasks"][0]
                 self.assertEqual(discovered["runtime_host"], "local")
@@ -435,7 +439,11 @@ class TaskSessionTests(unittest.TestCase):
 
                 finished_discovery = json.loads(
                     self.run_script(
-                        DISCOVER_TASKS, str(root), "--format", "json"
+                        DISCOVER_TASKS,
+                        str(root),
+                        "--format",
+                        "json",
+                        env=env,
                     ).stdout
                 )["tasks"][0]
                 self.assertEqual(finished_discovery["status"], "done")

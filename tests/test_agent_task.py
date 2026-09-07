@@ -107,6 +107,8 @@ name = (
     else "generated-session"
 )
 print(json.dumps({
+    "catalog_registered": True,
+    "catalog_warning": "",
     "created": True,
     "session_name": name,
     "task_dir": task_dir,
@@ -317,6 +319,48 @@ class AgentTaskTests(unittest.TestCase):
             self.assertFalse(payload["session_started"])
             self.assertTrue((root / "kept-task" / "README.md").is_file())
             self.assertIn("session unavailable", payload["error"])
+
+    def test_public_cli_reports_partial_when_runtime_refresh_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            catalog, env = self.catalog_fixture(root)
+            session = root / "partial-session.py"
+            session.write_text(
+                "import json\n"
+                "print(json.dumps({\n"
+                "  'catalog_registered': False,\n"
+                "  'catalog_warning': 'catalog unavailable after session start',\n"
+                "  'created': True,\n"
+                "  'session_name': 'partial',\n"
+                "  'tss_host': 'local',\n"
+                "  'tss_target': 'local:partial',\n"
+                "}))\n",
+                encoding="utf-8",
+            )
+            result = self.run_script(
+                AGENT_TASK,
+                "init",
+                "--name",
+                "partial-task",
+                "--destination",
+                str(root),
+                "--tss-host",
+                "local",
+                "--catalog-cli",
+                str(catalog),
+                "--task-session-cli",
+                str(session),
+                "--format",
+                "json",
+                check=False,
+                env=env,
+            )
+            payload = json.loads(result.stdout)
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(payload["ok"])
+            self.assertTrue(payload["session_started"])
+            self.assertIn("catalog unavailable", payload["error"])
+            self.assertTrue((root / "partial-task" / "README.md").is_file())
 
     def test_public_cli_reconcile_is_explicit_then_lists(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

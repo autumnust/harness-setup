@@ -342,6 +342,7 @@ class WorkflowSpecTests(unittest.TestCase):
 
         del config["learner_profile_update_policy"]
         del config["task_runtime"]
+        del config["task_catalog"]
         render_agents.validate_runtime_config_document(config, "legacy test")
 
         config["learner_profile_update_policy"] = "sometimes"
@@ -355,6 +356,13 @@ class WorkflowSpecTests(unittest.TestCase):
         with self.assertRaisesRegex(render_agents.SpecError, "host_alias"):
             render_agents.validate_runtime_config_document(config, "test")
         config["task_runtime"] = {"tss": {"host_alias": None}}
+
+        config["task_catalog"] = {"scan_roots": ["~/Documents", "/srv/tasks"]}
+        render_agents.validate_runtime_config_document(config, "test")
+        config["task_catalog"] = {"scan_roots": ["~/Documents", "~/Documents"]}
+        with self.assertRaisesRegex(render_agents.SpecError, "unique non-empty strings"):
+            render_agents.validate_runtime_config_document(config, "test")
+        config["task_catalog"] = {"scan_roots": ["~/Documents"]}
 
         config["review_backends"][1]["foundation"] = ""
         with self.assertRaisesRegex(render_agents.SpecError, "non-empty string"):

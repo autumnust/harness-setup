@@ -13,7 +13,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from catalog_client import register_path
+from catalog_client import list_records, register_path
 
 
 NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -58,6 +58,28 @@ def workspace_identity(workspace_file: Path) -> tuple[str, str]:
     if not name:
         raise ValueError(f"workspace name is missing from {workspace_file}")
     return name, workspace_id
+
+
+def catalog_workspace_id(workspace: Path) -> str:
+    registered, warning = register_path(workspace)
+    if not registered:
+        raise ValueError(
+            "legacy workspace registration failed before task creation: " + warning
+        )
+    matching_ids = {
+        str(record.get("id") or record.get("workspace_id") or "")
+        for record in list_records("--kind", "workspace")
+        if str(record.get("path") or record.get("local_path") or "")
+        and Path(str(record.get("path") or record.get("local_path")))
+        .expanduser()
+        .resolve()
+        == workspace
+    } - {""}
+    if len(matching_ids) != 1:
+        raise ValueError(
+            "legacy workspace registration did not return one stable workspace id"
+        )
+    return matching_ids.pop()
 
 
 def load_runtime_config(path: Path | None) -> dict[str, Any]:
@@ -185,6 +207,8 @@ def initialize_task(
     if not workspace_file.is_file():
         raise ValueError(f"not an initialized agent workspace: {workspace}")
     title, workspace_id = workspace_identity(workspace_file)
+    if not workspace_id:
+        workspace_id = catalog_workspace_id(workspace)
     config = load_runtime_config(config_path)
     task_dir = resolve_execution_folder(
         task_name, config, execution_root, execution_folder

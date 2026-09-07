@@ -52,7 +52,7 @@ def validate_runtime_config_document(config: dict[str, Any], label: str) -> None
         "review_independence",
         "pr_maintenance",
     }
-    optional = {"learner_profile_update_policy", "task_runtime"}
+    optional = {"learner_profile_update_policy", "task_runtime", "task_catalog"}
     if not required <= set(config) or not set(config) <= required | optional:
         raise SpecError(f"{label}: runtime-config keys differ from the schema")
     if config.get("version") != 1 or not isinstance(config.get("configured"), bool):
@@ -73,6 +73,19 @@ def validate_runtime_config_document(config: dict[str, Any], label: str) -> None
         ):
             raise SpecError(
                 f"{label}: task_runtime.tss.host_alias must be a non-empty string or null"
+            )
+    task_catalog = config.get("task_catalog")
+    if task_catalog is not None:
+        if not isinstance(task_catalog, dict) or set(task_catalog) != {"scan_roots"}:
+            raise SpecError(f"{label}: task_catalog has an invalid shape")
+        scan_roots = task_catalog["scan_roots"]
+        if (
+            not isinstance(scan_roots, list)
+            or any(not isinstance(root, str) or not root for root in scan_roots)
+            or len(scan_roots) != len(set(scan_roots))
+        ):
+            raise SpecError(
+                f"{label}: task_catalog.scan_roots must contain unique non-empty strings"
             )
     update_policy = config.get("learner_profile_update_policy", "ask")
     if update_policy not in {"ask", "auto", "off"}:

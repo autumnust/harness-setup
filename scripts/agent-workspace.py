@@ -245,7 +245,10 @@ def build_parser() -> argparse.ArgumentParser:
 def render_text(payload: dict[str, Any]) -> str:
     operation = payload["operation"]
     if operation in {"init", "rehydrate"}:
-        return str(payload["workspace"])
+        lines = [str(payload["workspace"])]
+        if payload.get("outcome") == "partial":
+            lines.append(f"Catalog registration failed: {payload.get('catalog_warning', '')}")
+        return "\n".join(lines)
     if operation == "list-tasks":
         tasks = payload.get("tasks", [])
         if not tasks:
@@ -257,6 +260,11 @@ def render_text(payload: dict[str, Any]) -> str:
     lines = [f"Execution folder: {task['execution_folder']}"]
     if payload["session_started"]:
         lines.append(f"Connect: tss {payload['session']['tss_target']}")
+        if payload.get("outcome") == "partial":
+            lines.append(
+                "Catalog runtime refresh failed: "
+                + str(payload["session"].get("catalog_warning", ""))
+            )
     else:
         lines.append(f"Session start failed: {payload['session_error']}")
     return "\n".join(lines)

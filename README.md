@@ -31,8 +31,8 @@ Drop this onto a new device and run `install.sh` to restore the global setup.
 ## Filesystem agent tasks
 
 The installed `agent-task` skill creates portable workspaces for personal or
-professional tasks, starts a TSS-reachable tmux session, and discovers their
-current state directly from the filesystem. Ask an agent, for example:
+professional tasks, starts a TSS-reachable tmux session, and registers their
+local paths in a machine-local SQLite catalog. Ask an agent, for example:
 
 > Initialize an agent task for organizing my personal finances.
 
@@ -41,15 +41,22 @@ name with you, then hydrates a workspace containing raw inputs, stable context,
 decisions, task tracking, working artifacts, and final outputs. It starts tmux
 in that task folder and returns `tss <host>:<session>`. The tmux custom options
 make the task available to a TSS metadata reader without a separate
-registration request. There is no user-facing command to remember; the
-deterministic scripts are internal skill resources.
+registration request. The same deterministic operation is available directly:
+
+```bash
+~/.agent-harness/bin/agent-task init \
+  --name personal-finance \
+  --objective "Organize accounts and tax records" \
+  --destination "$HOME/Documents"
+```
 
 Each workspace keeps small discovery metadata in `README.md`, including a
-stable ID, status, and update date. Ask "show me all my agent tasks" to scan
-one or more filesystem roots and summarize them. The scanner can also emit
-versioned JSON with paths, statuses, objectives, current state, and immediate
-next tasks, providing a future task-board integration point without adding a
-database or cached index. The workspace files remain authoritative.
+stable ID, status, and update date. Ask "show me all my agent tasks," or run
+`~/.agent-harness/bin/agent-task list`, to query the local catalog with one
+fixed SQL statement. Use `~/.agent-harness/bin/agent-task reconcile <root>...`
+to backfill older folders or repair paths
+after a manual move. The workspace files and their Git history remain
+authoritative; SQLite stores only this machine's locations and cached metadata.
 
 For multi-repository development environments, the installed `agent-workspace`
 skill creates a versioned workspace root, clones the selected repositories,
@@ -59,8 +66,10 @@ execution folder under the configured execution root and start a tmux session
 that TSS can discover. The session opens in the workspace root. Generated output
 goes to the task's execution folder unless the user asks otherwise. Durable
 material enters `context/` only when the user explicitly requests it. Ask
-`list-tasks` to find task records associated with the workspace without
-requiring tmux, including folders created at an explicitly overridden location.
+`list-tasks`, or run
+`~/.agent-harness/bin/agent-workspace list-tasks --workspace <path>`, to query
+task records associated with the workspace without requiring tmux, including
+folders created at an explicitly overridden location.
 Repository worktrees remain a later per-repository operation. The richer
 long-running-work structure is created only when the coordinator selects that
 workflow. Its committed source is

@@ -182,6 +182,26 @@ def init_task(arguments: argparse.Namespace) -> int:
         )
         return 3
 
+    if session_result.get("catalog_registered") is not True:
+        error = str(session_result.get("catalog_warning", "")) or (
+            "task session started but catalog runtime refresh failed"
+        )
+        emit(
+            {
+                "schema_version": 1,
+                "operation": "agent-task-init",
+                "ok": False,
+                "path": path,
+                "catalog_registered": False,
+                "session_started": True,
+                "session_name": str(session_result.get("session_name", "")),
+                "tss_target": str(session_result.get("tss_target", "")),
+                "error": error,
+            },
+            arguments.format,
+        )
+        return 2
+
     payload = {
         "schema_version": 1,
         "operation": "agent-task-init",
