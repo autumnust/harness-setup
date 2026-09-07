@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -135,6 +136,38 @@ def render_markdown(tasks: list[dict[str, str]], missing_paths: list[str]) -> st
     return output
 
 
+def render_human(
+    workspace: Path,
+    tasks: list[dict[str, str]],
+    missing_paths: list[str],
+) -> str:
+    if not tasks:
+        return f"No tasks found for {workspace}."
+    lines = [f"Workspace tasks: {len(tasks)}", f"Workspace: {workspace}"]
+    for task in tasks:
+        missing = " [missing]" if task["present"] == "0" else ""
+        status = " ".join(task["status"].split()) or "unknown"
+        lines.extend(("", f"[{status}] {' '.join(task['task_name'].split())}{missing}"))
+        details = []
+        if task["last_used_at"]:
+            details.append(f"last used {task['last_used_at']}")
+        if task["tss_target"]:
+            details.append(f"session tss {task['tss_target']}")
+        if details:
+            lines.append(
+                textwrap.fill(
+                    " | ".join(details),
+                    width=100,
+                    initial_indent="  ",
+                    subsequent_indent="  ",
+                )
+            )
+        lines.append(f"  Path: {task['path']}")
+    if missing_paths:
+        lines.extend(("", f"Missing folders: {len(missing_paths)}"))
+    return "\n".join(lines)
+
+
 def render_json(
     workspace: Path,
     tasks: list[dict[str, str]],
@@ -164,7 +197,17 @@ def main() -> int:
         choices=tuple(STATUS_ORDER),
         help="include only this task status; repeat to include several",
     )
-    parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    formats = parser.add_mutually_exclusive_group()
+    formats.add_argument("--format", choices=("markdown", "json", "human"))
+    formats.add_argument(
+        "-H",
+        "--human",
+        dest="format",
+        action="store_const",
+        const="human",
+        help="show compact records for terminal reading",
+    )
+    parser.set_defaults(format="markdown")
     arguments = parser.parse_args()
     try:
         workspace = arguments.workspace.expanduser().resolve()
@@ -176,6 +219,8 @@ def main() -> int:
 
     if arguments.format == "json":
         print(render_json(workspace, tasks, missing_paths))
+    elif arguments.format == "human":
+        print(render_human(workspace, tasks, missing_paths))
     else:
         print(render_markdown(tasks, missing_paths))
     return 0

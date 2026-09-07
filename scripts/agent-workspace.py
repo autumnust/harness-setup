@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -190,7 +191,17 @@ def run_start_task(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any]
 
 
 def add_format(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--format", choices=("text", "json"), default="text")
+    formats = parser.add_mutually_exclusive_group()
+    formats.add_argument("--format", choices=("text", "json", "human"))
+    formats.add_argument(
+        "-H",
+        "--human",
+        dest="format",
+        action="store_const",
+        const="human",
+        help="show compact output for terminal reading",
+    )
+    parser.set_defaults(format="text")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -270,6 +281,39 @@ def render_text(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_human(payload: dict[str, Any]) -> str:
+    if payload["operation"] != "list-tasks":
+        return render_text(payload)
+    tasks = payload.get("tasks", [])
+    workspace = str(payload.get("workspace", ""))
+    if not tasks:
+        return f"No tasks found for {workspace}." if workspace else "No workspace tasks found."
+    lines = [f"Workspace tasks: {len(tasks)}"]
+    if workspace:
+        lines.append(f"Workspace: {workspace}")
+    for task in tasks:
+        status = " ".join(str(task.get("status", "unknown")).split()) or "unknown"
+        name = " ".join(str(task.get("task_name", "")).split())
+        missing = " [missing]" if str(task.get("present", "1")) == "0" else ""
+        lines.extend(("", f"[{status}] {name}{missing}"))
+        details = []
+        if task.get("last_used_at"):
+            details.append(f"last used {task['last_used_at']}")
+        if task.get("tss_target"):
+            details.append(f"session tss {task['tss_target']}")
+        if details:
+            lines.append(
+                textwrap.fill(
+                    " | ".join(details),
+                    width=100,
+                    initial_indent="  ",
+                    subsequent_indent="  ",
+                )
+            )
+        lines.append(f"  Path: {task.get('path', '')}")
+    return "\n".join(lines)
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -291,6 +335,8 @@ def main() -> int:
         return 1
     if args.format == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))
+    elif args.format == "human":
+        print(render_human(payload))
     else:
         print(render_text(payload))
     return status

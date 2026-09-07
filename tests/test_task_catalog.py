@@ -179,6 +179,13 @@ class TaskCatalogTests(unittest.TestCase):
                 },
             )
 
+            human = self.run_catalog(database, "list", "-H").stdout
+            self.assertIn("Catalog: 1 workspaces, 2 tasks", human)
+            self.assertIn("[active] latency", human)
+            self.assertIn("Kind: workspace task | Workspace: serving-workspace", human)
+            self.assertIn("Session: tss gpu-box:serving-run", human)
+            self.assertIn(f"Path: {task.resolve()}", human)
+
     def test_same_task_id_can_have_multiple_locations_and_filters_run_in_python(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

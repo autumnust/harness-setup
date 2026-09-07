@@ -91,7 +91,9 @@ Normal discovery always invokes the catalog's fixed agent-task list operation.
 Use `--format json` when another tool or board will consume the result. The JSON
 contains `schema_version`, catalog source, optional path filters, generation
 time, and task records with identity, status, summaries, absolute paths, and
-any recorded tmux/TSS association.
+any recorded tmux/TSS association. Use `-H` or `--human` when a person will read
+the terminal output; this prints one wrapped record at a time instead of a wide
+Markdown table.
 
 Manual clones, moves outside the skill, and older task folders may not yet be
 registered. Repair registration explicitly by scanning only chosen roots:

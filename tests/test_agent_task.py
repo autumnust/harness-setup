@@ -234,6 +234,30 @@ class AgentTaskTests(unittest.TestCase):
                 ["list", "--format", "json", "--kind", "agent-task"],
             )
 
+            human = self.run_script(
+                DISCOVER,
+                str(root),
+                "--catalog-cli",
+                str(catalog),
+                "-H",
+                env=env,
+            ).stdout
+            self.assertIn("General tasks: 2", human)
+            self.assertIn("[blocked] taxes", human)
+            self.assertIn("Next:", human)
+
+            public_human = self.run_script(
+                AGENT_TASK,
+                "list",
+                str(root),
+                "--catalog-cli",
+                str(catalog),
+                "--human",
+                env=env,
+            ).stdout
+            self.assertIn("General tasks: 2", public_human)
+            self.assertIn(f"Path: {(root / 'taxes').resolve()}", public_human)
+
     def test_missing_catalog_keeps_created_folder_and_discovery_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

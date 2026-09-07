@@ -52,7 +52,8 @@ agent-task init \
 
 Each workspace keeps small discovery metadata in `README.md`, including a
 stable ID, status, and update date. Ask "show me all my agent tasks," or run
-`agent-task list`, to query the local catalog with one fixed SQL statement.
+`agent-task list -H`, to query the local catalog with one fixed SQL statement
+and print wrapped terminal output.
 Use `agent-task reconcile <root>...` to backfill older folders or repair paths
 after a manual move. The workspace files and their Git history remain
 authoritative; SQLite stores only this machine's locations and cached metadata.
@@ -66,7 +67,7 @@ that TSS can discover. The session opens in the workspace root. Generated output
 goes to the task's execution folder unless the user asks otherwise. Durable
 material enters `context/` only when the user explicitly requests it. Ask
 `list-tasks`, or run
-`agent-workspace list-tasks --workspace <path>`, to query
+`agent-workspace list-tasks --workspace <path> -H`, to query
 task records associated with the workspace without requiring tmux, including
 folders created at an explicitly overridden location.
 Repository worktrees remain a later per-repository operation. The richer
@@ -192,7 +193,7 @@ or rebuild local registrations from explicit roots with:
 ```bash
 task-catalog register --path /path/to/task
 task-catalog reconcile ~/Documents --format json
-task-catalog list --format json
+task-catalog list -H
 ```
 
 The installer uses `~/bin` for these command links, matching the existing TSS
@@ -200,7 +201,8 @@ installation. Add `~/bin` to `PATH` on a host that does not already include it.
 
 Catalog listing always executes one fixed, parameter-free SQL query. Kind and
 workspace filters, along with display ordering, are applied by the command
-after reading the rows.
+after reading the rows. `-H` and `--human` select wrapped terminal output;
+`--format json` remains the stable format for agents and scripts.
 
 ## Portable agent workflow
 

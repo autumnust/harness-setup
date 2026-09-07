@@ -664,6 +664,43 @@ def render_markdown(records: Sequence[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def clean_text(value: Any) -> str:
+    return " ".join(str(value or "").split())
+
+
+def render_human(records: Sequence[dict[str, Any]]) -> str:
+    if not records:
+        return "No registered agent tasks or workspaces found."
+    workspaces = [record for record in records if record["record_type"] == "workspace"]
+    tasks = [record for record in records if record["record_type"] == "task"]
+    lines = [f"Catalog: {len(workspaces)} workspaces, {len(tasks)} tasks"]
+
+    if workspaces:
+        lines.extend(("", "Workspaces"))
+        for record in workspaces:
+            missing = " [missing]" if not record["present"] else ""
+            lines.append(f"  {clean_text(record['name'])}{missing}")
+            lines.append(f"    Path: {record['path']}")
+
+    if tasks:
+        lines.extend(("", "Tasks"))
+        for record in tasks:
+            status = clean_text(record["status"]) or "unknown"
+            missing = " [missing]" if not record["present"] else ""
+            lines.append(f"  [{status}] {clean_text(record['name'])}{missing}")
+            kind = "general task" if record["kind"] == "agent-task" else "workspace task"
+            detail = f"    Kind: {kind}"
+            if record["workspace_name"]:
+                detail += f" | Workspace: {clean_text(record['workspace_name'])}"
+            if record["updated"]:
+                detail += f" | Updated: {clean_text(record['updated'])}"
+            lines.append(detail)
+            if record["tss_target"]:
+                lines.append(f"    Session: tss {record['tss_target']}")
+            lines.append(f"    Path: {record['path']}")
+    return "\n".join(lines)
+
+
 def json_payload(
     database: Path,
     records: Sequence[dict[str, Any]],
@@ -759,8 +796,22 @@ def reconcile(connection: sqlite3.Connection, raw_roots: Sequence[Path]) -> tupl
     return roots, count
 
 
+def add_output_format(parser: argparse.ArgumentParser, default: str) -> None:
+    formats = parser.add_mutually_exclusive_group()
+    formats.add_argument("--format", choices=("json", "markdown", "human"))
+    formats.add_argument(
+        "-H",
+        "--human",
+        dest="format",
+        action="store_const",
+        const="human",
+        help="show compact records for terminal reading",
+    )
+    parser.set_defaults(format=default)
+
+
 def add_listing_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--format", choices=("json", "markdown"), default="markdown")
+    add_output_format(parser, "markdown")
     parser.add_argument(
         "--kind",
         choices=("workspace", "task", "agent-workspace", "agent-task", "workspace-task"),
@@ -775,7 +826,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     register = commands.add_parser("register", help="register one local folder")
     register.add_argument("--path", required=True, type=Path)
-    register.add_argument("--format", choices=("json", "markdown"), default="json")
+    add_output_format(register, "json")
 
     listing = commands.add_parser("list", help="list registered local folders")
     add_listing_arguments(listing)
@@ -786,7 +837,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     repair = commands.add_parser("reconcile", help="scan explicit roots and refresh the catalog")
     repair.add_argument("roots", nargs="+", type=Path)
-    repair.add_argument("--format", choices=("json", "markdown"), default="markdown")
+    add_output_format(repair, "markdown")
     return parser
 
 
@@ -809,6 +860,8 @@ def main() -> int:
                 )
         if args.format == "json":
             print(json_payload(args.db, records, command=args.command, roots=roots))
+        elif args.format == "human":
+            print(render_human(records))
         else:
             print(render_markdown(records))
         return 0

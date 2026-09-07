@@ -237,6 +237,25 @@ def run_discovery(arguments: argparse.Namespace, *, do_reconcile: bool) -> int:
         return 1
 
 
+def add_output_format(
+    parser: argparse.ArgumentParser,
+    *,
+    choices: tuple[str, ...],
+    default: str,
+) -> None:
+    formats = parser.add_mutually_exclusive_group()
+    formats.add_argument("--format", choices=choices)
+    formats.add_argument(
+        "-H",
+        "--human",
+        dest="format",
+        action="store_const",
+        const="human",
+        help="show compact output for terminal reading",
+    )
+    parser.set_defaults(format=default)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -249,7 +268,11 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--session-name")
     init_parser.add_argument("--config", type=Path)
     init_parser.add_argument("--catalog-cli", type=Path)
-    init_parser.add_argument("--format", choices=("text", "json"), default="text")
+    add_output_format(
+        init_parser,
+        choices=("text", "json", "human"),
+        default="text",
+    )
     init_parser.add_argument("--task-session-cli", type=Path, help=argparse.SUPPRESS)
     init_parser.add_argument("--tmux-socket", help=argparse.SUPPRESS)
     init_parser.set_defaults(handler=init_task)
@@ -257,7 +280,11 @@ def build_parser() -> argparse.ArgumentParser:
     list_parser = subparsers.add_parser("list", help="list registered tasks")
     list_parser.add_argument("roots", nargs="*", type=Path)
     list_parser.add_argument("--catalog-cli", type=Path)
-    list_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    add_output_format(
+        list_parser,
+        choices=("markdown", "json", "human"),
+        default="markdown",
+    )
     list_parser.set_defaults(handler=lambda args: run_discovery(args, do_reconcile=False))
 
     reconcile_parser = subparsers.add_parser(
@@ -265,8 +292,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     reconcile_parser.add_argument("roots", nargs="+", type=Path)
     reconcile_parser.add_argument("--catalog-cli", type=Path)
-    reconcile_parser.add_argument(
-        "--format", choices=("markdown", "json"), default="markdown"
+    add_output_format(
+        reconcile_parser,
+        choices=("markdown", "json", "human"),
+        default="markdown",
     )
     reconcile_parser.set_defaults(
         handler=lambda args: run_discovery(args, do_reconcile=True)

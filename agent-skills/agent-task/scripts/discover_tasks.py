@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -147,6 +148,33 @@ def render_markdown(tasks: list[dict[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def render_human(tasks: list[dict[str, str]]) -> str:
+    if not tasks:
+        return "No general tasks found."
+    lines = [f"General tasks: {len(tasks)}"]
+    for task in tasks:
+        status = " ".join(task["status"].split()) or "unknown"
+        lines.extend(("", f"[{status}] {' '.join(task['title'].split())}"))
+        details = []
+        if task["updated"]:
+            details.append(f"updated {task['updated']}")
+        if task["tss_target"]:
+            details.append(f"session tss {task['tss_target']}")
+        if details:
+            lines.append("  " + " | ".join(details))
+        lines.append(f"  Path: {task['path']}")
+        if task["next_task"]:
+            lines.append(
+                textwrap.fill(
+                    " ".join(task["next_task"].split()),
+                    width=100,
+                    initial_indent="  Next: ",
+                    subsequent_indent="        ",
+                )
+            )
+    return "\n".join(lines)
+
+
 def render_json(roots: list[Path], tasks: list[dict[str, str]]) -> str:
     payload: dict[str, Any] = {
         "schema_version": 2,
@@ -166,7 +194,17 @@ def main() -> int:
         type=Path,
         help="optional local path filters; no filesystem scan is performed",
     )
-    parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    formats = parser.add_mutually_exclusive_group()
+    formats.add_argument("--format", choices=("markdown", "json", "human"))
+    formats.add_argument(
+        "-H",
+        "--human",
+        dest="format",
+        action="store_const",
+        const="human",
+        help="show compact records for terminal reading",
+    )
+    parser.set_defaults(format="markdown")
     parser.add_argument(
         "--catalog-cli",
         type=Path,
@@ -185,7 +223,12 @@ def main() -> int:
     except CatalogError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    print(render_json(args.roots, tasks) if args.format == "json" else render_markdown(tasks))
+    if args.format == "json":
+        print(render_json(args.roots, tasks))
+    elif args.format == "human":
+        print(render_human(tasks))
+    else:
+        print(render_markdown(tasks))
     return 0
 
 

@@ -383,6 +383,28 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 {alternate_task.resolve(), task.resolve()},
             )
 
+            human = self.run_script(
+                LIST_TASKS,
+                "--workspace",
+                str(workspace),
+                "-H",
+                env=env,
+            ).stdout
+            self.assertIn("Workspace tasks: 2", human)
+            self.assertIn("[active] model-serving", human)
+            self.assertIn(f"Path: {task.resolve()}", human)
+
+            public_human = self.run_script(
+                AGENT_WORKSPACE_CLI,
+                "list-tasks",
+                "--workspace",
+                str(workspace),
+                "--human",
+                env=env,
+            ).stdout
+            self.assertIn("Workspace tasks: 2", public_human)
+            self.assertIn("[active] custom-location", public_human)
+
             portable_workspace = root / "portable-workspace"
             portable_workspace.mkdir()
             shutil.copy2(

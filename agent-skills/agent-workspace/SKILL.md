@@ -117,11 +117,13 @@ Run the installed CLI:
 
 ```bash
 "${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" list-tasks \
-  --workspace "/path/to/workspace"
+  --workspace "/path/to/workspace" \
+  -H
 ```
 
 When the user asks for active tasks, pass `--status active`. Repeat `--status`
-to include several requested states.
+to include several requested states. Use `--format json` for agent or script
+consumption. Use `-H` or `--human` for wrapped terminal output.
 
 The CLI queries the machine-local SQLite catalog and filters the returned rows
 by the workspace's stable ID. It does not scan the execution root. Results are
