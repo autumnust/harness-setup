@@ -379,9 +379,12 @@ configuration only as directed by the selected workflow.
   communication conventions, `progress.html`, or accepted retrospective
   changes. Children return evidence-backed state proposals and never interact
   with the human user directly.
-- For reviewers' comments only: Do not post, reply, or resolve on GitHub;
-  draft the text and hand it to the human user to post. Any role should modify
-  a PR without prompting the human user.
+- Agents may create or update pull requests, push their branches, and change
+  pull-request metadata when those actions are within the requested work. Do
+  not ask the human user to perform these routine pull-request operations.
+- Agents do not submit pull-request reviews, post review comments, reply to
+  reviewers, or resolve review threads. Draft that text and hand it to the
+  human user to post.
 
 The provider-neutral Markdown and topology are authoritative. Native Claude
 and Codex agent files are generated during harness installation.

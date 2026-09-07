@@ -217,6 +217,17 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn("A requested PR is full work.", handoff)
         self.assertIn("Full-mode only.", maintenance)
 
+    def test_agents_may_create_prs_but_not_join_review_conversations(self) -> None:
+        contract = (self.source / "contracts/canonical-state.md").read_text()
+        global_prompt = (REPO_ROOT / "home/AGENTS.md").read_text()
+
+        for text in (contract, global_prompt):
+            normalized = " ".join(text.split())
+            self.assertIn("create or update pull requests", normalized)
+            self.assertIn("review comments", normalized)
+            self.assertIn("reply to reviewers", normalized)
+            self.assertIn("resolve review threads", normalized)
+
     def test_coordinator_owns_human_readable_html_contract(self) -> None:
         manifest, _adapters = render_agents.validate(self.source)
         coordinator = self.role(manifest, "coordinator")
