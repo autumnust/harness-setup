@@ -172,8 +172,24 @@ Pick one of:
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |
 | coordinator model and workflow depth | Codex Terra or Claude Code Sonnet plus medium effort; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
+| deterministic task commands | `~/.agent-harness/bin/agent-task`, `~/.agent-harness/bin/agent-workspace`, and `~/.agent-harness/bin/task-catalog` |
 | versioned harness releases | `~/.agent-harness/releases/<release-id>/` with `~/.agent-harness/current` selecting the active release |
+| machine-local task catalog | `~/.agent-harness/state/task-catalog/catalog.sqlite3` (initialized on first catalog command and never overwritten) |
 | mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates or rollback) |
+
+The catalog stores where this machine has each task or workspace. The folder's
+own files and Git history remain the source for task state. Register one folder
+or rebuild local registrations from explicit roots with:
+
+```bash
+~/.agent-harness/bin/task-catalog register --path /path/to/task
+~/.agent-harness/bin/task-catalog reconcile ~/Documents --format json
+~/.agent-harness/bin/task-catalog list --format json
+```
+
+Catalog listing always executes one fixed, parameter-free SQL query. Kind and
+workspace filters, along with display ordering, are applied by the command
+after reading the rows.
 
 ## Portable agent workflow
 

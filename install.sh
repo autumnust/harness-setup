@@ -275,6 +275,9 @@ record_conflict "$CLAUDE_DIR/CLAUDE.md"
 record_conflict "$CLAUDE_DIR/settings.json"
 record_conflict "$AGENT_HARNESS_HOME/specs"
 record_conflict "$AGENT_HARNESS_HOME/bin/harness-release"
+record_conflict "$AGENT_HARNESS_HOME/bin/task-catalog"
+record_conflict "$AGENT_HARNESS_HOME/bin/agent-task"
+record_conflict "$AGENT_HARNESS_HOME/bin/agent-workspace"
 if (( WITH_TSS )); then
   record_conflict "$AGENT_HARNESS_HOME/dependencies/tss"
   record_conflict "$HOME/bin/tss"
@@ -511,6 +514,15 @@ mkdir -p "$AGENT_HARNESS_HOME/bin"
 place_file \
   "$REPO_ROOT/scripts/harness-release.py" \
   "$AGENT_HARNESS_HOME/bin/harness-release"
+place_file \
+  "$REPO_ROOT/scripts/task-catalog.py" \
+  "$AGENT_HARNESS_HOME/bin/task-catalog"
+place_file \
+  "$REPO_ROOT/scripts/agent-task.py" \
+  "$AGENT_HARNESS_HOME/bin/agent-task"
+place_file \
+  "$REPO_ROOT/scripts/agent-workspace.py" \
+  "$AGENT_HARNESS_HOME/bin/agent-workspace"
 
 # Runtime configuration is mutable, confirmed by the coordinator, and never
 # managed by place_file after initialization.
@@ -548,6 +560,7 @@ fi
 # Mutable learner state is initialized once and never managed by place_tree.
 # Migrate the old Claude-only profile directory by copying, without deleting it.
 mkdir -p "$AGENT_HARNESS_HOME/state"
+mkdir -p "$AGENT_HARNESS_HOME/state/task-catalog"
 # Remove the retired session-state directory only when no historical records
 # remain. Mutable records are never deleted by installation.
 rmdir "$AGENT_HARNESS_HOME/state/education-sessions" 2>/dev/null || true
@@ -664,7 +677,11 @@ printf '\n%s\n' \
   "  $AGENT_HARNESS_HOME/specs" \
   "  $AGENT_HARNESS_HOME/releases/* and current" \
   "  $AGENT_HARNESS_HOME/bin/harness-release" \
+  "  $AGENT_HARNESS_HOME/bin/task-catalog" \
+  "  $AGENT_HARNESS_HOME/bin/agent-task" \
+  "  $AGENT_HARNESS_HOME/bin/agent-workspace" \
   "  $AGENT_HARNESS_HOME/config.json  (initialized once, never overwritten)" \
+  "  $AGENT_HARNESS_HOME/state/task-catalog  (initialized, never overwritten)" \
   "  $AGENT_HARNESS_HOME/state/learner-profiles  (initialized, never overwritten)"
 if (( WITH_TSS )); then
   printf '%s\n' \
