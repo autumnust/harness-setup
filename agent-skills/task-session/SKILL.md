@@ -5,97 +5,67 @@ description: Start or reuse tmux for an existing task, expose its TSS target, an
 
 # Task Session
 
-Attach runtime state to a task folder without creating another task record.
-The task folder remains authoritative; the machine-local catalog records its
-local path, while tmux stores only enough identifying metadata for runtime
-inspection. TSS discovers the resulting tmux session from tmux metadata.
+The task folder is authoritative. The catalog records local paths and session
+data; tmux stores runtime metadata for TSS.
 
-## Start a session
+## Resolve the task
 
-1. Resolve the existing task directory from the machine-local catalog. For an
-   `agent-task`, use its task folder. For an `agent-workspace` task, use its
-   execution folder and resolve the current host's workspace root. Do not
-   require tmux metadata to find the task.
-2. Resolve the TSS host label from the request or from
-   `$AGENT_HARNESS_HOME/config.json` at `task_runtime.tss.host_alias`, defaulting
-   `AGENT_HARNESS_HOME` to `~/.agent-harness`. Ask for the label when neither
-   source provides it. The coordinator may offer to save the confirmed label as
-   this machine's default.
-3. Resolve the session name, defaulting to a filesystem-safe form of the task
-   name. If another task already uses that session name, ask for another name.
-4. Run the bundled helper:
+Use the installed commands in `${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin`:
+`task-catalog list --format json`, `agent-task list --format json`, or
+`agent-workspace list-tasks --workspace <path> --format json`. Do not scan
+directories or require a live tmux session. Ask when several local locations
+match one task.
 
-   ```bash
-   python3 <skill-dir>/scripts/start_task_session.py \
-     --task-dir "/path/to/task" \
-     --workspace "/path/to/workspace" \
-     --tss-host "<host-label>" \
-     --session-name "<session-name>"
-   ```
+## Start or restore a session
 
-Omit `--workspace` for an `agent-task`. For a workspace task, the helper can
-resolve a sole registered local workspace location by stable workspace ID; pass
-`--workspace` when this host has more than one clone. The helper starts workspace
-tasks in the workspace root and general tasks in their task folder. It adds
-runtime references as tmux custom options, records the host and session in the
-task README, refreshes the catalog after that durable write, and prints
-`tss <host>:<session>`. Repeating the command is safe when that session already
-belongs to the same task.
+Resolve the existing task folder, optional workspace path, TSS host, and session
+name, then run:
 
-Do not edit TSS configuration, create repository worktrees, or create a second
-task directory. Tack reporting is not implemented yet.
+```bash
+python3 <skill-dir>/scripts/start_task_session.py \
+  --task-dir "/path/to/task" \
+  --workspace "/path/to/workspace" \
+  --tss-host "<host>" \
+  --session-name "<session>" \
+  --format json
+```
 
-## Change lifecycle state
+Omit `--workspace` for a general task. Omit it for a workspace task only when
+the catalog has one matching local workspace. The helper uses the configured
+TSS host when available, starts in the correct folder, updates the task record
+and catalog, and returns `tss <host>:<session>`. Repeating it is safe only when
+the session already belongs to the same task.
 
-Use this workflow only after explicit human intent to pause, wait, block,
-resume, finish, or cancel a task. Do not infer state from a missing session or
-from the user ending a conversation.
+## Change state
 
-For `active`, `paused`, `waiting`, or `blocked`, collect a short current-state
-summary and one concrete next step or resume trigger, then run:
+Run this only after an explicit request. For `active`, `paused`, `waiting`, or
+`blocked`, collect a current-state summary and next step:
 
 ```bash
 python3 <skill-dir>/scripts/set_task_state.py \
   --task-dir "/path/to/task" \
   --status waiting \
-  --summary "Waiting for benchmark capacity." \
-  --next-step "Resume when the GPU reservation is available."
+  --summary "<current-state>" \
+  --next-step "<next-step-or-resume-trigger>" \
+  --format json
 ```
 
-Use `active` for an explicit resume. The helper atomically updates the task
-file, removes a prior completion timestamp when resuming, mirrors the new state
-plus change time into the recorded tmux session when it exists, and refreshes
-the catalog. A catalog refresh failure is reported without undoing the task
-file or tmux update.
+Use `active` for an explicit resume. For `done` or `cancelled`, collect the
+outcome. When the full workflow was used, close its coordinator-owned execution
+records before running:
 
-For `done` or `cancelled`, use the finish workflow below. These terminal states
-write `@agent_task_finished_at`; that field is the cleanup marker required by
-`tss prune --finished`.
+```bash
+python3 <skill-dir>/scripts/finish_task.py \
+  --task-dir "/path/to/task" \
+  --outcome "<outcome>" \
+  --format json
+```
 
-## Finish a task
+Add `--status cancelled` only for intentionally abandoned work. The helpers
+write the task file before tmux and catalog state. A missing session or catalog
+refresh failure is a warning and does not undo that file update.
 
-Use this workflow when the user says `finish-task [<task-name>]` or asks to mark
-the current task complete.
-
-1. Resolve the task folder from the current directory, the explicit task name,
-   or the workspace task discovery flow. Summarize the completed outcome. For
-   full work, close the coordinator-owned execution records first.
-2. Run the bundled compatibility helper:
-
-   ```bash
-   python3 <skill-dir>/scripts/finish_task.py \
-     --task-dir "/path/to/task" \
-     --outcome "<completed outcome>"
-   ```
-
-   Use `--status cancelled` only when the user intentionally closes incomplete
-   work. The helper updates the task README before marking the tmux session with
-   `@agent_task_status` and `@agent_task_finished_at`.
-3. Leave the session running. Report whether its cleanup marker was written and
-   explain that `tss prune --finished` can remove it after detachment. If the
-   session is already missing, the completed filesystem state still succeeds;
-   report the cleanup warning without reverting completion. A catalog refresh
-   failure is also a warning and does not revert completion.
-
-Do not infer completion from a missing session. A stopped tmux process may mean
-a reboot, failure, or manual cleanup rather than a completed task.
+Leave a finished session running for inspection. `tss prune --finished` may
+remove it after detachment. Never infer a lifecycle change from a disconnect,
+reboot, or missing session. Do not edit TSS configuration or create task
+folders or repository worktrees from this skill.
