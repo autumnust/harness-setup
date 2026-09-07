@@ -21,11 +21,7 @@ from start_task_session import (
     yaml_scalar,
 )
 
-WORKSPACE_SCRIPTS = Path(__file__).resolve().parents[2] / "agent-workspace" / "scripts"
-if str(WORKSPACE_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(WORKSPACE_SCRIPTS))
-
-from task_history import record_task_use
+from catalog_client import register_path
 
 
 ACTIVE_STATUSES = {"active", "paused", "waiting", "blocked"}
@@ -213,20 +209,6 @@ def set_task_state(
         updated = replace_markdown_section(updated, "Immediate next task", next_step or "")
     write_task_record(readme, updated)
 
-    if metadata.get("workspace_task") == "1" and metadata.get("workspace_path"):
-        history_host = metadata.get("runtime_host") or os.uname().nodename
-        session_name = metadata.get("tmux_session", "")
-        record_task_use(
-            Path(metadata["workspace_path"]),
-            host=history_host,
-            task_id=task_id,
-            task_name=metadata.get("task_name", task_dir.name),
-            status=status,
-            execution_folder=task_dir,
-            tss_target=f"{history_host}:{session_name}" if session_name else "",
-            used_at=changed_at,
-        )
-
     session_name = metadata.get("tmux_session", "")
     session_marked = False
     session_warning = ""
@@ -237,7 +219,11 @@ def set_task_state(
     else:
         session_warning = "task has no recorded tmux session"
 
+    catalog_registered, catalog_warning = register_path(task_dir)
+
     return {
+        "catalog_registered": catalog_registered,
+        "catalog_warning": catalog_warning,
         "changed_at": changed_at,
         "completed": changed_at if status in TERMINAL_STATUSES else "",
         "next_step": next_step or "",
@@ -282,6 +268,8 @@ def main() -> int:
             print(f"Session state updated: {result['session_name']}")
         else:
             print(f"Session state not updated: {result['session_warning']}")
+    if result["catalog_warning"]:
+        print(f"warning: {result['catalog_warning']}", file=sys.stderr)
     return 0
 
 

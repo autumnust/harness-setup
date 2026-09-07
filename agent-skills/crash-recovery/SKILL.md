@@ -12,25 +12,19 @@ recorded session is currently available.
 
 ## Report task records
 
-Run the bundled report without `--validate-tss` first. It reads the configured
-execution root from `$AGENT_HARNESS_HOME/config.json`, defaulting
+Run the bundled report without `--validate-tss` first. It queries the
+machine-local catalog at `$AGENT_HARNESS_HOME/state/task-catalog`, defaulting
 `AGENT_HARNESS_HOME` to `~/.agent-harness`:
 
 ```bash
 python3 <skill-dir>/scripts/recover_task_sessions.py
 ```
 
-The report lists each task's status, execution folder, workspace folder when
-one is recorded, and its saved `host:session` TSS target. It does not create,
-resume, attach to, rename, or remove any session.
-
-For an execution root that is not configured on this machine, pass it
-explicitly:
-
-```bash
-python3 <skill-dir>/scripts/recover_task_sessions.py \
-  --execution-root "/absolute/path/to/execution-notes"
-```
+The report lists each registered task's status, execution folder, sole matching
+local workspace folder when available, and saved `host:session` TSS target. It
+does not scan an execution root or create, resume, attach to, rename, or remove
+any session. Use `task-catalog reconcile <roots...>` first when manual copies or
+moves may not yet be registered.
 
 ## Verify recorded TSS sessions
 

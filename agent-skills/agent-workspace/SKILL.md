@@ -24,12 +24,12 @@ its primary branch.
 2. Summarize the proposed destination and repository list before cloning when
    the user has not already authorized creation. The workspace path may already
    exist when it is an empty directory; reject a path that contains files.
-3. Run the bundled initializer. A repository specification has the form
+3. Run the installed CLI. A repository specification has the form
    `name|url|branch|role`; omit the last two fields to detect the default
    branch and use `active`.
 
    ```bash
-   python3 <skill-dir>/scripts/hydrate_workspace.py \
+   "${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" init \
      --name "structured-data-models" \
      --destination "/path/to/parent" \
      --repo "sdm-benchmark|ssh://git@example.com/team/sdm-benchmark.git|main|active" \
@@ -60,8 +60,8 @@ repository definitions. Existing repository folders must be Git checkouts whose
 these checks before cloning missing repositories:
 
 ```bash
-python3 <skill-dir>/scripts/hydrate_workspace.py \
-  --rehydrate-from "/path/to/source/workspace.yaml" \
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" rehydrate \
+  --manifest "/path/to/source/workspace.yaml" \
   --destination "/exact/path/on/this/host"
 ```
 
@@ -84,64 +84,55 @@ does not create repository worktrees or the full long-running-work structure.
    When `execution_root` or the host label is missing, offer to save the
    confirmed value as this machine's default; only the coordinator writes the
    mutable runtime configuration.
-4. Run the bundled task initializer:
+4. Run the installed CLI. This command creates the durable task record,
+   registers its local path, and starts or reuses its tmux session:
 
    ```bash
-python3 <skill-dir>/scripts/start_workspace_task.py \
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" start-task \
   --workspace "/path/to/workspace" \
   --name "<task-name>" \
   --objective "<objective>" \
-  --host "<tss-host-label>"
+  --tss-host "<tss-host-label>"
    ```
 
    Pass `--execution-folder "/other/path"` when the user overrides the default.
-   The initializer creates the execution folder with a metadata-bearing
-   `README.md`. It records the path in machine-local Git metadata so task
-   discovery can retain an execution-folder override without committing an
-   absolute path to the workspace repository.
-5. Use the installed `task-session` skill with the new execution folder, current
-   workspace path, resolved TSS host label, and session name. The tmux working
-   directory is the workspace root; `@agent_task_path` still points to the
+   The task `README.md` contains the portable task and workspace IDs, but no
+   machine path. The host-local catalog records both local folders. The tmux
+   working directory is the workspace root; `@agent_task_path` points to the
    external execution folder. Return the execution-folder path and the printed
    `tss <host>:<session>` command.
-6. When the coordinator selects the full workflow, create its canonical
+5. When the coordinator selects the full workflow, create its canonical
    execution entry points and then invoke the execution-environment preparation
    flow. Fast tasks keep only the minimal task record unless their work needs
    additional files.
 
-If task-session setup fails, report the initialized execution folder and the
-exact failure. Do not remove task records unless the user asks.
+If session setup fails, the CLI leaves the initialized and registered execution
+folder in place and returns a nonzero status with the exact failure. Report the
+folder so the user can retry. Do not remove it unless the user asks.
 
 ## List tasks
 
 Use this workflow when the user says `list-tasks` from an initialized workspace.
-Run the bundled discovery script:
+Run the installed CLI:
 
 ```bash
-python3 <skill-dir>/scripts/list_workspace_tasks.py \
+"${AGENT_HARNESS_HOME:-$HOME/.agent-harness}/bin/agent-workspace" list-tasks \
   --workspace "/path/to/workspace"
 ```
 
 When the user asks for active tasks, pass `--status active`. Repeat `--status`
 to include several requested states.
 
-The script reads the workspace-root `task-history.json`, whose records are keyed
-by host and task name, then merges it with task metadata found in the configured
-execution root and the machine-local path index. It orders results by each
-task's own `last_used_at` timestamp, newest first. The history remains available
-when the same workspace is materialized on another host; a remote execution
-folder is a recorded path, not a claim that the folder exists locally.
-Commit `task-history.json` in the workspace repository when the history must
-travel through the normal Git-based workspace exchange; rehydration also copies
-it when it is next to the source `workspace.yaml`.
-The task `README.md` remains the authoritative record, so task resolution does
-not require tmux metadata. Match by stable workspace ID when available, with
-name/path compatibility for older records. A displayed TSS target is the saved
-connection value; discovery does not contact TSS or confirm that the session is
-running. Report missing indexed folders separately.
+The CLI queries the machine-local SQLite catalog and filters the returned rows
+by the workspace's stable ID. It does not scan the execution root. Results are
+ordered by each task's own `last_used_at` value, newest first. The task README
+and its Git history remain authoritative for task state; SQLite records where
+this host has materialized the workspace and task. A displayed TSS target is a
+saved connection value; this listing does not contact TSS or confirm that the
+session is running. Report registered folders that are no longer present.
 
 Resolve an omitted task name in this order: an explicit name, the sole matching
-active task from `list_workspace_tasks.py`, then the current tmux task path as a
+active task from `agent-workspace list-tasks`, then the current tmux task path as a
 runtime hint. If multiple filesystem records still match, ask which task the
 user means.
 

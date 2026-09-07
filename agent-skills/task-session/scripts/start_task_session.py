@@ -10,15 +10,11 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-WORKSPACE_SCRIPTS = Path(__file__).resolve().parents[2] / "agent-workspace" / "scripts"
-if str(WORKSPACE_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(WORKSPACE_SCRIPTS))
-
-from task_history import current_timestamp, record_task_use
+from catalog_client import list_records, register_path
 
 
 SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -76,40 +72,8 @@ def update_front_matter(readme: Path, updates: dict[str, str]) -> None:
     readme.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def update_workspace_reference(
-    readme: Path,
-    task_dir: Path,
-    workspace: Path,
-    workspace_name: str,
-) -> None:
-    text = readme.read_text(encoding="utf-8")
-    lines = text.splitlines()
-    heading = "## Workspace"
-    start = next(
-        (index for index, line in enumerate(lines) if line.strip() == heading),
-        None,
-    )
-    if start is None:
-        return
-    end = next(
-        (
-            index
-            for index in range(start + 1, len(lines))
-            if lines[index].startswith("## ")
-        ),
-        len(lines),
-    )
-    href = os.path.relpath(workspace, start=task_dir)
-    replacement = [
-        heading,
-        "",
-        f"This execution belongs to [{workspace_name}]({href}). Repository",
-        "changes follow that workspace's instructions and are created only when the work",
-        "requires them.",
-        "",
-    ]
-    lines[start:end] = replacement
-    readme.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+def current_timestamp() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def load_runtime_config(path: Path | None) -> dict[str, Any]:
@@ -190,6 +154,34 @@ def resolve_working_directory(
     candidate_value: str | Path | None = workspace
     if candidate_value is None:
         candidate_value = metadata.get("workspace_path") or None
+    if candidate_value is None:
+        workspace_id = metadata.get("workspace_id", "")
+        if not workspace_id:
+            raise ValueError(
+                "workspace task has no stable workspace id; pass --workspace"
+            )
+        candidates: list[Path] = []
+        for record in list_records("--kind", "workspace"):
+            record_id = record.get("id") or record.get("workspace_id")
+            record_path = record.get("path") or record.get("local_path")
+            if (
+                record_id == workspace_id
+                and isinstance(record_path, str)
+                and record_path
+                and record.get("present", True)
+            ):
+                candidates.append(Path(record_path).expanduser().resolve())
+        candidates = sorted(set(candidates))
+        if len(candidates) == 1:
+            candidate_value = candidates[0]
+        elif not candidates:
+            raise ValueError(
+                "workspace path is unresolved; register this host's workspace or pass --workspace"
+            )
+        else:
+            raise ValueError(
+                "multiple local workspace locations match; pass --workspace"
+            )
     if candidate_value is None:
         raise ValueError(
             "workspace path is unresolved; pass --workspace with this host's workspace path"
@@ -344,33 +336,17 @@ def start_session(
             "updated": date.today().isoformat(),
             "last_used_at": last_used_at,
         }
-        if task_kind == "workspace-task":
-            updates["workspace_path"] = str(working_directory)
         update_front_matter(readme, updates)
-        if task_kind == "workspace-task":
-            update_workspace_reference(
-                readme,
-                task_dir,
-                working_directory,
-                metadata.get("workspace", working_directory.name),
-            )
-            record_task_use(
-                working_directory,
-                host=tss_host,
-                task_id=task_id,
-                task_name=task_name,
-                status=metadata.get("status", "active"),
-                execution_folder=task_dir,
-                tss_target=f"{tss_host}:{session_name}",
-                used_at=last_used_at,
-            )
     except OSError:
         if created:
             run_tmux(
                 socket_name, "kill-session", "-t", session_name, check=False
             )
         raise
+    catalog_registered, catalog_warning = register_path(task_dir)
     return {
+        "catalog_registered": catalog_registered,
+        "catalog_warning": catalog_warning,
         "created": created,
         "session_name": session_name,
         "task_dir": str(task_dir),
@@ -434,6 +410,8 @@ def main() -> int:
         print(f"Working directory: {result['working_directory']}")
         print(f"Execution folder: {result['task_dir']}")
         print(f"Connect: tss {result['tss_target']}")
+    if result["catalog_warning"]:
+        print(f"warning: {result['catalog_warning']}", file=sys.stderr)
     return 0
 
 
