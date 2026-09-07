@@ -1,6 +1,6 @@
 {
   "name": "tss",
-  "repository": "https://github.com/autumnust/tss.git",
-  "revision": "6d3a330173a0b38947a52eb87364cbff6c445369",
+  "repository": "git@github.com:autumnust/tss.git",
+  "revision": "6121720c787e046d38a7320d8bcb1aef69ca3396",
   "entrypoint": "tss"
 }

@@ -198,23 +198,21 @@ on those questions.
 Use the smallest runnable example that can show the intended behavior before
 applying the change to the full system.
 
-**4. Execution output stays in execution-notes**
+**4. Task output stays in its execution folder**
 Unless the user asks otherwise, write generated output to the task's execution
 folder, not this workspace. Put material in `context/` only when the user asks
 to keep it. Incoming documents that still need review go in `inbox/`. Do not
 create a `knowledge/` folder.
 
 **5. Start task executions explicitly**
-Use `start-task <task-name>` to create an execution folder under the configured
-execution root and start its tmux session. Use `list-tasks` to find execution
+Use `agent-workspace start-task` to create and register an execution folder
+under the configured execution root. Use `agent-workspace list-tasks` to find
 folders recorded for this workspace. Workspace-level reusable actions belong in
-`workflow/`. Repository worktrees are created later, when a task actually needs
-to change that repository.
+`workflow/`. Repository worktrees are created later, when a task needs to
+change that repository. Starting a runtime is a separate request.
 
-Use `pause-task`, `wait-task`, `block-task`, or `resume-task` to record an
-explicit lifecycle change. Use `finish-task <task-name>` to record a completed
-outcome and mark its tmux session for later TSS cleanup. The session remains
-available until detached and pruned.
+Use `agent-task set-state` for explicit pause, wait, block, resume, finish, or
+cancel requests. Runtime state does not change task state.
 
 ## Rehydrating this workspace
 
@@ -232,20 +230,13 @@ def agent_instructions() -> str:
 This root repository tracks workspace metadata only. Nested repositories are
 tracked by their own upstreams and are ignored here.
 
-When asked to `start-task <task-name>`, use the installed `agent-workspace`
-workflow. It creates the execution folder and tmux session but does not create
-repository worktrees.
+When asked to start a task, use `agent-workspace start-task`. It creates the
+execution folder but does not start a runtime or create repository worktrees.
 
-When asked to `list-tasks`, use the same workflow to discover task records for
-this workspace. A recorded TSS target is a saved connection value, not a live
-session check.
-
-When asked to `finish-task [<task-name>]`, use the same workflow to update the
-task record and mark its tmux session for later cleanup without terminating it.
-
-When the user explicitly asks to pause, wait, block, resume, finish, or cancel
-a task, use the installed `task-session` lifecycle command. Do not infer a state
-change from a conversational stopping point or a missing tmux session.
+Use `agent-workspace list-tasks` to discover this workspace's task records. For
+an explicit pause, wait, block, resume, finish, or cancel request, use
+`agent-task set-state`. Do not infer a state change from a conversational
+stopping point or a missing runtime.
 
 Unless the user asks otherwise, write generated output to the current task's
 execution folder, not this workspace. Write to `context/` only when the user

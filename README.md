@@ -38,6 +38,8 @@ cannot be scripted.
 # General task
 agent-task init --name "<name>" --objective "<text>" --destination "<parent>"
 agent-task list -H
+agent-task set-state --task-dir "<path>" --status waiting \
+  --summary "<state>" --next-step "<resume trigger>" --format json
 
 # Multi-repository workspace
 agent-workspace init --name "<name>" --destination "<parent>" \
@@ -51,21 +53,20 @@ Use `--format json` when an agent or script consumes the result and `-H` for
 terminal output. `reference` is the alternative repository role.
 Workspace creation and rehydration register the workspace. Rehydration uses the
 exact destination, verifies workspace metadata, repository origins, and primary
-branches, then clones only missing repositories. Task creation starts or reuses
-tmux in the workspace root, writes generated task output to the execution
-folder, and returns the TSS target. Use
+branches, then clones only missing repositories. Task creation only creates and
+registers context. Use
 `agent-task reconcile <root>...` only to import older folders or repair
 registration after a manual copy or move.
 
 Task folders and Git history remain authoritative. The SQLite catalog stores
-this host's paths and runtime observations. Stable task and workspace IDs keep
+this host's context paths. Stable task and workspace IDs keep
 the relationship portable when another host uses a different absolute path.
 
-Lifecycle changes require explicit intent. The `task-session` skill applies
-pause, wait, block, resume, finish, or cancel requests through deterministic
-helpers. A disconnect or missing tmux process does not change task state.
-Repository worktrees and the full long-running execution structure are created
-only when the requested work needs them.
+Lifecycle changes require explicit intent and use `agent-task set-state` for
+both general and workspace tasks. Runtime creation is separate. The
+`task-session` compatibility skill sends runtime requests to `tss start`; a
+disconnect or missing tmux process does not change task state. Execution notes
+are created only for an explicitly selected agent-workspace task.
 
 > Project-local skills and project `AGENTS.md` files are **not** included here;
 > they belong in their respective project repositories.
@@ -95,11 +96,11 @@ installation. To install the revision recorded in
 ```
 
 The installer stores the checked-out source at
-`~/.agent-harness/dependencies/tss` and installs its command at `~/bin/tss`.
+`~/.agent-harness/dependencies/tss` and installs `tss` and `ts` in `~/bin`.
 Use `./update.sh --with-tss` to refresh it to the revision currently recorded
 by the harness. This requires Git and network access; an installation without
-this option remains usable, but task sessions cannot be opened with the `tss`
-command until TSS is installed.
+this option remains usable, but TSS runtimes cannot be started until TSS is
+installed.
 
 On a **fresh device** with no existing harness instructions, settings, skills,
 workflow specs, or generated agents, this installs cleanly with no prompts.
@@ -160,7 +161,7 @@ Pick one of:
 | machine-local task catalog | `~/.agent-harness/state/task-catalog/catalog.sqlite3` (initialized on first catalog command and never overwritten) |
 | mutable learner state | `~/.agent-harness/state/learner-profiles/` (initialized once, never overwritten by updates or rollback) |
 
-The catalog stores local paths and observations; task folders and Git remain
+The catalog stores local context paths; task folders and Git remain
 authoritative. Normal creation registers automatically. Use these commands only
 for an imported or moved folder:
 
@@ -192,7 +193,7 @@ flowchart TB
     Prep["Environment Prepper"]
     Reviewer["Reviewer<br/>other-foundation opinion"]
     Maintainer["PR Maintainer"]
-    Coordinator -->|full: long-running| Prep
+    Coordinator -->|explicit agent-workspace task| Prep
     Coordinator -->|full: review| Reviewer
     Coordinator -->|full: PR work| Maintainer
     Reviewer -->|invoke and wait| Opinion(["Cross-provider opinion"])

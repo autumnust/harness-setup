@@ -35,29 +35,12 @@ def string_value(record: dict[str, Any], *keys: str) -> str:
 
 
 def normalize_record(record: dict[str, Any]) -> dict[str, str]:
-    runtime = record.get("runtime")
-    if not isinstance(runtime, dict):
-        runtime = {}
-    runtime_host = string_value(record, "runtime_host") or string_value(
-        runtime, "host", "runtime_host"
-    )
-    tmux_session = string_value(record, "tmux_session") or string_value(
-        runtime, "session", "tmux_session"
-    )
-    tss_target = string_value(record, "tss_target") or string_value(
-        runtime, "tss_target"
-    )
-    if not tss_target and runtime_host and tmux_session:
-        tss_target = f"{runtime_host}:{tmux_session}"
     return {
         "id": string_value(record, "id", "task_id") or "unknown",
         "title": string_value(record, "title", "name") or "unknown",
         "status": string_value(record, "status") or "unknown",
         "created": string_value(record, "created", "created_at"),
         "updated": string_value(record, "updated", "updated_at"),
-        "runtime_host": runtime_host,
-        "tmux_session": tmux_session,
-        "tss_target": tss_target,
         "objective": string_value(record, "objective"),
         "current_state": string_value(record, "current_state"),
         "next_task": string_value(record, "next_task"),
@@ -126,8 +109,8 @@ def render_markdown(tasks: list[dict[str, str]]) -> str:
     if not tasks:
         return "No agent-task workspaces found."
     lines = [
-        "| Status | Task | Updated | Session | Immediate next task | Path |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Status | Task | Updated | Immediate next task | Path |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for task in tasks:
         lines.append(
@@ -138,7 +121,6 @@ def render_markdown(tasks: list[dict[str, str]]) -> str:
                     "status",
                     "title",
                     "updated",
-                    "tss_target",
                     "next_task",
                     "path",
                 )
@@ -158,8 +140,6 @@ def render_human(tasks: list[dict[str, str]]) -> str:
         details = []
         if task["updated"]:
             details.append(f"updated {task['updated']}")
-        if task["tss_target"]:
-            details.append(f"session tss {task['tss_target']}")
         if details:
             lines.append("  " + " | ".join(details))
         lines.append(f"  Path: {task['path']}")
