@@ -137,57 +137,13 @@ def run_start_task(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any]
         initialize_command,
     )
     task = json_output(initialized, "workspace task initialization")
-
-    if registration_status(task) != 0:
-        return (
-            {
-                "operation": "start-task",
-                "outcome": "partial",
-                "session_started": False,
-                "session": None,
-                "session_error": "session start was not attempted because task registration failed",
-                "task": task,
-            },
-            2,
-        )
-
-    session_command = [
-        "--task-dir",
-        str(task["execution_folder"]),
-        "--workspace",
-        str(args.workspace),
-        "--format",
-        "json",
-    ]
-    optional_path(session_command, "--config", args.config)
-    if args.tss_host:
-        session_command.extend(("--tss-host", args.tss_host))
-    if args.session_name:
-        session_command.extend(("--session-name", args.session_name))
-    if args.tmux_socket:
-        session_command.extend(("--tmux-socket", args.tmux_socket))
-    started = run_helper(
-        helper(root, "task-session", "start_task_session.py"), session_command
-    )
-    payload: dict[str, Any] = {
+    status = registration_status(task)
+    payload = {
         "operation": "start-task",
-        "session_started": started.returncode == 0,
+        "outcome": "complete" if status == 0 else "partial",
         "task": task,
     }
-    if started.returncode == 0:
-        payload["session"] = json_output(started, "task session start")
-        payload["session_error"] = ""
-        if registration_status(payload["session"]) == 0:
-            payload["outcome"] = "complete"
-            return payload, 0
-        payload["outcome"] = "partial"
-        return payload, 2
-    payload["session"] = None
-    payload["session_error"] = (
-        started.stderr or started.stdout or f"exit {started.returncode}"
-    ).strip()
-    payload["outcome"] = "partial"
-    return payload, 1
+    return payload, status
 
 
 def add_format(parser: argparse.ArgumentParser) -> None:
@@ -228,7 +184,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_format(rehydrate)
 
     start = subparsers.add_parser(
-        "start-task", help="create a workspace task and start its tmux session"
+        "start-task", help="create and register a workspace task"
     )
     start.add_argument("--workspace", required=True, type=Path)
     start.add_argument("--name", required=True)
@@ -236,9 +192,6 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--config", type=Path)
     start.add_argument("--execution-root", type=Path)
     start.add_argument("--execution-folder", type=Path)
-    start.add_argument("--tss-host")
-    start.add_argument("--session-name")
-    start.add_argument("--tmux-socket", help=argparse.SUPPRESS)
     add_format(start)
 
     listing = subparsers.add_parser("list-tasks", help="list workspace tasks")
@@ -269,15 +222,10 @@ def render_text(payload: dict[str, Any]) -> str:
         )
     task = payload["task"]
     lines = [f"Execution folder: {task['execution_folder']}"]
-    if payload["session_started"]:
-        lines.append(f"Connect: tss {payload['session']['tss_target']}")
-        if payload.get("outcome") == "partial":
-            lines.append(
-                "Catalog runtime refresh failed: "
-                + str(payload["session"].get("catalog_warning", ""))
-            )
-    else:
-        lines.append(f"Session start failed: {payload['session_error']}")
+    if payload.get("outcome") == "partial":
+        lines.append(
+            "Catalog registration failed: " + str(task.get("catalog_warning", ""))
+        )
     return "\n".join(lines)
 
 
@@ -299,8 +247,6 @@ def render_human(payload: dict[str, Any]) -> str:
         details = []
         if task.get("last_used_at"):
             details.append(f"last used {task['last_used_at']}")
-        if task.get("tss_target"):
-            details.append(f"session tss {task['tss_target']}")
         if details:
             lines.append(
                 textwrap.fill(

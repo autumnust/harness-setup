@@ -217,6 +217,17 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertIn("A requested PR is full work.", handoff)
         self.assertIn("Full-mode only.", maintenance)
 
+    def test_agents_may_create_prs_but_not_join_review_conversations(self) -> None:
+        contract = (self.source / "contracts/canonical-state.md").read_text()
+        global_prompt = (REPO_ROOT / "home/AGENTS.md").read_text()
+
+        for text in (contract, global_prompt):
+            normalized = " ".join(text.split())
+            self.assertIn("create or update pull requests", normalized)
+            self.assertIn("review comments", normalized)
+            self.assertIn("reply to reviewers", normalized)
+            self.assertIn("resolve review threads", normalized)
+
     def test_coordinator_owns_human_readable_html_contract(self) -> None:
         manifest, _adapters = render_agents.validate(self.source)
         coordinator = self.role(manifest, "coordinator")
@@ -261,10 +272,10 @@ class WorkflowSpecTests(unittest.TestCase):
         )
         coordinator = (self.source / "roles/coordinator.md").read_text()
         coordinator_normalized = " ".join(coordinator.split())
-        self.assertEqual(coordinator.count("Present its readiness result"), 1)
         self.assertIn("**Fast**", coordinator)
         self.assertIn("**Full**", coordinator)
-        self.assertNotIn("Present its readiness result", global_docs)
+        self.assertIn("Only an explicitly invoked `agent-workspace` task", coordinator)
+        self.assertNotIn("execution folder first", global_docs)
 
         education_other = "\n".join(
             (self.source / relative).read_text()
@@ -341,7 +352,7 @@ class WorkflowSpecTests(unittest.TestCase):
         render_agents.validate_runtime_config_document(config, "test")
 
         del config["learner_profile_update_policy"]
-        del config["task_runtime"]
+        config.pop("task_runtime", None)
         del config["task_catalog"]
         render_agents.validate_runtime_config_document(config, "legacy test")
 

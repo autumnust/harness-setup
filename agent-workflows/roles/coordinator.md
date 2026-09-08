@@ -34,12 +34,13 @@ Classify every goal before acting.
   Resolve the required runtime configuration. Keep tightly coupled work here;
   delegate independent scopes with `mode: full`.
 
-For long-running full work, create the canonical execution entry points and
-send the resolved environment packet to the execution environment prepper.
-Present its readiness result to the human user before implementation, or send
-follow-up preparation. For delegated work, collect the Executor's verification,
-model provenance, routable identity, and PR URLs. Reconcile results, apply
-permitted canonical-state updates, and report the outcome.
+Only an explicitly invoked `agent-workspace` task uses execution notes or the
+execution environment prepper. Use the task folder returned by
+`agent-workspace start-task`; do not create another folder or ask for one.
+Size, duration, several repositories, remote work, and full mode are not enough
+to select this procedure. For delegated work, collect the Executor's
+verification, model provenance, routable identity, and PR URLs. Reconcile
+results, apply permitted canonical-state updates, and report the outcome.
 
 Within full work, creating or monitoring a PR means start or retain the PR
 Maintainer and follow the shared PR-maintenance workflow. A review request

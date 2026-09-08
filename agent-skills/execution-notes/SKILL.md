@@ -1,6 +1,6 @@
 ---
 name: execution-notes
-description: Prepare and validate the observable execution environment for large, multi-step, remote, hardware-dependent, or multi-session workloads. Use from the execution-environment-prepper after the coordinator resolves configuration and creates canonical entry points. Skip for small edits and one-off commands.
+description: Prepare and validate an explicit agent-workspace task's execution environment. Use from the execution-environment-prepper only after the user selects agent-workspace and the coordinator provides its task folder.
 ---
 
 # Execution Notes
@@ -11,11 +11,12 @@ deterministic structure checker that previously existed as a separate skill.
 
 ## When to use
 
-Use this for large executions, expensive jobs, multi-stage validation, remote or
-special-hardware workloads, or work likely to continue in another session. The
-context packet must contain resolved runtime configuration, an authorized
-execution path, and coordinator-owned canonical entry points. Report missing
-values to the coordinator; never ask the user directly.
+Use this only for a task the user explicitly started through `agent-workspace`.
+A large change, several repositories, remote hardware, multiple sessions, or
+full mode does not select this skill by itself. The context packet must contain
+the workspace task folder, resolved runtime configuration, and coordinator-owned
+canonical entry points. Report missing values to the coordinator; never ask the
+user directly or create another execution folder.
 
 ## Procedure
 

@@ -120,13 +120,13 @@ class TaskCatalogTests(unittest.TestCase):
             self.assertEqual(registered["kind"], "workspace-task")
             self.assertEqual(registered["workspace_id"], "workspace-1")
             self.assertEqual(registered["workspace_name"], "serving-workspace")
-            self.assertEqual(registered["tss_target"], "gpu-box:serving-run")
+            self.assertNotIn("tss_target", registered)
             self.assertEqual(registered["objective"], "Measure request latency.")
 
             payload = self.json_result(
                 self.run_catalog(database, "list", "--format", "json")
             )
-            self.assertEqual(payload["schema_version"], 1)
+            self.assertEqual(payload["schema_version"], 2)
             self.assertEqual(len(payload["records"]), 3)
             expected_fields = {
                 "record_type",
@@ -142,9 +142,6 @@ class TaskCatalogTests(unittest.TestCase):
                 "created",
                 "updated",
                 "last_used",
-                "runtime_host",
-                "tmux_session",
-                "tss_target",
                 "objective",
                 "current_state",
                 "next_task",
@@ -165,7 +162,6 @@ class TaskCatalogTests(unittest.TestCase):
                         "workspace_locations",
                         "tasks",
                         "task_locations",
-                        "sessions",
                     )
                 }
             self.assertEqual(
@@ -175,7 +171,6 @@ class TaskCatalogTests(unittest.TestCase):
                     "workspace_locations": 1,
                     "tasks": 2,
                     "task_locations": 2,
-                    "sessions": 1,
                 },
             )
 
@@ -183,7 +178,7 @@ class TaskCatalogTests(unittest.TestCase):
             self.assertIn("Catalog: 1 workspaces, 2 tasks", human)
             self.assertIn("[active] latency", human)
             self.assertIn("Kind: workspace task | Workspace: serving-workspace", human)
-            self.assertIn("Session: tss gpu-box:serving-run", human)
+            self.assertNotIn("Session:", human)
             self.assertIn(f"Path: {task.resolve()}", human)
 
     def test_same_task_id_can_have_multiple_locations_and_filters_run_in_python(self) -> None:
@@ -307,30 +302,40 @@ class TaskCatalogTests(unittest.TestCase):
                 module.normalized_git_remote("https://example.com/team/workspace.git"),
             )
 
-    def test_registration_refreshes_removed_runtime_fields(self) -> None:
+    def test_schema_two_migration_preserves_context_and_drops_sessions(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             database = root / "catalog.sqlite3"
             task = root / "task"
             self.write_task(task, "task-1", runtime=True)
             self.run_catalog(database, "register", "--path", str(task))
-            readme = task / "README.md"
-            readme.write_text(
-                readme.read_text(encoding="utf-8")
-                .replace("runtime_host: gpu-box\n", "")
-                .replace("tmux_session: serving-run\n", ""),
-                encoding="utf-8",
-            )
-            record = self.json_result(
-                self.run_catalog(database, "register", "--path", str(task))
-            )["records"][0]
-            self.assertEqual(record["runtime_host"], "")
-            self.assertEqual(record["tmux_session"], "")
             with sqlite3.connect(database) as connection:
-                self.assertEqual(
-                    connection.execute("SELECT count(*) FROM sessions").fetchone()[0],
-                    0,
+                connection.execute(
+                    "CREATE TABLE sessions(id INTEGER PRIMARY KEY, runtime_host TEXT)"
                 )
+                connection.execute("INSERT INTO sessions(runtime_host) VALUES ('old')")
+                connection.execute(
+                    "UPDATE catalog_metadata SET value = '1' WHERE key = 'schema_version'"
+                )
+                connection.commit()
+
+            payload = self.json_result(
+                self.run_catalog(database, "list", "--format", "json")
+            )
+            self.assertEqual(payload["schema_version"], 2)
+            self.assertEqual(payload["records"][0]["id"], "task-1")
+            with sqlite3.connect(database) as connection:
+                tables = {
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    )
+                }
+                version = connection.execute(
+                    "SELECT value FROM catalog_metadata WHERE key = 'schema_version'"
+                ).fetchone()[0]
+            self.assertNotIn("sessions", tables)
+            self.assertEqual(version, "2")
 
     def test_reconcile_registers_recognized_folders_and_marks_missing_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -21,7 +21,7 @@
 #   ./install.sh --instance NAME  # Append instances/NAME.md to the deployed
 #                                 # ~/AGENTS.md and remember the selection.
 #   ./install.sh --with-tss       # Optionally install the lockfile-pinned TSS
-#                                 # client into ~/bin/tss.
+#                                 # commands into ~/bin.
 set -euo pipefail
 
 MODE="prompt"
@@ -75,10 +75,10 @@ Usage:
                                 remember NAME for later updates and rollback.
   ./install.sh --no-instance    Deploy only the portable instructions and
                                 clear any remembered instance profile.
-  ./install.sh --with-tss       Also fetch the lockfile-pinned TSS client,
+  ./install.sh --with-tss       Also fetch the lockfile-pinned TSS tools,
                                 store its source under
                                 ~/.agent-harness/dependencies/tss, and install
-                                its tss command into ~/bin/tss.
+                                the tss and ts commands into ~/bin.
 
 The installer also resolves the external skills recorded in
 dependencies/external-skills.json. The first local install needs Git and network
@@ -284,6 +284,7 @@ record_conflict "$HOME/bin/agent-workspace"
 if (( WITH_TSS )); then
   record_conflict "$AGENT_HARNESS_HOME/dependencies/tss"
   record_conflict "$HOME/bin/tss"
+  record_conflict "$HOME/bin/ts"
 fi
 for agent_file in "$TEMP_ROOT"/agents/claude/*; do
   record_conflict "$CLAUDE_DIR/agents/agent-harness/$(basename "$agent_file")"
@@ -617,7 +618,9 @@ if (( WITH_TSS )); then
   mkdir -p "$AGENT_HARNESS_HOME/dependencies" "$HOME/bin"
   place_tree "$TSS_STAGED" "$AGENT_HARNESS_HOME/dependencies/tss"
   place_file "$TSS_STAGED/tss" "$HOME/bin/tss"
+  place_file "$TSS_STAGED/ts" "$HOME/bin/ts"
   chmod u+x "$HOME/bin/tss"
+  chmod u+x "$HOME/bin/ts"
 fi
 
 # This small machine-local file lets ordinary updates and rollback reuse the
@@ -696,7 +699,8 @@ printf '\n%s\n' \
 if (( WITH_TSS )); then
   printf '%s\n' \
     "  $AGENT_HARNESS_HOME/dependencies/tss  (lockfile-pinned source)" \
-    "  $HOME/bin/tss"
+    "  $HOME/bin/tss" \
+    "  $HOME/bin/ts"
 fi
 if (( CODEX_PRESENT )); then
   printf '%s\n' \

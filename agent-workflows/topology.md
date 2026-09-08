@@ -22,7 +22,7 @@ flowchart TB
         Opinion(["Cross-provider opinion"])
     end
 
-    Coordinator -->|long-running only| Prep
+    Coordinator -->|explicit agent-workspace task| Prep
     Coordinator -->|review / merge-ready| Reviewer
     Coordinator -->|PR-producing work| Maintainer
     Reviewer -->|invoke once and wait| Opinion

@@ -7,7 +7,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-import uuid
 from pathlib import Path
 
 
@@ -35,20 +34,6 @@ LIST_TASKS = (
 )
 TASK_CATALOG = REPO_ROOT / "scripts" / "task-catalog.py"
 AGENT_WORKSPACE_CLI = REPO_ROOT / "scripts" / "agent-workspace.py"
-START_SESSION = (
-    REPO_ROOT
-    / "agent-skills"
-    / "task-session"
-    / "scripts"
-    / "start_task_session.py"
-)
-SET_TASK_STATE = (
-    REPO_ROOT
-    / "agent-skills"
-    / "task-session"
-    / "scripts"
-    / "set_task_state.py"
-)
 class AgentWorkspaceTaskTests(unittest.TestCase):
     def catalog_env(self, root: Path) -> dict[str, str]:
         harness_home = root / "harness-home"
@@ -165,12 +150,12 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 "/tasks/", (workspace / ".gitignore").read_text(encoding="utf-8")
             )
             self.assertIn(
-                "start-task <task-name>",
+                "agent-workspace start-task",
                 (workspace / "README.md").read_text(encoding="utf-8"),
             )
             agents_md = (workspace / "AGENTS.md").read_text(encoding="utf-8")
             self.assertIn(
-                "does not create\nrepository worktrees",
+                "does not start a runtime or create repository worktrees",
                 agents_md,
             )
             self.assertIn(
@@ -178,7 +163,7 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 agents_md,
             )
             self.assertIn(
-                "Execution output stays in execution-notes",
+                "Task output stays in its execution folder",
                 (workspace / "README.md").read_text(encoding="utf-8"),
             )
             (workspace / "task-history.json").write_text(
@@ -306,8 +291,8 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             )
             self.assertTrue((task / "README.md").is_file())
             self.assertEqual(
-                [entry.name for entry in task.iterdir()],
-                ["README.md"],
+                sorted(entry.name for entry in task.iterdir()),
+                ["AGENTS.md", "README.md"],
             )
             self.assertFalse((workspace / "tasks").exists())
             task_index = workspace / ".git" / "agent-workspace" / "task-paths.json"
@@ -320,6 +305,12 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             self.assertIn("workspace: demo-workspace", readme)
             self.assertNotIn("workspace_path:", readme)
             self.assertIn("Measure serving latency.", readme)
+            self.assertNotIn("tmux", readme.casefold())
+            instructions = (task / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("agent-task set-state", instructions)
+            self.assertIn("start or resume to", instructions)
+            self.assertIn("cancel or abandon to", instructions)
+            self.assertIn("--status <status> --summary", instructions)
 
             repeated = self.run_script(
                 START_TASK,
@@ -393,6 +384,7 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             self.assertIn("Workspace tasks: 2", human)
             self.assertIn("[active] model-serving", human)
             self.assertIn(f"Path: {task.resolve()}", human)
+            self.assertNotIn("session tss", human)
 
             public_human = self.run_script(
                 AGENT_WORKSPACE_CLI,
@@ -503,7 +495,7 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 (workspace / ".git" / "agent-workspace" / "task-paths.json").exists()
             )
 
-    def test_public_cli_preserves_registered_task_when_session_start_fails(self) -> None:
+    def test_public_cli_creates_registered_task_without_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             env = self.catalog_env(root)
@@ -523,20 +515,20 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 "--workspace",
                 str(workspace),
                 "--name",
-                "no-runtime-host",
+                "context-only",
                 "--config",
                 str(config),
                 "--format",
                 "json",
-                check=False,
                 env=env,
             )
-            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.returncode, 0)
             payload = json.loads(result.stdout)
-            self.assertFalse(payload["session_started"])
+            self.assertEqual(payload["outcome"], "complete")
+            self.assertNotIn("session_started", payload)
+            self.assertNotIn("session", payload)
             task_path = Path(payload["task"]["execution_folder"])
             self.assertTrue((task_path / "README.md").is_file())
-            self.assertIn("TSS host label is unresolved", payload["session_error"])
 
             listed = json.loads(
                 self.run_script(
@@ -551,7 +543,7 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             )
             self.assertEqual(
                 [task["task_name"] for task in listed["tasks"]],
-                ["no-runtime-host"],
+                ["context-only"],
             )
 
     def test_legacy_workspace_id_is_resolved_from_catalog(self) -> None:
@@ -688,8 +680,6 @@ last_used_at: 2026-09-01T00:00:00+00:00
                 "catalog-failure",
                 "--config",
                 str(config),
-                "--tss-host",
-                "local",
                 "--format",
                 "json",
                 check=False,
@@ -698,202 +688,12 @@ last_used_at: 2026-09-01T00:00:00+00:00
             self.assertEqual(result.returncode, 2)
             payload = json.loads(result.stdout)
             self.assertEqual(payload["outcome"], "partial")
-            self.assertFalse(payload["session_started"])
+            self.assertNotIn("session_started", payload)
             self.assertFalse(payload["task"]["catalog_registered"])
             self.assertTrue(
                 Path(payload["task"]["execution_folder"], "README.md").is_file()
             )
-            self.assertIn("registration failed", payload["session_error"])
-
-    @unittest.skipUnless(shutil.which("tmux"), "tmux is required")
-    def test_workspace_task_can_start_isolated_tmux_session(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            env = self.catalog_env(root)
-            workspace = self.prepare_workspace(root)
-            self.register(env, workspace)
-            execution_root = root / "execution-notes"
-            execution_root.mkdir()
-            config = root / "config.json"
-            config.write_text(
-                json.dumps(
-                    {
-                        "execution_root": str(execution_root),
-                        "task_runtime": {"tss": {"host_alias": "local"}},
-                    }
-                ),
-                encoding="utf-8",
-            )
-            task_payload = json.loads(
-                self.run_script(
-                    START_TASK,
-                    "--workspace",
-                    str(workspace),
-                    "--name",
-                    "model-serving",
-                    "--config",
-                    str(config),
-                    "--format",
-                    "json",
-                    env=env,
-                ).stdout
-            )
-            runtime_workspace = root / "workspace-on-this-host"
-            runtime_workspace.mkdir()
-            shutil.copy2(
-                workspace / "workspace.yaml",
-                runtime_workspace / "workspace.yaml",
-            )
-
-            tmux_tmp = root / "tmux"
-            tmux_tmp.mkdir()
-            env["TMUX_TMPDIR"] = str(tmux_tmp)
-            socket_name = f"ws-{uuid.uuid4().hex[:6]}"
-            try:
-                session_payload = json.loads(
-                    self.run_script(
-                        START_SESSION,
-                        "--task-dir",
-                        task_payload["execution_folder"],
-                        "--config",
-                        str(config),
-                        "--workspace",
-                        str(runtime_workspace),
-                        "--tmux-socket",
-                        socket_name,
-                        "--format",
-                        "json",
-                        env=env,
-                    ).stdout
-                )
-                self.assertEqual(session_payload["tss_target"], "local:model-serving")
-                self.assertTrue(session_payload["created"])
-                option = subprocess.run(
-                    [
-                        "tmux",
-                        "-L",
-                        socket_name,
-                        "show-options",
-                        "-v",
-                        "-t",
-                        "model-serving",
-                        "@agent_workspace",
-                    ],
-                    check=True,
-                    text=True,
-                    capture_output=True,
-                    env=env,
-                )
-                self.assertEqual(option.stdout.strip(), "demo-workspace")
-                pane_path = subprocess.run(
-                    [
-                        "tmux",
-                        "-L",
-                        socket_name,
-                        "display-message",
-                        "-p",
-                        "-t",
-                        "model-serving",
-                        "#{pane_current_path}",
-                    ],
-                    check=True,
-                    text=True,
-                    capture_output=True,
-                    env=env,
-                )
-                self.assertEqual(
-                    Path(pane_path.stdout.strip()).resolve(),
-                    runtime_workspace.resolve(),
-                )
-                for option_name, expected in (
-                    ("@agent_task_path", task_payload["execution_folder"]),
-                    ("@agent_workspace_path", str(runtime_workspace.resolve())),
-                ):
-                    value = subprocess.run(
-                        [
-                            "tmux",
-                            "-L",
-                            socket_name,
-                            "show-options",
-                            "-v",
-                            "-t",
-                            "model-serving",
-                            option_name,
-                        ],
-                        check=True,
-                        text=True,
-                        capture_output=True,
-                        env=env,
-                    )
-                    self.assertEqual(value.stdout.strip(), expected)
-
-                waiting = json.loads(
-                    self.run_script(
-                        SET_TASK_STATE,
-                        "--task-dir",
-                        task_payload["execution_folder"],
-                        "--status",
-                        "waiting",
-                        "--summary",
-                        "Waiting for capacity.",
-                        "--next-step",
-                        "Resume when capacity is available.",
-                        "--tmux-socket",
-                        socket_name,
-                        "--format",
-                        "json",
-                        env=env,
-                    ).stdout
-                )
-                self.assertTrue(waiting["session_marked"])
-                task_text = Path(
-                    task_payload["execution_folder"], "README.md"
-                ).read_text(encoding="utf-8")
-                self.assertIn("status: waiting", task_text)
-                self.assertIn("state_changed_at:", task_text)
-                self.assertIn("Resume when capacity is available.", task_text)
-                state_option = subprocess.run(
-                    [
-                        "tmux",
-                        "-L",
-                        socket_name,
-                        "show-options",
-                        "-v",
-                        "-t",
-                        "model-serving",
-                        "@agent_task_status",
-                    ],
-                    check=True,
-                    text=True,
-                    capture_output=True,
-                    env=env,
-                )
-                self.assertEqual(state_option.stdout.strip(), "waiting")
-                discovered = json.loads(
-                    self.run_script(
-                        LIST_TASKS,
-                        "--workspace",
-                        str(workspace),
-                        "--config",
-                        str(config),
-                        "--format",
-                        "json",
-                        env=env,
-                    ).stdout
-                )
-                self.assertEqual(
-                    discovered["tasks"][0]["tss_target"],
-                    "local:model-serving",
-                )
-            finally:
-                subprocess.run(
-                    ["tmux", "-L", socket_name, "kill-server"],
-                    check=False,
-                    text=True,
-                    capture_output=True,
-                    env=env,
-                )
-
+            self.assertIn("registration", payload["task"]["catalog_warning"])
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,7 +16,7 @@ from typing import Any, Iterable, Sequence
 from urllib.parse import urlsplit
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 DEFAULT_HARNESS_HOME = Path(
     os.environ.get("AGENT_HARNESS_HOME", Path.home() / ".agent-harness")
 )
@@ -60,9 +60,6 @@ SELECT
     '' AS created,
     wl.updated_at AS updated,
     wl.last_used_at AS last_used,
-    '' AS runtime_host,
-    '' AS tmux_session,
-    '' AS tss_target,
     '' AS objective,
     '' AS current_state,
     '' AS next_task,
@@ -87,9 +84,6 @@ SELECT
     tl.created AS created,
     tl.updated AS updated,
     tl.last_used_at AS last_used,
-    COALESCE(s.runtime_host, '') AS runtime_host,
-    COALESCE(s.tmux_session, '') AS tmux_session,
-    COALESCE(s.tss_target, '') AS tss_target,
     tl.objective AS objective,
     tl.current_state AS current_state,
     tl.next_task AS next_task,
@@ -100,7 +94,6 @@ SELECT
 FROM tasks AS t
 JOIN task_locations AS tl ON tl.task_id = t.id
 LEFT JOIN workspaces AS w ON w.id = t.workspace_id
-LEFT JOIN sessions AS s ON s.task_location_id = tl.id
 """
 
 
@@ -158,19 +151,8 @@ CREATE TABLE IF NOT EXISTS task_locations (
     UNIQUE (task_id, path)
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
-    id INTEGER PRIMARY KEY,
-    task_id TEXT NOT NULL REFERENCES tasks(id),
-    task_location_id INTEGER NOT NULL UNIQUE REFERENCES task_locations(id)
-        ON DELETE CASCADE,
-    runtime_host TEXT NOT NULL,
-    tmux_session TEXT NOT NULL,
-    tss_target TEXT NOT NULL,
-    observed_at TEXT NOT NULL
-);
-
 INSERT INTO catalog_metadata(key, value)
-VALUES ('schema_version', '1')
+VALUES ('schema_version', '2')
 ON CONFLICT(key) DO UPDATE SET value = excluded.value;
 """
 
@@ -328,8 +310,6 @@ def parse_task_readme(path: Path) -> dict[str, str] | None:
         raise CatalogError(
             f"workspace task README needs workspace_id or a readable workspace_path: {path}"
         )
-    runtime_host = metadata.get("runtime_host", "")
-    tmux_session = metadata.get("tmux_session", "")
     return {
         "id": task_id,
         "kind": kind,
@@ -341,13 +321,6 @@ def parse_task_readme(path: Path) -> dict[str, str] | None:
         "created": metadata.get("created", ""),
         "updated": metadata.get("updated", ""),
         "last_used_at": metadata.get("last_used_at", ""),
-        "runtime_host": runtime_host,
-        "tmux_session": tmux_session,
-        "tss_target": (
-            f"{runtime_host}:{tmux_session}"
-            if runtime_host and tmux_session
-            else ""
-        ),
         "objective": markdown_section(body, "Current objective", "Goal"),
         "current_state": markdown_section(body, "Current state"),
         "next_task": markdown_section(body, "Immediate next task"),
@@ -385,8 +358,27 @@ def connect(database: Path) -> sqlite3.Connection:
     connection.execute("PRAGMA busy_timeout = 5000")
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA journal_mode = WAL")
+    metadata_exists = connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'catalog_metadata'"
+    ).fetchone()
+    if metadata_exists:
+        row = connection.execute(
+            "SELECT value FROM catalog_metadata WHERE key = 'schema_version'"
+        ).fetchone()
+        if row is not None:
+            try:
+                existing_version = int(row[0])
+            except (TypeError, ValueError) as exc:
+                connection.close()
+                raise CatalogError("task catalog has an invalid schema version") from exc
+            if existing_version > SCHEMA_VERSION:
+                connection.close()
+                raise CatalogError(
+                    f"task catalog schema {existing_version} is newer than supported schema {SCHEMA_VERSION}"
+                )
     with connection:
         connection.executescript(SCHEMA_SQL)
+        connection.execute("DROP TABLE IF EXISTS sessions")
     return connection
 
 
@@ -490,13 +482,6 @@ def upsert_task(
     )
     connection.execute(
         """
-        DELETE FROM sessions
-        WHERE task_location_id IN (SELECT id FROM task_locations WHERE path = ?)
-        """,
-        (str(path),),
-    )
-    connection.execute(
-        """
         INSERT INTO task_locations(
             task_id, path, title, workspace_name, present, status, created,
             updated, last_used_at, objective, current_state, next_task,
@@ -538,30 +523,6 @@ def upsert_task(
             git["git_commit"],
         ),
     )
-    if task["runtime_host"] or task["tmux_session"]:
-        connection.execute(
-            """
-            INSERT INTO sessions(
-                task_id, task_location_id, runtime_host, tmux_session,
-                tss_target, observed_at
-            )
-            SELECT ?, id, ?, ?, ?, ? FROM task_locations WHERE path = ?
-            ON CONFLICT(task_location_id) DO UPDATE SET
-                task_id = excluded.task_id,
-                runtime_host = excluded.runtime_host,
-                tmux_session = excluded.tmux_session,
-                tss_target = excluded.tss_target,
-                observed_at = excluded.observed_at
-            """,
-            (
-                task["id"],
-                task["runtime_host"],
-                task["tmux_session"],
-                task["tss_target"],
-                observed_at,
-                str(path),
-            ),
-        )
 
 
 def classify_path(path: Path) -> tuple[str, dict[str, str]]:
@@ -645,8 +606,8 @@ def render_markdown(records: Sequence[dict[str, Any]]) -> str:
     if not records:
         return "No registered agent tasks or workspaces found."
     lines = [
-        "| Type | Kind | Status | Name | Workspace | Session | Present | Path |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Type | Kind | Status | Name | Workspace | Present | Path |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for record in records:
         values = (
@@ -655,7 +616,6 @@ def render_markdown(records: Sequence[dict[str, Any]]) -> str:
             record["status"],
             record["name"],
             record["workspace_name"],
-            record["tss_target"],
             "yes" if record["present"] else "no",
             record["path"],
         )
@@ -695,8 +655,6 @@ def render_human(records: Sequence[dict[str, Any]]) -> str:
             if record["updated"]:
                 detail += f" | Updated: {clean_text(record['updated'])}"
             lines.append(detail)
-            if record["tss_target"]:
-                lines.append(f"    Session: tss {record['tss_target']}")
             lines.append(f"    Path: {record['path']}")
     return "\n".join(lines)
 

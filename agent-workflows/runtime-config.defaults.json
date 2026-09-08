@@ -2,11 +2,6 @@
   "version": 1,
   "configured": false,
   "execution_root": null,
-  "task_runtime": {
-    "tss": {
-      "host_alias": null
-    }
-  },
   "task_catalog": {
     "scan_roots": [
       "~/Documents"
