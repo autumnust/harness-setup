@@ -124,6 +124,12 @@ run_inside_sandbox() {
   export CLAUDE_CODE_DISABLE_TELEMETRY=1
   export OTEL_SDK_DISABLED=true
   unset SSH_AUTH_SOCK
+  # Claude Code runs the macOS security command for keychain checks. With the
+  # temporary HOME, the real command shows a "Keychain Not Found" dialog.
+  mkdir -p "$root/bin"
+  printf '#!/bin/sh\nexit 44\n' > "$root/bin/security"
+  chmod +x "$root/bin/security"
+  export PATH="$root/bin:$PATH"
 
   # Build the same self-contained deployment copy used by remote broadcast.
   # Its external skill fixture is local so offline mode remains deterministic.
