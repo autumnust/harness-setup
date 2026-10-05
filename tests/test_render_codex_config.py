@@ -15,9 +15,10 @@ SPEC.loader.exec_module(render_codex_config)
 
 
 class RenderCodexConfigTests(unittest.TestCase):
-    def test_sets_coordinator_policy_and_preserves_unrelated_config(self) -> None:
+    def test_keeps_existing_values_written_by_codex_or_the_user(self) -> None:
         source = """smoke_sentinel = \"preserved\"
-model = \"old-model\"
+model = \"user-model\"
+model_reasoning_effort = \"high\"
 
 [agents]
 max_depth = 1
@@ -34,10 +35,27 @@ command = \"example\"
         parsed = tomllib.loads(rendered)
 
         self.assertEqual(parsed["smoke_sentinel"], "preserved")
+        self.assertEqual(parsed["model"], "user-model")
+        self.assertEqual(parsed["model_reasoning_effort"], "high")
+        self.assertEqual(parsed["agents"]["max_depth"], 1)
+        self.assertEqual(parsed["mcp_servers"]["example"]["command"], "example")
+
+    def test_writes_defaults_only_for_missing_keys(self) -> None:
+        rendered = render_codex_config.render(
+            "smoke_sentinel = \"preserved\"\n",
+            depth=2,
+            model="fast-model",
+            reasoning_effort="medium",
+        )
+        parsed = tomllib.loads(rendered)
+
         self.assertEqual(parsed["model"], "fast-model")
         self.assertEqual(parsed["model_reasoning_effort"], "medium")
         self.assertEqual(parsed["agents"]["max_depth"], 2)
-        self.assertEqual(parsed["mcp_servers"]["example"]["command"], "example")
+
+    def test_omitted_model_writes_no_model(self) -> None:
+        rendered = render_codex_config.render("", depth=2, model=None, reasoning_effort="medium")
+        self.assertNotIn("model", tomllib.loads(rendered))
 
     def test_inserts_agents_table_before_existing_child_table(self) -> None:
         rendered = render_codex_config.render(

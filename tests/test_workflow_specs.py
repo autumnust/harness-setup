@@ -43,12 +43,10 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertTrue(all(role["allowed_children"] == [] for role in children))
         self.assertEqual(manifest["max_depth"], 2)
         self.assertEqual(adapters["claude"]["models"]["deep"], "opus")
-        self.assertEqual(adapters["codex"]["models"]["deep"], "gpt-5.6-sol")
-        self.assertEqual(adapters["claude"]["models"]["coordinator"], "sonnet")
+        self.assertEqual(set(adapters["claude"]["models"].values()), {"opus"})
         self.assertEqual(
-            adapters["codex"]["models"]["coordinator"], "gpt-5.6-terra"
+            set(adapters["codex"]["models"].values()), {"provider-default"}
         )
-        self.assertEqual(adapters["codex"]["models"]["executor"], "gpt-5.6-sol")
         self.assertEqual(
             self.role(manifest, "executor")["reasoning_policy"], "high"
         )
@@ -85,7 +83,7 @@ class WorkflowSpecTests(unittest.TestCase):
             {
                 "backend": "codex-plugin-native-review",
                 "caller": "claude",
-                "model": "gpt-5.6-sol",
+                "model": "provider-default",
                 "effort": "provider-default",
             },
         )
@@ -424,7 +422,7 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertFalse((output / "claude/educator.md").exists())
 
         reviewer = (output / "codex/agent-harness-reviewer.toml").read_text()
-        self.assertIn('model = "gpt-5.6-terra"', reviewer)
+        self.assertNotIn("\nmodel = ", reviewer)
         self.assertIn('model_reasoning_effort = "medium"', reviewer)
         self.assertIn("External backend: claude-code", reviewer)
         self.assertIn("External model: opus", reviewer)
@@ -437,11 +435,11 @@ class WorkflowSpecTests(unittest.TestCase):
         self.assertNotIn("**Disagreement:**", reviewer)
 
         claude_reviewer = (output / "claude/reviewer.md").read_text()
-        self.assertIn("model: sonnet", claude_reviewer)
+        self.assertIn("model: opus", claude_reviewer)
         self.assertIn("effort: medium", claude_reviewer)
         self.assertIn("  - cross-provider-review", claude_reviewer)
         self.assertIn("External backend: codex-plugin-native-review", claude_reviewer)
-        self.assertIn("External model: gpt-5.6-sol", claude_reviewer)
+        self.assertIn("External model: provider-default", claude_reviewer)
         self.assertIn("--caller claude", claude_reviewer)
         self.assertIn("# PR review workflow", claude_reviewer)
 

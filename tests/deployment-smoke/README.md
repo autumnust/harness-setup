@@ -50,10 +50,11 @@ The offline test verifies:
 - Seatbelt permits writes only below a uniquely created temporary root.
 - Offline mode denies network access and unsets provider API keys.
 - The installer preserves an existing Codex setting while adding max depth 2.
-- The Codex root session receives Terra, the Claude Code root session receives
-  Sonnet, and both use the medium reasoning policy.
-- Codex Executor renders with `gpt-5.6-sol` and high reasoning effort.
-- Reviewer renders with the capable model at medium effort. Its dry-run
+- The Claude Code root session receives `opus`. The Codex root session keeps
+  the Codex default model, because the harness writes no Codex model. Both use
+  the medium reasoning policy.
+- Codex Executor renders with no model and high reasoning effort.
+- Reviewer renders with the capable model policy at medium effort. Its dry-run
   command selects Claude `opus` with `max` effort from Codex, and the
   installed OpenAI Codex plugin's read-only adversarial-review runtime from
   Claude Code.

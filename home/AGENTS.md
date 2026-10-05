@@ -325,8 +325,10 @@ configuration only as directed by the selected workflow.
   contract. Conversation inheritance is an optimization, not a substitute.
 - Parallel writers must own different files. Serialize work that touches the
   same files or depends on an earlier result.
-- Use each role's provider-adapter model policy. Under Codex, Executor uses
-  `gpt-5.6-sol` at high effort.
+- Use each role's provider-adapter model policy. The harness sets a model
+  family, not a model version. Under Claude Code, every role uses `opus`.
+  Under Codex, every role uses the Codex default model; Executor uses high
+  effort.
 - Reviewer is the only role permitted to invoke the cross-provider review
   route. Under Codex, it invokes Claude Code with the current `opus` alias and
   `max` effort. Under Claude Code, it invokes the installed OpenAI Codex

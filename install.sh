@@ -237,6 +237,9 @@ if (( CODEX_PRESENT )); then
   CODEX_COORDINATOR_MODEL="$(python3 -c \
     'import json, sys; print(json.load(open(sys.argv[1]))["models"]["coordinator"])' \
     "$REPO_ROOT/agent-workflows/adapters/codex.json")"
+  if [[ "$CODEX_COORDINATOR_MODEL" == "provider-default" ]]; then
+    CODEX_COORDINATOR_MODEL=""
+  fi
   CODEX_COORDINATOR_EFFORT="$(python3 -c \
     'import json, sys; print(json.load(open(sys.argv[1]))["reasoning_effort"]["medium"])' \
     "$REPO_ROOT/agent-workflows/adapters/codex.json")"
@@ -248,7 +251,7 @@ if (( CODEX_PRESENT )); then
     --input "$CODEX_DIR/config.toml" \
     --output "$TEMP_ROOT/codex-config.toml" \
     --max-depth 2 \
-    --model "$CODEX_COORDINATOR_MODEL" \
+    ${CODEX_COORDINATOR_MODEL:+--model "$CODEX_COORDINATOR_MODEL"} \
     --reasoning-effort "$CODEX_COORDINATOR_EFFORT" \
     ${CODEX_MCP_OPTION:+"$CODEX_MCP_OPTION"}
 fi
@@ -499,9 +502,9 @@ say "Pinning statusline node binary to: $NODE_BIN"
 
 # The statusline command embeds a literal node path. Render the device-specific
 # settings.json into a temp file, then place it (so --update can diff against it).
-# The render is ADDITIVE for plugins: it patches the node path and forces the
-# repo's baseline keys, but unions enabledPlugins / extraKnownMarketplaces with
-# whatever this machine already has, so host-specific plugins are never dropped.
+# Claude Code also writes settings.json, so repo values are defaults only: an
+# existing key or plugin entry always wins. statusLine is the one harness-owned
+# key, because it carries this device's node path.
 RENDERED_SETTINGS="$TEMP_ROOT/claude-settings.json"
 python3 "$REPO_ROOT/scripts/render-claude-settings.py" \
   --source "$REPO_ROOT/claude/settings.json" \

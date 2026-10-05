@@ -77,17 +77,14 @@ def verify_install(
     assert (
         claude_settings["model"]
         == claude_adapter["models"]["coordinator"]
-        == "sonnet"
+        == "opus"
     )
     assert claude_settings["effortLevel"] == claude_adapter["effort"]["medium"]
 
     config = tomllib.loads((home / ".codex/config.toml").read_text())
     assert config["smoke_sentinel"] == "preserved"
-    assert (
-        config["model"]
-        == codex_adapter["models"]["coordinator"]
-        == "gpt-5.6-terra"
-    )
+    assert codex_adapter["models"]["coordinator"] == "provider-default"
+    assert "model" not in config
     assert config["model_reasoning_effort"] == codex_adapter["reasoning_effort"]["medium"]
     assert config["agents"]["max_depth"] == manifest["max_depth"] == 2
     assert config["mcp_servers"]["linear"]["enabled"] is False
@@ -119,9 +116,8 @@ def verify_install(
         codex_agent = tomllib.loads(codex_path.read_text())
         assert codex_agent["name"] == name
         assert codex_agent["nickname_candidates"] == [roles[name]["display_name"]]
-        assert codex_agent["model"] == codex_adapter["models"][
-            roles[name]["model_policy"]
-        ]
+        assert codex_adapter["models"][roles[name]["model_policy"]] == "provider-default"
+        assert "model" not in codex_agent
         assert codex_agent["model_reasoning_effort"] == codex_adapter[
             "reasoning_effort"
         ][roles[name]["reasoning_policy"]]
@@ -140,12 +136,12 @@ def verify_install(
     executor = tomllib.loads(
         (codex_dir / "agent-harness-executor.toml").read_text()
     )
-    assert executor["model"] == "gpt-5.6-sol"
+    assert "model" not in executor
     assert executor["model_reasoning_effort"] == "high"
     reviewer = tomllib.loads(
         (codex_dir / "agent-harness-reviewer.toml").read_text()
     )
-    assert reviewer["model"] == "gpt-5.6-terra"
+    assert "model" not in reviewer
     assert reviewer["model_reasoning_effort"] == "medium"
     assert "only role permitted" in reviewer["developer_instructions"]
     assert "# PR review workflow" in reviewer["developer_instructions"]
@@ -215,12 +211,12 @@ def verify_install(
     assert claude_route["provenance"] == {
         "caller": "claude",
         "backend": "codex-plugin-native-review",
-        "model": "gpt-5.6-sol",
+        "model": "provider-default",
         "effort": "provider-default",
     }
     claude_command = claude_route["command"]
     assert claude_command[2:4] == ["adversarial-review", "--wait"]
-    assert claude_command[claude_command.index("--model") + 1] == "gpt-5.6-sol"
+    assert "--model" not in claude_command
     assert claude_command[-1].startswith("Smoke review context")
 
     releases = home / ".agent-harness/releases"

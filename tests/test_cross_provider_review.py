@@ -33,7 +33,7 @@ def args(
         scope=scope,
         base=base,
         context="Goal: review the change. Target: the complete diff.",
-        codex_model="gpt-5.6-sol",
+        codex_model=None,
     )
 
 
@@ -91,14 +91,14 @@ class CrossProviderReviewTests(unittest.TestCase):
         self.assertEqual(command[2:4], ["adversarial-review", "--wait"])
         self.assertEqual(command[command.index("--scope") + 1], "branch")
         self.assertEqual(command[command.index("--base") + 1], "main")
-        self.assertEqual(command[command.index("--model") + 1], "gpt-5.6-sol")
+        self.assertNotIn("--model", command)
         self.assertEqual(command[-1], "Goal: review the change. Target: the complete diff.")
         self.assertEqual(
             provenance,
             {
                 "caller": "claude",
                 "backend": "codex-plugin-native-review",
-                "model": "gpt-5.6-sol",
+                "model": "provider-default",
                 "effort": "provider-default",
             },
         )

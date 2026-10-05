@@ -39,7 +39,7 @@
       }
     }
   },
-  "model": "sonnet",
+  "model": "opus",
   "effortLevel": "medium",
   "skipDangerousModePermissionPrompt": true,
   "agentPushNotifEnabled": true

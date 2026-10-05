@@ -155,7 +155,7 @@ Pick one of:
 | `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
 | revision-pinned entries in `dependencies/external-skills.json` | The same skill locations as portable skills; currently installs `unslop` from `cursor/plugins` |
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |
-| coordinator model and workflow depth | Codex Terra or Claude Code Sonnet plus medium effort; `agents.max_depth = 2` merged into Codex config |
+| coordinator model and workflow depth | Claude Code `opus` (a model family, not a version); Codex keeps its default model; medium effort; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
 | deterministic task commands | Stored under `~/.agent-harness/bin/` and linked into `~/bin/` as `agent-task`, `agent-workspace`, and `task-catalog` |
 | versioned harness releases | `~/.agent-harness/releases/<release-id>/` with `~/.agent-harness/current` selecting the active release |
@@ -230,12 +230,20 @@ rules and the [detailed topology](./agent-workflows/topology.md).
     "crit@crit": true
   },
   "extraKnownMarketplaces": { ... github sources for each ... },
-  "model": "sonnet",
+  "model": "opus",
   "effortLevel": "medium",
   "skipDangerousModePermissionPrompt": true,
   "agentPushNotifEnabled": true
 }
 ```
+
+Claude Code also writes this file, for example through `/model` and `/config`.
+These values are defaults only. The installer writes a key only when it is
+missing and never changes an existing value. The only exception is
+`statusLine`, which contains the `node` path for each device. The same rule
+applies to the `model`, `model_reasoning_effort`, and `agents.max_depth` keys in
+`~/.codex/config.toml`. The managed MCP server `enabled` flags are the one Codex
+setting that the installer still enforces.
 
 Plugins are not vendored here. The marketplace entries tell Claude Code
 where to fetch them on first launch — they auto-install into

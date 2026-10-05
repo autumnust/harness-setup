@@ -39,6 +39,45 @@ class RenderClaudeSettingsTests(unittest.TestCase):
         self.assertEqual(rendered["env"]["HOST_ONLY"], "preserved")
         self.assertNotIn("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", rendered["env"])
 
+    def test_existing_values_win_except_status_line(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            existing = Path(temp) / "settings.json"
+            existing.write_text(
+                json.dumps(
+                    {
+                        "model": "sonnet",
+                        "effortLevel": "high",
+                        "hostOnly": True,
+                        "statusLine": {"type": "command", "command": "old"},
+                        "enabledPlugins": {"crit@crit": False},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            rendered = render_claude_settings.render(
+                REPO_ROOT / "claude/settings.json",
+                existing,
+                "/usr/local/bin/node",
+            )
+
+        self.assertEqual(rendered["model"], "sonnet")
+        self.assertEqual(rendered["effortLevel"], "high")
+        self.assertTrue(rendered["hostOnly"])
+        self.assertFalse(rendered["enabledPlugins"]["crit@crit"])
+        self.assertTrue(rendered["enabledPlugins"]["claude-hud@claude-hud"])
+        self.assertIn('exec "/usr/local/bin/node"', rendered["statusLine"]["command"])
+
+    def test_writes_defaults_for_missing_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            rendered = render_claude_settings.render(
+                REPO_ROOT / "claude/settings.json",
+                Path(temp) / "missing.json",
+                "/usr/local/bin/node",
+            )
+
+        self.assertEqual(rendered["model"], "opus")
+        self.assertEqual(rendered["effortLevel"], "medium")
+
 
 if __name__ == "__main__":
     unittest.main()

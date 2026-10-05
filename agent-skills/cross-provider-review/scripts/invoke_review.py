@@ -102,18 +102,17 @@ def build_command(args: argparse.Namespace) -> tuple[list[str], dict[str, str]]:
         "--wait",
         "--scope",
         args.scope,
-        "--model",
-        args.codex_model,
-        "--cwd",
-        repo,
     ]
+    if args.codex_model:
+        command.extend(["--model", args.codex_model])
+    command.extend(["--cwd", repo])
     if args.base:
         command.extend(["--base", args.base])
     command.append(args.context)
     provenance = {
         "caller": "claude",
         "backend": "codex-plugin-native-review",
-        "model": args.codex_model,
+        "model": args.codex_model or "provider-default",
         "effort": "provider-default",
     }
     return command, provenance
@@ -132,7 +131,10 @@ def main() -> int:
         required=True,
         help="Coordinator review context, including the problem and target diff.",
     )
-    parser.add_argument("--codex-model", default="gpt-5.6-sol")
+    parser.add_argument(
+        "--codex-model",
+        help="Codex model for the review. When omitted, Codex uses its default model.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Render Codex root-agent settings while preserving unrelated TOML text."""
+"""Render Codex root-agent settings while preserving unrelated TOML text.
+
+Codex also writes this file. The model, reasoning effort, and agents.max_depth
+keys are defaults only: the harness writes each key only when it is missing.
+"""
 
 from __future__ import annotations
 
@@ -35,22 +39,17 @@ def table_header(line: str) -> tuple[str, bool] | None:
     return None
 
 
-def set_root_string(lines: list[str], key: str, value: str) -> None:
+def default_root_string(lines: list[str], key: str, value: str) -> None:
     end = next((i for i, line in enumerate(lines) if table_header(line)), len(lines))
-    key_re = re.compile(rf"^(\s*){re.escape(key)}\s*=.*$")
+    key_re = re.compile(rf"^\s*{re.escape(key)}\s*=.*$")
     matches = [i for i in range(end) if key_re.match(lines[i])]
     if len(matches) > 1:
         raise ValueError(f"config contains more than one root {key} key")
-    rendered = f"{key} = {json.dumps(value, ensure_ascii=True)}"
-    if matches:
-        index = matches[0]
-        indent = key_re.match(lines[index]).group(1)
-        lines[index] = indent + rendered
-    else:
-        lines.insert(end, rendered)
+    if not matches:
+        lines.insert(end, f"{key} = {json.dumps(value, ensure_ascii=True)}")
 
 
-def set_max_depth(lines: list[str], depth: int) -> None:
+def default_max_depth(lines: list[str], depth: int) -> None:
     tables = [
         (i, header[0], header[1])
         for i, line in enumerate(lines)
@@ -86,11 +85,7 @@ def set_max_depth(lines: list[str], depth: int) -> None:
     matches = [i for i in range(start + 1, end) if MAX_DEPTH_RE.match(lines[i])]
     if len(matches) > 1:
         raise ValueError("[agents] contains more than one max_depth key")
-    if matches:
-        index = matches[0]
-        indent = MAX_DEPTH_RE.match(lines[index]).group(1)
-        lines[index] = f"{indent}max_depth = {depth}"
-    else:
+    if not matches:
         lines.insert(end, f"max_depth = {depth}")
 
 
@@ -123,14 +118,15 @@ def set_existing_mcp_servers_enabled(lines: list[str], enabled: bool) -> None:
 def render(
     text: str,
     depth: int,
-    model: str,
+    model: str | None,
     reasoning_effort: str,
     managed_mcp_enabled: bool = False,
 ) -> str:
     lines = text.splitlines()
-    set_root_string(lines, "model", model)
-    set_root_string(lines, "model_reasoning_effort", reasoning_effort)
-    set_max_depth(lines, depth)
+    if model:
+        default_root_string(lines, "model", model)
+    default_root_string(lines, "model_reasoning_effort", reasoning_effort)
+    default_max_depth(lines, depth)
     set_existing_mcp_servers_enabled(lines, managed_mcp_enabled)
 
     result = "\n".join(lines).rstrip() + "\n"
@@ -139,12 +135,12 @@ def render(
             parsed = tomllib.loads(result)
         except Exception as exc:
             raise ValueError(f"rendered config is invalid TOML: {exc}") from exc
-        if parsed.get("model") != model:
-            raise ValueError("rendered config did not set the coordinator model")
-        if parsed.get("model_reasoning_effort") != reasoning_effort:
-            raise ValueError("rendered config did not set coordinator reasoning effort")
-        if parsed.get("agents", {}).get("max_depth") != depth:
-            raise ValueError("rendered config did not set agents.max_depth")
+        if model and "model" not in parsed:
+            raise ValueError("rendered config has no coordinator model")
+        if "model_reasoning_effort" not in parsed:
+            raise ValueError("rendered config has no coordinator reasoning effort")
+        if "max_depth" not in parsed.get("agents", {}):
+            raise ValueError("rendered config has no agents.max_depth")
     return result
 
 
@@ -153,7 +149,10 @@ def main() -> int:
     parser.add_argument("--input", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--max-depth", type=int, default=2)
-    parser.add_argument("--model", required=True)
+    parser.add_argument(
+        "--model",
+        help="Default coordinator model, written only when the config has none.",
+    )
     parser.add_argument("--reasoning-effort", required=True)
     parser.add_argument(
         "--enable-managed-mcp",

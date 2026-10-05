@@ -1,9 +1,9 @@
 {
   "models": {
-    "coordinator": "sonnet",
-    "fast": "sonnet",
-    "executor": "sonnet",
-    "capable": "sonnet",
+    "coordinator": "opus",
+    "fast": "opus",
+    "executor": "opus",
+    "capable": "opus",
     "deep": "opus"
   },
   "effort": {
@@ -15,7 +15,7 @@
   "review_bridge": {
     "backend": "codex-plugin-native-review",
     "caller": "claude",
-    "model": "gpt-5.6-sol",
+    "model": "provider-default",
     "effort": "provider-default"
   }
 }
