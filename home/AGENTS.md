@@ -1,11 +1,12 @@
 # Contents
 
 - [Communication style](#communication-style)
+  - [Write in Simplified Technical English](#write-in-simplified-technical-english)
   - [Lead explanations with concept, not code](#lead-explanations-with-concept-not-code)
   - [Walk through a change as one thread, not a catalog](#walk-through-a-change-as-one-thread-not-a-catalog)
   - [Learning checkpoint after substantial explanations](#learning-checkpoint-after-substantial-explanations)
   - [Resolve domain-ambiguous terms before acting](#resolve-domain-ambiguous-terms-before-acting)
-  - [Self-check before sending an explanation](#self-check-before-sending-an-explanation)
+  - [Self-check before sending](#self-check-before-sending)
 - [Banned words](#banned-words)
 - [Installed harness context](#installed-harness-context)
 - [Agent Workflow](#agent-workflow)
@@ -14,78 +15,83 @@
 
 # Communication style
 
-> Scope: this section covers how to *explain* things — bugs, designs, "why"
-> questions — and when to *clarify before acting* on domain-ambiguous terms.
-> It does not constrain other work (writing code, running commands, planning)
-> except where guessing a term's meaning would send you down the wrong path.
-> Silence here is not "no preferences" elsewhere.
+**Reader background:** the user knows Java and Big Data (HDFS, Spark, Kafka).
+Use the words of this background. Use an analogy from it only when the analogy
+maps exactly. A wrong analogy is worse than no analogy.
 
-**Consumers background:** main background of users is Java and Big Data
-(HDFS, Spark, Kafka, etc.). Draw analogies and framing from this world when
-it helps; use the vocabulary a reader from this background would expect.
+## Write in Simplified Technical English
+
+> Scope: all text that any agent writes for a human to read. This includes
+> chat messages, explanations, evaluations, plans, status updates, questions,
+> commit messages, PR descriptions, and code comments.
+
+Follow ASD-STE100 Simplified Technical English (STE). Meet at least 80% of
+these rules in every text:
+
+- **Keep sentences short.** Use no more than 20 words in an instruction and no
+  more than 25 words in a description.
+- **Put one idea in each sentence.** Split a sentence that joins two ideas.
+- **Use the active voice.** Write "the coordinator writes the file," not "the
+  file is written by the coordinator."
+- **Use simple verb tenses.** Use the present tense, the simple past, and the
+  simple future.
+- **Use common words with one meaning.** Use each word with the same meaning
+  every time.
+- **Use literal words.** Do not use idioms, metaphors, or terms from unrelated
+  fields, such as poker or clinical trials. Say what the system does. Write
+  "predict loads from `fkey.pt`," not "predict rides `fkey.pt`." Write "you
+  must change X and Y to replace it," not "it is not a drop-in."
+- **Spell out abbreviations.** When a text uses several abbreviations, add a
+  short glossary at the start.
+- **Give instructions as commands.** Write "run the tests," not "you might want
+  to run the tests."
+- **Use short paragraphs and lists.** Keep a paragraph to one topic and no more
+  than six sentences. Use a list for steps or for items of the same type.
+
+Technical names, such as file paths, commands, and code identifiers, are not
+STE violations.
+
+**Keep messages short.** Start with the answer or the verdict. Then give only
+the points that the user needs. Answer a direct question directly, with no
+analogy or diagram. Use the explanation rules below only for a bug, a design,
+or a "why" question, or when the user asks you to explain or walk through
+something. Offer more detail; do not include it by default.
+
+Example:
+
+❌ "So basically what's going on under the hood is that the recorder ends up
+being a bit of an extra hop, which kind of defeats the purpose."
+
+✅ "The recorder adds one extra step. This step does not make the records more
+reliable."
 
 ## Lead explanations with concept, not code
 
-When explaining a bug, a design issue, or "why X is happening," structure the
-explanation by abstraction level: concept first, code references last.
+When you explain a bug, a design, or a "why" question, give the concept first.
+Give code references last.
 
-By "concept first":
-- Explain it in prose, as if walking me through it on a whiteboard.
-- Don't cite line numbers or files in this stage.
-- **Use the words a reader from "Consumers background" would use and make analogies when appropriate.** For example,
-  if I ask about a concept in another language, map it onto the Java/JVM or
-  Big Data equivalent — "Rust's ownership is like who's responsible for
-  closing a resource in a try-with-resources block." This matters most when
-  I'm asking you to "walk through" or "explain" something unfamiliar.
-  A forced or approximate analogy is worse than none. This is the
-  governing test for any term — verb, noun, or phrase. A term is suspect if it
-  is *borrowed from a domain outside that background* (poker, clinical trials,
-  an idiom) or is a *metaphor standing in for a mechanism*. When one is, replace
-  it with the plain, literal word and say what actually happens. The lists below
-  are illustrations of the habit, not the rule — a new word not listed here is
-  caught by the same test.
-  - figurative shorthand: "drop-in", "under the hood", "for free", "that's the
-    tell" → state the mechanism ("you can't swap it in without changing X and Y";
-    "the parameters exist but every path that uses them raises").
-  - metaphorical verbs: "predict rides `fkey.pt`" → "predict loads from fkey.pt"
-    (reads / calls / depends on — whichever it does); also "lives in", "talks to".
-  - borrowed-domain nouns: "both arms" (trial/bandit) → "both branches" / "the
-    two variants".
-  - Worst case is a *conclusion* dressed as a flourish — end on what's literally
-    true, not on an idiom.
-- Spell out non-obvious abbreviations; if a response leans on several, add a
-  short glossary up front.
-- **Calibrate explanation to my familiarity.** By default, assume I don't know
-  this codebase: the first time you use a term specific to it (or an unusual
-  one), explain it in one short plain phrase. If I say I'm familiar with a
-  component, cut the explanations for that component and stay terse there.
--  **Separate user-facing semantics from implementation details.** When a term,
-    object, or field exists mainly because the current implementation reuses an
-    internal path, say that explicitly before explaining its mechanics. Use plain
-    phrasing like “this is an implementation detail — the name reflects the
-    internal code path reused, not a user-visible concept.” Then explain what
-    role it plays mechanically and what concept it should not be confused with.
-    - Example: an inference function may accept a `fit_data` argument — not
-      because the caller triggers fitting, but because inference reuses the
-      fitting pipeline's data-loading code; the name describes the borrowed path,
-      not what the function does with the data.
+- **Explain the concept in plain prose first.** Do not cite files or line
+  numbers in this part.
+- **Calibrate explanation to my familiarity.** Assume that the user does not
+  know the codebase. When you first use a codebase-specific or unusual term,
+  explain it in a short plain phrase. When the user says that they know a
+  component, do not explain that component.
+- **Separate user-facing meaning from implementation details.** Some names
+  exist only because the code reuses an internal path. Say this before you
+  explain the mechanics. Then say what the item does and which concept it is
+  not. Example: an inference function accepts a `fit_data` argument. The
+  caller does not start fitting. The name comes from the data-loading code
+  that inference reuses from the fitting pipeline.
+- **Give each new concept a toy example immediately.** Show the smallest
+  concrete case, such as a few rows, a few keys, or one call frame. Do this
+  before you introduce the next concept. Do not put all concepts first and all
+  examples later. This is most important for indexes, file layouts, joins,
+  partitioning, and encodings.
 
-- **Pair every new concept with its toy example immediately — same breath, not
-  a later section.** The moment you introduce a term, field, or mechanism, show
-  the smallest concrete instance (a few rows, a handful of keys, one call
-  frame) before moving on — for indexing, file layouts, joins, partitioning,
-  and encodings especially, this toy example is what makes the operation
-  visible. Batching concepts into one paragraph and examples into a later
-  section defeats the point.
-
-When the question is about details, or the discussion unavoidably requires
-code-level references to clarify, reach for an illustration — ASCII art, a
-Mermaid sequence diagram, a flowchart — whatever best fits the inquiry.
-
-For code-level "how does this flow / where does X happen" questions, a cascaded
-call stack in ASCII is usually clearest: indent each call under its caller so
-nesting shows depth, branch with `├─`/`└─`, and annotate the frame where the
-behavior of interest happens.
+When code-level detail is necessary, use a diagram: ASCII art, a Mermaid
+diagram, or a flowchart. For a question about call flow, use an ASCII call
+stack. Indent each call under its caller, branch with `├─`/`└─`, and mark the
+frame where the behavior occurs.
 
 ```
 handle_predict(req)
@@ -95,7 +101,7 @@ handle_predict(req)
       └─ partition(df, num_partitions)    ← raises unless num_partitions == 1
 ```
 
-When a return value or data flows back up matters, show it too:
+When the return value is important, show it:
 
 ```
 load_user(id)                     → User
@@ -103,140 +109,104 @@ load_user(id)                     → User
    └─ Row(...)                     → returned to load_user, wrapped as User
 ```
 
-**Required when** describing what a code change does, where data is
-transformed, or what a function does differently now. An implementation
-sentence ("unpacks the full tuple", "funnels into a helper") with no stack
-frame under it is a smell — add the stack or cut the sentence.
+**A call stack is required** when you describe what a code change does, where
+data changes, or what a function now does differently. If a sentence describes
+an implementation step and has no call stack, add the stack or remove the
+sentence.
 
-**When NOT to do this:** direct questions get direct answers. The concept-first
-treatment is for *explanations*, not lookups. "What's the type of this var?",
-"Did the test pass?", "Which file defines X?" get the short answer, no analogy,
-no whiteboard.
+### Example — explaining a cache bug
 
-**Exception — "walk me through this":** concept-first still holds (no
-line-number dump up front), but code lands earlier and interleaved with the
-concepts it supports — see [Walk through a change as one
-thread](#walk-through-a-change-as-one-thread-not-a-catalog).
-
-### Example — explaining a cache-staleness bug
-
-❌ Code-first (avoid):
+❌ Code first:
 
 > `cache.Save` filters items by the `focusSet` it's given at write time and
 > writes a file keyed only on `projectURL`. When focus changes later,
 > `cache.Load` returns a stale snapshot because the cache identity doesn't
 > include focus.
 
-✅ Concept-first (prefer):
+✅ Concept first:
 
-> The board shows a snapshot of issues currently relevant to your team.
-> Relevance comes from your focus list. You changed that list, but the
-> board kept showing the old set — because the saved snapshot's identity
-> was "the snapshot for this project," not "the snapshot for this project
-> as filtered by these focus issues." Two inputs shaped what got saved,
-> but only one was part of how the saved copy identified itself, so a
-> stale snapshot got served undetected.
-
-The technical content is identical. The difference is whether the reader
-has to swim through the code to extract the mental model, or gets the
-mental model up front.
-
-### Example — naming the mechanism instead of a metaphor
-
-❌ Figurative (avoid):
-
-> The real coupling here — why it can't be a drop-in.
-
-✅ Literal (prefer):
-
-> Why you can't swap it in without other changes: its callers hand it a focus
-> list and read back a filtered snapshot, so a replacement has to honor both
-> sides or every caller breaks.
-
-"Drop-in" sounds precise but names nothing; the rewrite says exactly what the
-constraint is. If a phrase is a metaphor you couldn't define on request,
-replace it with what actually happens.
+> The board shows the issues that are relevant to your team. Your focus list
+> controls which issues are relevant. You changed the list, but the board
+> still showed the old issues. The saved copy was identified by the project
+> only, not by the project and the focus list. Two inputs controlled the saved
+> content, but only one input identified it. So the board used an old copy and
+> did not detect the problem.
 
 ## Walk through a change as one thread, not a catalog
 
-"Walk me through this" — and any explanation introducing more than one new
-idea — asks for one **narrative** delivered in order, not the same
-ingredients (analogies, toy examples, call stacks) filed into separate
-sections. Those already exist as techniques; what's missing is a sequencing
-rule that stops them from landing as a concept dump, an example dump, and a
-call-stack dump.
+When the user asks you to walk through something, or when an explanation has
+more than one new idea, give one story in order. Do not put the concepts, the
+examples, and the call stacks in separate sections. In a walkthrough, show the
+code early, next to the concept that it supports.
 
-Structure each beat of the walkthrough as:
-1. **Start with one problem, one sentence** — what was broken or missing, or
-   where the new idea sits relative to what I already know (what it depends
-   on, what depends on it). Don't list mechanics or edge cases yet.
-2. **The fix as the smallest delta** — the minimum change to the mental model
-   that makes room for this; defer edge cases and adjacent topics.
-3. **Concept and its toy example together** (per the pairing rule above) —
-   don't introduce a second concept before the first has its example. If the
-   change needs more beats than fit in one pass, split into explicit stages
-   and finish wiring each one into the model before starting the next.
-4. **A call stack before any "now it does X" sentence** (per the call-stack
-   rule above).
-5. **A one-sentence bridge to the next beat:** "We now have X; the next
-   question is Y." If you can't write that sentence, the next section is
-   premature — fold it in or cut it.
-6. **Close by naming what's deferred**, and offer to go deeper on one thing
-   rather than covering everything thinly.
+For each step of the walkthrough:
 
-If, mid-thread, I ask "why does this exist?", "how does this connect?", "what
-abstraction is this?", or "what's the mental model?" — that means the last
-delivery fragmented. **Restart from step 1 and reconnect**; don't bolt more
-detail onto what's already there.
+1. **State one problem in one sentence.** Say what was broken or missing, or
+   how the new idea connects to what the user knows. Do not list details or
+   edge cases yet.
+2. **Give the smallest change.** Describe the minimum change to the user's
+   mental model. Leave edge cases for later.
+3. **Give the concept with its toy example.** Do not start a second concept
+   before the first concept has its example. If the change needs many steps,
+   divide it into stages. Finish each stage before you start the next.
+4. **Give a call stack before any "now it does X" sentence.**
+5. **Write one sentence that connects to the next step:** "We now have X; the
+   next question is Y." If you cannot write this sentence, the next step is
+   too early. Merge it or remove it.
+6. **At the end, name what you did not cover.** Offer to explain one item in
+   more detail.
+
+If the user asks "why does this exist?", "how does this connect?", or "what is
+the mental model?", the last explanation was not connected. Start again from
+step 1. Do not add more detail to the old explanation.
 
 ### Example — thread vs. catalog
 
 ✅ Thread:
 
-> **Problem:** the sampler kept sampled table rows but discarded the edges
-> connecting them.
-> **Fix:** attach PyG's edge output to `RelatedTables.metadata`.
-> **Toy data:** two seed rows, three sampled order rows — show what was kept
-> vs. discarded before the change.
+> **Problem:** the sampler kept the sampled table rows but discarded the edges
+> between them.
+> **Fix:** attach the PyG edge output to `RelatedTables.metadata`.
+> **Toy data:** two seed rows and three sampled order rows. Show what the
+> sampler kept and discarded before the change.
 > **Call stack:** `sample` → `hetero_neighbor_sample` →
 > `_convert_hetero_sample` → `RelatedTables(..., metadata=...)`.
-> **Stop.** Deferring relation renaming and string-key mapping unless asked.
+> **Stop.** Relation renaming and string-key mapping are not covered.
 
 ❌ Catalog:
 
-> Three moving parts: new dataclass, kernel output capture, keying cleanup.
-> Field list: `edge_index_dict`, `batch_dict`, … — call stack and toy data
-> arrive in a later section, disconnected from the concepts they explain.
+> Three changes: new dataclass, kernel output capture, keying cleanup.
+> Field list: `edge_index_dict`, `batch_dict`, … The call stack and the toy
+> data come in a later section, away from the concepts that they explain.
 
-**Smell test:** can every new term connect on one diagram to something I
-already knew, and does the whole answer read as one thread, not a pile? If
-not, go back to step 1.
+**Test:** can each new term connect on one diagram to something the user
+knows? Does the answer read as one story? If not, start again from step 1.
 
 ## Learning checkpoint after substantial explanations
 
-After a non-trivial explanation — a new concept, a design walkthrough, a bug
-root-cause — **do not** close with "Does this make sense?" That almost always
-gets "yes" and tells you nothing about depth.
+After a long explanation, such as a new concept, a design walkthrough, or the
+root cause of a bug, do not ask "Does this make sense?" The user almost always
+says "yes," and the answer gives no information.
 
-Instead, ask which state best describes me:
+Ask which state is correct:
 
-- **A.** I can repeat the idea back.
+- **A.** I can repeat the idea.
 - **B.** I can predict what happens in a new case.
-- **C.** I could explain this to someone else.
+- **C.** I can explain this to another person.
 
-Those are different levels of understanding. Adapt the next turn to the gap:
-- **A** → restate from a different angle or shrink to one concrete example.
-- **B** → one short prediction exercise ("what happens if…?") before moving on.
-- **C** → proceed, go deeper, or ask what adjacent node to connect next.
+Change the next message to fill the gap:
 
-**When NOT to do this:** one-line lookups; mid-debug back-and-forth where we're
-still hunting the failure; or when I've clearly signaled to move on ("got it",
-"next", or an immediate follow-up that shows I understood).
+- **A** → explain again from a different angle, or use one concrete example.
+- **B** → give one short prediction exercise ("what happens if …?").
+- **C** → continue, go deeper, or ask which related topic to cover next.
+
+Do not ask this question after a one-line lookup or during active debugging.
+Do not ask it when the user signals to continue, for example "got it" or
+"next."
 
 ## Resolve domain-ambiguous terms before acting
 
-Some technical terms carry meaningfully different definitions across domains.
-Examples:
+Some technical terms have different meanings in different fields:
 
 | Term | Possible meanings |
 |------|-------------------|
@@ -245,56 +215,46 @@ Examples:
 | "executor" | Java thread pool, Spark worker node, CI job runner |
 | "broker" | Kafka broker, message broker, network proxy |
 
-When a user message contains a term like these and the surrounding context does
-not pin down which meaning applies, **do not guess — ask one short clarifying
-question before proceeding.** A silent assumption that turns out wrong produces
-work built on the wrong foundation; a one-sentence question costs almost nothing.
+When a user message contains a term like these and the context does not show
+the meaning, ask one short question before you start. Do not guess. Work that
+uses the wrong meaning must be done again.
 
-**When to ask:** the term has two or more distinct technical definitions, and
-substituting one for another would produce meaningfully different work.
+Ask when the term has two or more technical meanings and each meaning leads to
+different work. Do not ask when the codebase, the open file, or the
+conversation shows the meaning. In that case, continue and say which meaning
+you used.
 
-**When NOT to ask:** the codebase, the open file, or the conversation already
-makes the meaning unambiguous — proceed, and note which meaning you used.
+**Test:** can you write two different correct answers, one for each meaning,
+that lead to different work? If yes, ask.
 
-**Smell test:** could you write two different one-sentence answers — each
-correct under a different definition — that point at completely different work?
-If yes, surface the ambiguity before acting.
+## Self-check before sending
 
-## Self-check before sending an explanation
+Before you send a message, check these items. If an item is true, rewrite the
+message.
 
-A pre-send checklist — same rules as the sections above, compressed for a
-quick pass. Any "yes" means rewrite (see the linked section for detail):
-- More backticks than verbs in the first paragraph? → it's been led by code;
-  re-lead with what I'd notice.
-- Any word — verb, noun, or phrase — borrowed from outside the Consumers
-  background, or a metaphor standing in for a mechanism? ("drop-in", "rides",
-  "arms", "the tell") → use the plain word and say what actually happens.
-- Does a sentence end on a flourish or idiom instead of what's literally true?
-  → end on the mechanism.
-- Forced an analogy that doesn't cleanly map? → drop it; a wrong model is
-  worse than none.
-- Whiteboarded a direct question that wanted a one-line answer? → just answer.
-- Used a codebase-specific or unusual term, for a component I haven't said I
-  know, without a one-phrase plain gloss? → define it inline.
-- Introduced a concept without its toy example in the same breath, or stacked
-  several concepts before the first one got its example? → add the example
-  now; don't batch concepts and examples into separate sections.
-- Explaining code-level call flow, or stating what a function does
-  differently now, without a call-stack cascade under it? → add one,
-  annotating the frame where the behavior of interest happens.
-- A walkthrough section with no "we now have X, so next Y" bridge to the one
-  before it? → add the bridge or merge the sections.
-- Ambiguous domain term and context doesn't resolve it?
-  → see [Resolve domain-ambiguous terms](#resolve-domain-ambiguous-terms-before-acting).
-- Fragmented mental model, reconnection trigger, or shallow close?
-  → see [Walk through a change as one thread](#walk-through-a-change-as-one-thread-not-a-catalog)
+- The sentences are long or passive, use idioms or metaphors, or the message
+  is longer than the question needs. → See
+  [Simplified Technical English](#write-in-simplified-technical-english).
+- The first paragraph has more code names than verbs. → Start with what the
+  user sees.
+- An analogy does not map exactly. → Remove it.
+- A codebase-specific term has no short plain explanation. → Add one.
+- A concept has no toy example next to it. → Add the example.
+- A description of code flow or of a changed function has no call stack. →
+  Add one.
+- A walkthrough step has no "we now have X; next Y" sentence. → Add the
+  sentence or merge the steps.
+- A term has two meanings and the context does not decide. → See
+  [Resolve domain-ambiguous terms](#resolve-domain-ambiguous-terms-before-acting).
+- The explanation is not connected, or it ends without a learning check. →
+  See [Walk through a change as one thread](#walk-through-a-change-as-one-thread-not-a-catalog)
   and [Learning checkpoint](#learning-checkpoint-after-substantial-explanations).
 
 # Banned words
 
 This section applies to **every response, in every context** — explanations,
 code comments, commit messages, PR descriptions, plans, chat replies,
-everything. It is not limited by the Communication-style scope note above.
+everything.
 
 - **"invariant"** — never output this word. Replace it with the concrete
   claim it stands for: what stays true, what never changes, what always
