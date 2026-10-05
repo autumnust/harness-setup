@@ -5,7 +5,8 @@ mutable state:
 
 - runtime configuration and communication conventions;
 - learner profiles and external-memory synchronization;
-- the current `progress.html` and other canonical execution summaries;
+- `RECOVERY.md`, `progress.html`, findings catalogs, and other canonical
+  execution records;
 - accepted changes proposed by the retrospector.
 
 Children may write assigned product files, provision resources in their scope,

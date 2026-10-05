@@ -209,13 +209,15 @@ class WorkflowSpecTests(unittest.TestCase):
         ):
             self.assertIn(marker, normalized)
 
-    def test_pr_requests_escalate_to_full_work(self) -> None:
+    def test_pr_work_and_review_stay_in_fast_mode(self) -> None:
         coordinator = (self.source / "roles/coordinator.md").read_text()
-        handoff = (self.source / "contracts/handoff.md").read_text()
+        normalized = " ".join(coordinator.split())
         maintenance = (self.source / "workflows/pr-maintenance.md").read_text()
-        self.assertIn("creates or monitors a PR", coordinator)
-        self.assertIn("A requested PR is full work.", handoff)
-        self.assertIn("Full-mode only.", maintenance)
+        review = (self.source / "workflows/pr-review.md").read_text()
+        self.assertIn("PR creation and monitoring, and PR review", normalized)
+        self.assertIn("a PR, or a review request never selects full mode", normalized)
+        self.assertIn("Available in fast and full mode.", maintenance)
+        self.assertIn("Available in fast and full mode.", review)
 
     def test_agents_may_create_prs_but_not_join_review_conversations(self) -> None:
         contract = (self.source / "contracts/canonical-state.md").read_text()
@@ -274,7 +276,15 @@ class WorkflowSpecTests(unittest.TestCase):
         coordinator_normalized = " ".join(coordinator.split())
         self.assertIn("**Fast**", coordinator)
         self.assertIn("**Full**", coordinator)
-        self.assertIn("Only an explicitly invoked `agent-workspace` task", coordinator)
+        self.assertIn(
+            "Use fast mode unless the human explicitly asks for full mode",
+            coordinator_normalized,
+        )
+        self.assertIn(
+            "Do you want no record, a compact `RECOVERY.md`, or full mode",
+            coordinator_normalized,
+        )
+        self.assertIn("Write execution records yourself", coordinator)
         self.assertNotIn("execution folder first", global_docs)
 
         education_other = "\n".join(

@@ -9,7 +9,7 @@
 - [Banned words](#banned-words)
 - [Installed harness context](#installed-harness-context)
 - [Agent Workflow](#agent-workflow)
-- [Long-Running Work Structure](#long-running-work-structure)
+- [Execution record policy](#execution-record-policy)
 - [Learning Calibration Mode](#learning-calibration-mode-quiz)
 
 # Communication style
@@ -348,12 +348,14 @@ configuration only as directed by the selected workflow.
 - Keep small or tightly coupled work in the main session; do not create an
   agent team merely because roles are available.
 - Follow `$AGENT_HARNESS_HOME/specs/roles/coordinator.md` for fast-versus-full
-  classification, operational sequencing, and education. Fast is the default.
+  classification, operational sequencing, and education. Fast is the default
+  and covers all work the human steers directly, including PRs and review. Full
+  mode starts only when the human explicitly asks for it.
 - Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-maintenance.md` as the sole
   source for Maintainer lifecycle, polling, notification routing, and stop
-  behavior. Full path only.
+  behavior.
 - Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-review.md` as the sole source
-  for full-mode review: one other-foundation opinion, no same-foundation
+  for review: one other-foundation opinion, no same-foundation
   second pass.
 - Only the coordinator spawns agents. Current operational children are
   depth-one leaves. Keep the installed maximum depth of two as a defensive
@@ -376,9 +378,10 @@ configuration only as directed by the selected workflow.
 - Child results are summaries with evidence links. Keep verbose exploration,
   logs, and scans out of the main conversation.
 - Only the coordinator writes runtime configuration, learner state,
-  communication conventions, `progress.html`, or accepted retrospective
-  changes. Children return evidence-backed state proposals and never interact
-  with the human user directly.
+  communication conventions, execution records such as `RECOVERY.md` and
+  `progress.html`, or accepted retrospective changes. Children return
+  evidence-backed state proposals and never interact with the human user
+  directly.
 - Agents may create or update pull requests, push their branches, and change
   pull-request metadata when those actions are within the requested work. Do
   not ask the human user to perform these routine pull-request operations.
@@ -389,16 +392,34 @@ configuration only as directed by the selected workflow.
 The provider-neutral Markdown and topology are authoritative. Native Claude
 and Codex agent files are generated during harness installation.
 
-# Long-Running Work Structure
+# Execution record policy
 
-This applies only when the user explicitly starts an `agent-workspace` task.
-Size, duration, several repositories, remote work, or full workflow selection
-do not select this structure by themselves. For ordinary repository work and
-general `agent-task` folders, create none of these files.
+The mode decides the records. Fast mode is the default and keeps no execution
+record. Full mode starts only when the human explicitly asks for it, for example
+"implement this while I'm away," and always keeps the full structure.
 
-- **Use the workspace task folder.** `agent-workspace start-task` returns the
-  execution folder. Keep all files below there; do not create another notes
+- **Ask; do not choose.** In fast mode, when the work may need recovery state,
+  such as a likely pause, handoff, or context loss, ask the human one short
+  question: "Do you want no record, a compact `RECOVERY.md`, or full mode with
+  the full record structure?" Do not pick a record level from task size or
+  risk. Keep no record until the human answers.
+- **Use one compact recovery record when the human picks it.** Keep exactly
+  one `RECOVERY.md` in the task folder. It contains only the objective, durable decisions, PR and commit
+  state, blockers, latest meaningful validation, and next action. PR and commit
+  state means identifiers and unpublished local work, not copied PR text or
+  live GitHub checks. Summarize validation; do not paste passing command output.
+  Update the record only at a phase boundary, before a pause or likely context
+  loss, during a handoff, or after a non-obvious failure. Do not copy chat
+  updates, PR descriptions, GitHub status, or transient command output into it.
+- **Use the full structure in full mode.** Use the existing task folder
+  returned by `agent-task` or `agent-workspace`; do not create a second notes
   folder.
+- **Expand when the human switches to full mode.** Carry the durable content
+  of `RECOVERY.md` into the full structure, remove `RECOVERY.md`, and continue
+  with one current status entry point. Do not keep both formats current.
+
+For the full structure:
+
 - **Link all references.** Any generated HTML or Markdown file that references
   another file, section, PR, or external resource must use a clickable
   hyperlink — never bare text. Generated files are read in a rendered context
@@ -425,10 +446,10 @@ general `agent-task` folders, create none of these files.
   entry point; avoid multiple competing trackers that answer the same "where are
   we?" question.
 - **Keep one publisher.** The coordinator is the only writer of the canonical
-  `progress.html`. Environment and execution agents write only assigned raw
-  evidence and return proposed dashboard changes to the coordinator.
-- **Style HTML for human reading.** Every coordinator-published HTML artifact
-  follows
+  `progress.html` and findings catalog. Environment and execution agents write
+  only assigned raw evidence and return proposed record changes to the
+  coordinator.
+- **Style HTML for human reading.** Every published HTML artifact follows
   `$AGENT_HARNESS_HOME/specs/contracts/human-readable-html.md`, including
   responsive layout, readable typography, status text, descriptive links, and
   browser verification when tooling is available.

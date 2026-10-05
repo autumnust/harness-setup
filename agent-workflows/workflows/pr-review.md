@@ -1,12 +1,12 @@
 # PR review workflow
 
-Full-mode only.
+Available in fast and full mode. Run it when the human asks for a review.
 
 1. Coordinator assembles the review context: the problem statement, user
    decisions, linked design material, repository guidance, and the complete
    branch diff target.
 2. Coordinator sends that context and the implementation provider, foundation,
-   concrete model, and identity to Reviewer in a `mode: full` packet.
+   concrete model, and identity to Reviewer in a packet that carries the current mode.
 3. Reviewer invokes the provider adapter's cross-provider backend exactly
    once, passes that context to it, and waits for its opinion. No other role
    may invoke that backend. Reviewer does not perform a second same-foundation

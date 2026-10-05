@@ -1,26 +1,67 @@
 ---
 name: execution-notes
-description: Prepare and validate an explicit agent-workspace task's execution environment. Use from the execution-environment-prepper only after the user selects agent-workspace and the coordinator provides its task folder.
+description: Create or validate compact and full execution records. Use compact records only when the human picks them in fast mode; use full records in full mode, which starts only on explicit human request.
 ---
 
-# Execution Notes
+# Execution notes
 
-Make a workload feasible to run, observe, stop, and resume without relying on
-chat history. This skill implements execution preparation and includes the
-deterministic structure checker that previously existed as a separate skill.
+Preserve enough state to resume work without turning routine interaction into a
+second stream of status reporting.
 
 ## When to use
 
-Use this only for a task the user explicitly started through `agent-workspace`.
-A large change, several repositories, remote hardware, multiple sessions, or
-full mode does not select this skill by itself. The context packet must contain
-the workspace task folder, resolved runtime configuration, and coordinator-owned
-canonical entry points. Report missing values to the coordinator; never ask the
-user directly or create another execution folder.
+Use this skill only after the human picks a compact record in fast mode or
+explicitly asks for full mode, and the coordinator provides the task folder.
+Fast mode keeps no record by default. The execution environment prepper never asks the human directly.
 
-## Procedure
+The coordinator writes compact records and canonical full records. The
+execution environment prepper uses only `full` depth, writes assigned readiness
+evidence, and returns proposed record changes through the coordinator.
 
-1. **Validate authority and paths.** Use only the execution path, evidence
+## Compact record
+
+When the human picks a compact record in fast mode, the coordinator
+creates or updates exactly one `<task-folder>/RECOVERY.md` from `assets/RECOVERY.md`. Keep only:
+
+- objective;
+- durable decisions;
+- PR and commit state;
+- blockers;
+- latest meaningful validation;
+- next action.
+
+Record PR URLs or numbers, branch names, commit identifiers, and unpublished
+local work when they matter for recovery. Do not copy a PR description, review
+thread, live GitHub checks, chat updates, or passing command output. Summarize
+the latest meaningful validation in one line.
+
+Update `RECOVERY.md` only at a phase boundary, before a pause or likely context
+loss, during a handoff, or after a non-obvious failure. Validate it with:
+
+```bash
+python3 <this-skill-directory>/scripts/check_work_structure.py \
+  <task-folder> --mode compact
+```
+
+## Full execution structure
+
+Use full depth in full mode, which starts only when the human explicitly asks
+for it. The coordinator writes the canonical structure. If the task started
+with compact tracking, move its durable content into the full structure and remove
+`RECOVERY.md` so there is one current status entry point.
+
+When writing as the coordinator, read the full-structure rules in
+`~/AGENTS.md`, update only the canonical files needed at this checkpoint, and
+validate them with:
+
+```bash
+python3 <this-skill-directory>/scripts/check_work_structure.py \
+  <task-folder> --mode full
+```
+
+When invoked as the execution environment prepper:
+
+1. **Validate authority and paths.** Use only the task folder, evidence
    location, and resource scope authorized in the context packet. Do not create
    or update `progress.html`, learner state, global configuration, or another
    canonical artifact.
@@ -35,30 +76,31 @@ user directly or create another execution folder.
    service reachability, resource capacity, and safe shutdown. Do not start an
    expensive workload merely to prove the command exists.
 5. **Record scoped evidence.** Write raw readiness evidence only in the assigned
-   location. Return proposed canonical runbook or dashboard changes to the
-   coordinator instead of publishing them yourself.
+   location. Return proposed runbook or dashboard changes to the coordinator
+   instead of publishing them yourself.
 6. **Define operation.** Return exact start, observe, stop, and resume commands,
    output locations, success signals, and failure signals.
 7. **Validate structure.** Run:
 
    ```bash
-   python3 <this-skill-directory>/scripts/check_work_structure.py <execution-folder>
+   python3 <this-skill-directory>/scripts/check_work_structure.py \
+     <task-folder> --mode full
    ```
 
    Use `--json` for structured findings and `--strict` to treat warnings as
    failures. Fix only non-canonical paths you own; propose canonical fixes to
    the coordinator. Rule provenance is in `references/RULES.md`.
 
-## Return contract
+## Return contract for full preparation
 
 Return only:
 
-- execution-folder path;
+- task-folder path;
 - readiness: ready, partially ready, or blocked;
 - exact next command;
 - observation and stop commands;
-- blockers or assumptions requiring the coordinator or user.
-- canonical-state changes the coordinator should publish.
+- blockers or assumptions requiring the coordinator or user;
+- execution-record changes the coordinator should apply.
 
 Do not claim readiness when a required credential, input, service, hardware
 resource, or safe stop path has not been checked. The coordinator presents the

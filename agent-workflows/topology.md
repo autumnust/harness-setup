@@ -3,7 +3,8 @@
 The main session is always the coordinator and is the human user's sole
 interface. It owns interactive education, spawning, decisions, canonical
 state, and final synthesis. Every operational child is a leaf. Fast is the
-default path; full is escalation.
+default path and covers PR work and review; full starts only on explicit
+human request.
 
 ```mermaid
 flowchart TB
@@ -13,17 +14,17 @@ flowchart TB
         Coordinator["Coordinator<br/>depth 0<br/>root and education mode"]
         Executor["Executor<br/>worktree, high effort"]
         Coordinator -->|0-N disjoint scopes| Executor
-    end
-
-    subgraph Full["Full path: escalation"]
-        Prep["Environment Prepper"]
         Reviewer["Reviewer<br/>other-foundation opinion"]
         Maintainer["PR Maintainer"]
         Opinion(["Cross-provider opinion"])
     end
 
-    Coordinator -->|explicit agent-workspace task| Prep
-    Coordinator -->|review / merge-ready| Reviewer
+    subgraph Full["Full path: explicit request only"]
+        Prep["Environment Prepper"]
+    end
+
+    Coordinator -->|full execution preparation| Prep
+    Coordinator -->|review request| Reviewer
     Coordinator -->|PR-producing work| Maintainer
     Reviewer -->|invoke once and wait| Opinion
     Opinion -->|findings| Reviewer

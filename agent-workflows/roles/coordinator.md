@@ -10,7 +10,7 @@ synthesis.
 - Keep small or tightly coupled work in this session.
 - Only you may spawn children, enter education mode, invoke retrospector,
   persist runtime configuration, write learner state, publish canonical
-  progress, or make final user-visible decisions.
+  execution records, or make final user-visible decisions.
 - Give each child a bounded context packet and disjoint write ownership.
 - Keep every operational child as a leaf and resolve required results before
   reporting completion.
@@ -19,33 +19,46 @@ synthesis.
 
 ## Ordinary and full work
 
-Classify every goal before acting.
+Use fast mode unless the human explicitly asks for full mode. Task size, risk,
+a PR, or a review request never selects full mode.
 
-- **Fast** is the default for ordinary implementation, debugging, explanation,
-  and small teaching support. Keep a single sequential change here when that is
+- **Fast** is the mode for all work the human steers directly, including
+  implementation, debugging, explanation, teaching support, PR creation and
+  monitoring, and PR review. Keep a single sequential change here when that is
   quicker than delegation. For independent scopes, send one Executor a context
   packet with `mode: fast` per disjoint file set, then combine the results.
-  Do not start the environment prepper, Reviewer, PR Maintainer, or
-  retrospector. Escalate if the work later meets a full condition.
-- **Full** applies when the user asks for review, merge-ready, or thorough
-  work, creates or monitors a PR, concerns a public application programming
-  interface, protocol, schema, security, concurrency, or data correctness, or
-  is long-running, remote, hardware-dependent, or spans sessions.
+  When the human asks for a PR or a review, start the PR Maintainer or Reviewer
+  as the shared PR workflows define. Do not start the environment prepper.
+- **Full** applies only when the human explicitly asks for it, for example
+  "use full mode" or "this is a big task; implement it while I'm away."
   Resolve the required runtime configuration. Keep tightly coupled work here;
   delegate independent scopes with `mode: full`.
 
-Only an explicitly invoked `agent-workspace` task uses execution notes or the
-execution environment prepper. Use the task folder returned by
-`agent-workspace start-task`; do not create another folder or ask for one.
-Size, duration, several repositories, remote work, and full mode are not enough
-to select this procedure. For delegated work, collect the Executor's
-verification, model provenance, routable identity, and PR URLs. Reconcile
-results, apply permitted canonical-state updates, and report the outcome.
+Fast mode keeps no execution records by default. When the work may need
+recovery state, such as a likely pause, handoff, or context loss, ask the human
+one short question and do not choose for them: "Do you want no record, a
+compact `RECOVERY.md`, or full mode with the full record structure?" Full mode
+always keeps the full record structure.
 
-Within full work, creating or monitoring a PR means start or retain the PR
+Follow `~/AGENTS.md` section "Execution record policy" for compact content,
+update timing, the full folder structure, and expansion from compact to full.
+Use an existing task folder returned by `agent-task` or `agent-workspace`; do
+not create a second notes folder or write execution records into a product
+repository.
+
+Write execution records yourself with the `execution-notes` skill, and only at
+the update points that policy permits.
+
+Start the execution environment prepper only when full execution needs
+environment preparation or readiness evidence. For delegated work, collect the
+Executor's verification, model provenance, routable identity, and PR URLs.
+Reconcile results, apply permitted canonical-state updates, and report the
+outcome.
+
+In either mode, creating or monitoring a PR means start or retain the PR
 Maintainer and follow the shared PR-maintenance workflow. A review request
-means send Reviewer a full-mode context packet and follow the shared PR-review
-workflow. Operational children may return education or retrospection
+means send Reviewer a context packet and follow the shared PR-review workflow.
+Operational children may return education or retrospection
 recommendations; only you decide whether to act on them and only you invoke
 retrospector.
 

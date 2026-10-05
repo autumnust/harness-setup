@@ -18,7 +18,7 @@
       "reasoning_policy": "medium",
       "allowed_children": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
       "allowed_message_targets": ["exec-env-prepper", "executor", "reviewer", "pr-maintainer"],
-      "required_skills": ["quiz", "retrospector"],
+      "required_skills": ["quiz", "retrospector", "execution-notes"],
       "required_workflows": ["pr-maintenance", "pr-review"],
       "contracts": ["contracts/runtime-configuration.md", "contracts/canonical-state.md", "contracts/human-readable-html.md", "contracts/handoff.md", "contracts/result.md", "contracts/education-routing.md", "contracts/learning-state.md", "contracts/review-independence.md", "contracts/pr-queue.md", "contracts/output-limits.md"]
     },
@@ -27,7 +27,7 @@
       "display_name": "Environment Prepper",
       "kind": "subagent",
       "human_interface": "none",
-      "description": "Prepares an observable, feasible execution environment for large or multi-session work before implementation starts.",
+      "description": "Prepares and validates the environment for unattended, multi-session, remote, hardware-dependent, or handoff-heavy execution.",
       "prompt": "roles/exec-env-prepper.md",
       "model_policy": "fast",
       "reasoning_policy": "low",

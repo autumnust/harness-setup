@@ -52,6 +52,8 @@ second editable copy of every prompt.
 ## Procedure authority
 
 The Coordinator prompt is the single source for ordinary-work classification,
-full-work escalation, and education. Each shared workflow is the single source
-for its ordered process, lifecycle, and named result states. Contracts define
-shared data shape, write authority, and handoff requirements.
+explicit full-mode entry, execution-record choice, and education. The global
+`Execution record policy` defines record contents and update timing. Each shared
+workflow is the single source for its ordered process, lifecycle, and named
+result states. Contracts define shared data shape, write authority, and handoff
+requirements.

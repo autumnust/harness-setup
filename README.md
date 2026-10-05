@@ -65,8 +65,9 @@ the relationship portable when another host uses a different absolute path.
 Lifecycle changes require explicit intent and use `agent-task set-state` for
 both general and workspace tasks. Runtime creation is separate. The
 `task-session` compatibility skill sends runtime requests to `tss start`; a
-disconnect or missing tmux process does not change task state. Execution notes
-are created only for an explicitly selected agent-workspace task.
+disconnect or missing tmux process does not change task state. Fast mode, the
+default, keeps no execution record unless the human picks a compact recovery
+record. Full mode starts only on explicit request and keeps the full structure.
 
 > Project-local skills and project `AGENTS.md` files are **not** included here;
 > they belong in their respective project repositories.
@@ -180,8 +181,9 @@ orders its result. Use `task-catalog list -H` for terminal output or
 ## Portable agent workflow
 
 The main session is the coordinator. Fast is the default path: the
-coordinator implements directly or fans out Executors. Education runs on
-that path. Full-path prepper, review, and PR maintenance are escalation.
+coordinator implements directly or fans out Executors. Education, review, and PR
+maintenance run on that path. Full mode and its environment prepper start only
+when the human explicitly asks.
 Nesting stops after two subagent levels.
 
 ```mermaid
@@ -193,9 +195,9 @@ flowchart TB
     Prep["Environment Prepper"]
     Reviewer["Reviewer<br/>other-foundation opinion"]
     Maintainer["PR Maintainer"]
-    Coordinator -->|explicit agent-workspace task| Prep
-    Coordinator -->|full: review| Reviewer
-    Coordinator -->|full: PR work| Maintainer
+    Coordinator -->|full execution preparation| Prep
+    Coordinator -->|review| Reviewer
+    Coordinator -->|PR work| Maintainer
     Reviewer -->|invoke and wait| Opinion(["Cross-provider opinion"])
     Opinion -->|findings| Reviewer
     Reviewer -->|return opinion| Coordinator

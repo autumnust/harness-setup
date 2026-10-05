@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""Validate an execution folder against the Long-Running Work Structure contract.
+"""Validate compact or full records against the Execution record policy.
 
 Source of truth: ~/AGENTS.md (home/AGENTS.md in the harness-setup repo),
-section "Long-Running Work Structure". The S1-S5 rules below are a deterministic
-*interpretation* of that prose, not the rule itself. `references/RULES.md` in
-the execution-notes skill records, rule by rule, which sentence each check was
-deduced from and what judgment was applied. Read it before changing a check or
-the prose.
+section "Execution record policy". The checks below cover mechanical parts of
+that prose. `references/RULES.md` records the source sentence and judgment for
+each check. Read it before changing a check or the prose.
 
-This is a STRUCTURE-only linter. It inspects the folder layout — which files and
-directories exist and where — and nothing about file *contents*. No model calls,
-no diff/PR parsing, no prose grading. Pure, deterministic, fast.
+The linter checks folder layout and required compact-record headings. It does
+not grade prose, parse diffs or PRs, or call a model.
 
-The contract (top-level roles):
+Compact mode:
+
+    RECOVERY.md           sole execution record with six required sections
+
+    C1  RECOVERY.md exists and is readable.                       (error)
+    C2  All six required sections exist and are non-empty.        (error)
+    C3  No competing record or full tracking directory exists.    (error)
+
+Full mode top-level roles:
 
     README.md / SPEC.md   self-contained "what and how"            (required)
     progress.html         single status dashboard / entry point    (required)
@@ -20,8 +25,9 @@ The contract (top-level roles):
     evidence/ | logs/     raw logs, traces, dry-run JSON, output    (optional)
     stages/ | batches/    per-stage runbooks + evidence (large)     (optional)
 
-Rules enforced:
+Rules enforced in full mode:
 
+    S0  RECOVERY.md has been removed after expansion.             (error)
     S1  README.md or SPEC.md present at the top level.            (error)
     S2  Exactly one progress dashboard; none others compete.      (error)
     S3  Top level is clean: no entry outside the contract roles.  (error)
@@ -30,11 +36,11 @@ Rules enforced:
         runbook AND an evidence/ directory.
 
 Usage:
-    check_work_structure.py <execution-folder> [--json] [--strict] [--allow NAME ...]
+    check_work_structure.py <task-folder> --mode compact|full [options]
 
     --json          emit findings as JSON instead of human-readable text
     --strict        treat warnings as errors for the exit code
-    --allow NAME    permit an extra top-level entry name (repeatable),
+    --allow NAME    in full mode, permit an extra top-level entry (repeatable),
                     e.g. --allow assets --allow .gitignore
 
 Exit code: 0 if the folder conforms (no errors; no warnings under --strict),
@@ -49,12 +55,21 @@ import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-CONTRACT_REF = "~/AGENTS.md § Long-Running Work Structure"
+CONTRACT_REF = "~/AGENTS.md § Execution record policy"
 
 # Top-level entries the contract sanctions.
 ALLOWED_FILES = {"README.md", "SPEC.md", "progress.html"}
 ALLOWED_DIRS = {"findings", "evidence", "logs", "stages", "batches"}
 STAGE_DIRS = {"stages", "batches"}
+COMPACT_RECORD = "RECOVERY.md"
+COMPACT_SECTIONS = (
+    "Objective",
+    "Durable decisions",
+    "PR and commit state",
+    "Blockers",
+    "Latest meaningful validation",
+    "Next action",
+)
 
 
 @dataclass
@@ -82,10 +97,105 @@ def _visible_entries(folder: Path) -> list[Path]:
     )
 
 
-def check_structure(folder: Path, allow: set[str]) -> list[Finding]:
+def _task_context_allowlist(folder: Path) -> set[str]:
+    readme = folder / "README.md"
+    try:
+        text = readme.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return set()
+    if "agent_task: 1" in text:
+        return {
+            "AGENTS.md",
+            "CLAUDE.md",
+            "tasks.md",
+            "decisions.md",
+            "context",
+            "inbox",
+            "outputs",
+            "work",
+        }
+    if "workspace_task: 1" in text:
+        return {"AGENTS.md"}
+    return set()
+
+
+def _markdown_sections(text: str) -> dict[str, str]:
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            current = line[3:].strip()
+            sections.setdefault(current, [])
+        elif current is not None:
+            sections[current].append(line)
+    return {name: "\n".join(lines).strip() for name, lines in sections.items()}
+
+
+def _is_competing_record(path: Path) -> bool:
+    if path.name == COMPACT_RECORD:
+        return False
+    low = path.name.lower()
+    return path.is_file() and low.endswith((".html", ".md")) and any(
+        word in low for word in ("recovery", "progress", "dashboard", "tracker")
+    )
+
+
+def check_compact(folder: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    record = folder / COMPACT_RECORD
+    if not record.is_file():
+        findings.append(
+            Finding(
+                "C1",
+                "error",
+                str(folder),
+                f"compact mode requires one {COMPACT_RECORD} file.",
+            )
+        )
+    else:
+        try:
+            sections = _markdown_sections(record.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError) as exc:
+            findings.append(Finding("C1", "error", str(record), f"cannot read record: {exc}"))
+        else:
+            for name in COMPACT_SECTIONS:
+                if name not in sections:
+                    findings.append(
+                        Finding("C2", "error", str(record), f"missing section: {name!r}.")
+                    )
+                elif not sections[name]:
+                    findings.append(
+                        Finding("C2", "error", str(record), f"empty section: {name!r}.")
+                    )
+
+    for entry in _visible_entries(folder):
+        if _is_competing_record(entry) or entry.name in ALLOWED_DIRS:
+            findings.append(
+                Finding(
+                    "C3",
+                    "error",
+                    str(entry),
+                    "compact mode permits one recovery record and no full tracking artifacts.",
+                )
+            )
+    return findings
+
+
+def check_full(folder: Path, allow: set[str]) -> list[Finding]:
     findings: list[Finding] = []
     entries = _visible_entries(folder)
     names = {p.name for p in entries}
+    allowed_extras = allow | _task_context_allowlist(folder)
+
+    if COMPACT_RECORD in names:
+        findings.append(
+            Finding(
+                "S0",
+                "error",
+                str(folder / COMPACT_RECORD),
+                "full mode must move recovery state into the full structure and remove RECOVERY.md.",
+            )
+        )
 
     # S1 — a self-contained spec must exist.
     if not (names & {"README.md", "SPEC.md"}):
@@ -133,7 +243,9 @@ def check_structure(folder: Path, allow: set[str]) -> list[Finding]:
 
     # S3 — top level holds only contract roles (plus user allowlist).
     for p in entries:
-        if p.name in allow:
+        if p.name == COMPACT_RECORD:
+            continue
+        if p.name in allowed_extras:
             continue
         if p.is_file() and p.name in ALLOWED_FILES:
             continue
@@ -194,9 +306,17 @@ def check_structure(folder: Path, allow: set[str]) -> list[Finding]:
     return findings
 
 
-def render_text(folder: Path, findings: list[Finding]) -> str:
+def check_structure(folder: Path, allow: set[str], mode: str = "full") -> list[Finding]:
+    if mode == "compact":
+        return check_compact(folder)
+    if mode == "full":
+        return check_full(folder, allow)
+    raise ValueError(f"unsupported mode: {mode}")
+
+
+def render_text(folder: Path, findings: list[Finding], mode: str = "full") -> str:
     if not findings:
-        return f"OK  {folder}  — conforms to the Long-Running Work Structure contract."
+        return f"OK  {folder}  - conforms to the {mode} execution-record policy."
     lines = [f"FAIL  {folder}", ""]
     for f in sorted(findings, key=lambda f: (f.severity != "error", f.rule, f.path)):
         tag = "ERROR " if f.severity == "error" else "warn  "
@@ -211,10 +331,10 @@ def render_text(folder: Path, findings: list[Finding]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Validate an execution folder against the Long-Running Work "
-        "Structure contract (~/AGENTS.md).",
+        description="Validate compact or full records against the execution-record policy.",
     )
-    parser.add_argument("folder", type=Path, help="path to the execution folder")
+    parser.add_argument("folder", type=Path, help="path to the task folder")
+    parser.add_argument("--mode", choices=("compact", "full"), required=True)
     parser.add_argument("--json", action="store_true", help="emit findings as JSON")
     parser.add_argument(
         "--strict", action="store_true", help="treat warnings as errors for exit code"
@@ -236,12 +356,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: not a directory: {folder}", file=sys.stderr)
         return 2
 
-    findings = check_structure(folder, set(args.allow))
+    findings = check_structure(folder, set(args.allow), args.mode)
 
     if args.json:
         print(json.dumps([asdict(f) for f in findings], indent=2))
     else:
-        print(render_text(folder, findings))
+        print(render_text(folder, findings, args.mode))
 
     has_error = any(f.severity == "error" for f in findings)
     has_warning = any(f.severity == "warning" for f in findings)

@@ -1,64 +1,38 @@
-# Rule traceability - execution-notes structure checker
+# Rule traceability for execution records
 
-Provenance map for the execution-notes linter: how each deterministic check is
-deduced from the natural-language contract. Companion to `../SKILL.md` and
-`../scripts/check_work_structure.py`.
+This file maps the deterministic checks in
+[`check_work_structure.py`](../scripts/check_work_structure.py) to the
+authoritative
+[`Execution record policy`](../../../home/AGENTS.md#execution-record-policy).
+The prose controls when records are needed and what they mean. The checker
+covers only file layout and required compact-record headings.
 
-A deterministic, stdlib-only linter that validates an execution folder against the
-**Long-Running Work Structure** contract.
+## Compact mode
 
-- Run it: see the module docstring in
-  [`check_work_structure.py`](../scripts/check_work_structure.py) for usage and flags.
-- Source of the rules:
-  [`home/AGENTS.md` section Long-Running Work Structure](../../../home/AGENTS.md#long-running-work-structure)
-  ([same section on GitHub](https://github.com/autumnust/harness-setup/blob/e33602c/home/AGENTS.md#long-running-work-structure)),
-  which is deployed to `~/AGENTS.md` on every machine.
+| Rule | Severity | Policy requirement | Check |
+|---|---|---|---|
+| `C1` | error | Keep exactly one `RECOVERY.md` in the task folder. | `RECOVERY.md` exists and is readable. |
+| `C2` | error | The compact record contains objective, durable decisions, PR and commit state, blockers, latest meaningful validation, and next action. | Each item has a non-empty level-two Markdown section. The checker does not judge whether the prose is correct or concise. |
+| `C3` | error | Compact mode has one recovery record and none of the full tracking structure. | No other top-level recovery, progress, dashboard, or tracker Markdown or HTML file exists. Full tracking directories are absent. Ordinary task metadata and product files are ignored. |
 
-### Why this file exists: the rules are *deduced* from prose
+The checker cannot determine whether an update happened at a permitted
+checkpoint or whether the text copied chat, PR descriptions, GitHub status, or
+command output. Those require conversation and source context.
 
-The section in `AGENTS.md` is a natural-language description of how a long-running
-execution folder should be laid out. The checks `S1`–`S5` in the script are a
-**deterministic interpretation** of that prose — they are *not* the authoritative
-rule. The prose is the source of truth; the script is a best-effort,
-mechanically-checkable subset of it.
+## Full mode
 
-Deducing a check from a sentence involves judgment (e.g. the prose lists a
-`README.md` as a contract role but never says the word "required" — the script
-*treats* it as required). This file records that judgment so that:
+| Rule | Severity | Policy requirement | Check |
+|---|---|---|---|
+| `S0` | error | When compact tracking expands, move its state into the full structure and stop keeping both formats current. | `RECOVERY.md` is absent. |
+| `S1` | error | The full structure has a self-contained `README.md` or `SPEC.md`. | At least one exists at the top level. |
+| `S2` | error | Use one `progress.html` status entry point. | `progress.html` exists and no other top-level progress, dashboard, or tracker Markdown or HTML file competes with it. |
+| `S3` | error | Keep the top level within the documented roles unless local instructions allow more. | Every visible top-level entry is a documented file or directory, part of the bundled `agent-task` or workspace-task layout identified by README metadata, or appears in `--allow`. |
+| `S4` | warning | A `findings/` directory has a catalog. | At least one Markdown file exists in `findings/`. |
+| `S5` | warning | Each stage or batch has a runbook and evidence directory. | Each immediate subfolder has `README.md` or a file whose name contains `runbook`, plus `evidence/`. |
 
-1. **When the prose changes**, you can see which checks to revisit.
-2. **Anyone can audit** whether a check faithfully represents the sentence it came
-   from, instead of reverse-engineering it from code.
+The checker does not inspect link quality, browser rendering, phase closure, or
+whether work products restate necessary context. Those checks require content
+or external state.
 
-### Traceability: each check → the sentence it encodes
-
-| Rule | Severity | Sentence(s) it encodes (from the section) | Deterministic check | Interpretation / judgment applied |
-|---|---|---|---|---|
-| **S1** | error | Contract table row: *"`README.md` / `SPEC.md` — Self-contained 'what and how': goal, success criteria, folder layout, how to add work, and how to resume."* | top level has `README.md` or `SPEC.md` | The table lists it as a role but doesn't say "required." Deduced as **required**: a folder with no self-contained spec has no entry point, so its absence is an error. Content of the spec is not checked — only presence. |
-| **S2** | error | *"Use one progress entry point. Prefer one visual dashboard as the status entry point; avoid multiple competing trackers…"* + contract row *"`progress.html` — Human/agent dashboard for 'where we are'…"* | exactly one progress dashboard; flags none, a wrong-named one, or competing trackers | "Progress entry point" deduced as **required and named `progress.html`**. "Competing tracker" operationalized as any *other* top-level file matching `progress` / `dashboard` / `tracker` (`.html`/`.md`). |
-| **S3** | error | *"Use an execution-folder contract, not ad hoc files… keep the top-level execution folder small"* + *"Keep the top level clean. Do not create one-off top-level runbooks, trackers, or evidence folders."* + *"Pick an execution folder first… don't scatter files."* | every top-level entry must be a contract role (`README.md`/`SPEC.md`/`progress.html`, or `findings/`/`evidence/`/`logs/`/`stages/`/`batches/`); anything else is flagged | "Ad hoc / one-off" deduced as **any top-level entry outside the role set**. The `--allow NAME` flag is the partial honoring of *"Unless local `AGENTS.md` or `README.md` says otherwise"* — a full per-folder override is not yet implemented. |
-| **S4** | warning | Contract row: *"`findings/` — … Keep a catalog with ticket links, source scenario, status, and resolution."* | if `findings/` exists, it must contain at least one `.md` file | Only the **presence of a catalog** is checkable deterministically; its completeness (ticket links, status columns, closed-but-visible items) is content and is **not** verified — hence a warning, not an error. |
-| **S5** | warning | Contract row: *"`stages/` or `batches/` — … Each stage has its own `README.md` or runbook and `evidence/`…"* | each immediate subfolder of `stages/`/`batches/` has a `README.md` or `*runbook*` file **and** an `evidence/` directory | Direct, structural mapping. Whether each stage actually *"updates the top-level `progress.html` and findings/"* is a cross-file content claim and is **not** verified. |
-
-### Sentences in the section deliberately **not** encoded
-
-These are real rules in the same section, left out because they are about file
-*content* or require judgment — outside a structure-only, deterministic linter.
-Listed so the omission is visible rather than silent:
-
-| Sentence | Why not encoded |
-|---|---|
-| *"Link all references… clickable hyperlink — never bare text."* | Content of generated files; needs parsing prose, not layout. |
-| *"Keep generated dashboards and specs self-contained…"* | Requires judging whether prose is understandable without chat history. |
-| *"Close phases explicitly… mark it closed…"* | Requires reading status content inside the files. |
-| *"Keep work products self-contained… PR descriptions, commit messages… never reference the execution artifacts…"* | Operates on diffs / PR / commit text, not the execution folder layout. |
-
-These could be picked up later by a separate content/PR checker (lint for bare
-links; an LLM judge for the self-containment and phase-closure rules).
-
-### Keeping the script and the prose in sync
-
-The prose is authoritative. If you edit
-[Long-Running Work Structure](../../../home/AGENTS.md#long-running-work-structure),
-re-read this table and update any affected check (or this mapping) in the same
-change, so the two never silently drift apart.
+When the policy prose changes, update this map and the checker in the same
+change.

@@ -2,7 +2,9 @@
 
 Prepare an environment in which the assigned workload can run and be observed.
 Invoke the `execution-notes` skill with the resolved configuration and the
-coordinator-owned execution entry points.
+coordinator-owned execution entry points. Accept only assignments whose
+execution-record depth is full. Return proposed execution-record changes to the
+coordinator.
 
 Your scope is environment readiness, not product implementation:
 
