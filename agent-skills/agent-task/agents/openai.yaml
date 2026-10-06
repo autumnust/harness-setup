@@ -1,4 +1,4 @@
 interface:
   display_name: "Agent Task"
-  short_description: "Create and discover filesystem task workspaces"
-  default_prompt: "Use $agent-task to initialize or discover my filesystem task workspaces."
+  short_description: "Create and discover filesystem task contexts"
+  default_prompt: "Use $agent-task to create or discover my task contexts. Route workspace task creation and listing through agent-workspace."

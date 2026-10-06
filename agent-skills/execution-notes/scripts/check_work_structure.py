@@ -103,7 +103,7 @@ def _task_context_allowlist(folder: Path) -> set[str]:
         text = readme.read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         return set()
-    if "agent_task: 1" in text:
+    if "agent_task: 1" in text or "workspace_task: 1" in text:
         return {
             "AGENTS.md",
             "CLAUDE.md",
@@ -114,8 +114,6 @@ def _task_context_allowlist(folder: Path) -> set[str]:
             "outputs",
             "work",
         }
-    if "workspace_task: 1" in text:
-        return {"AGENTS.md"}
     return set()
 
 

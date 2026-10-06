@@ -283,6 +283,10 @@ class WorkflowSpecTests(unittest.TestCase):
             coordinator_normalized,
         )
         self.assertIn("Write execution records yourself", coordinator)
+        self.assertIn("permitted in every mode", coordinator_normalized)
+        self.assertIn("does not require recurring record updates", coordinator_normalized)
+        self.assertIn("one status entry point", coordinator_normalized)
+        self.assertIn("one canonical location", coordinator_normalized)
         self.assertNotIn("execution folder first", global_docs)
 
         education_other = "\n".join(

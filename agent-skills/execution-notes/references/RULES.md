@@ -34,5 +34,11 @@ The checker does not inspect link quality, browser rendering, phase closure, or
 whether work products restate necessary context. Those checks require content
 or external state.
 
+Both task types permit `inbox/`, `context/`, `work/`, and `outputs/` beside full
+records. The README metadata identifies task folders. Task instructions,
+existing work lists, and decision files are also permitted. A work list must
+not duplicate the dashboard. Record each durable decision in one canonical
+location. The checker permits these entries but does not assess their content.
+
 When the policy prose changes, update this map and the checker in the same
 change.

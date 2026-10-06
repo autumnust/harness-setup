@@ -80,6 +80,52 @@ class ExecutionRecordTests(unittest.TestCase):
             findings = checker.check_structure(folder, set(), "full")
             self.assertIn("S0", {finding.rule for finding in findings})
 
+    def test_task_artifacts_pass_in_compact_and_full_for_both_task_types(self) -> None:
+        for marker in ("agent_task", "workspace_task"):
+            for mode in ("compact", "full"):
+                with self.subTest(marker=marker, mode=mode), tempfile.TemporaryDirectory() as temp:
+                    folder = Path(temp)
+                    (folder / "README.md").write_text(f"---\n{marker}: 1\n---\n# Task\n")
+                    for name in ("AGENTS.md", "CLAUDE.md", "tasks.md", "decisions.md"):
+                        (folder / name).write_text("# Task context\n")
+                    for name in ("inbox", "context", "work", "outputs"):
+                        (folder / name).mkdir()
+                    (folder / "inbox/training.pdf").write_bytes(b"%PDF-1.4\n")
+                    (folder / "outputs/analysis.md").write_text("# Analysis\n")
+                    if mode == "compact":
+                        (folder / "RECOVERY.md").write_text(TEMPLATE_PATH.read_text())
+                    else:
+                        (folder / "progress.html").write_text("<p>status</p>")
+                        (folder / "evidence").mkdir()
+                        (folder / "findings").mkdir()
+                        (folder / "findings/README.md").write_text("# Findings\n")
+                    self.assertEqual(checker.check_structure(folder, set(), mode), [])
+
+    def test_full_artifact_permission_requires_task_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            (folder / "README.md").write_text("# General execution folder\n")
+            (folder / "progress.html").write_text("<p>status</p>")
+            (folder / "inbox").mkdir()
+            findings = checker.check_structure(folder, set(), "full")
+            self.assertEqual([finding.rule for finding in findings], ["S3"])
+
+    def test_task_context_does_not_relax_execution_record_rules(self) -> None:
+        for marker in ("agent_task", "workspace_task"):
+            with self.subTest(marker=marker), tempfile.TemporaryDirectory() as temp:
+                folder = Path(temp)
+                (folder / "README.md").write_text(f"---\n{marker}: 1\n---\n# Task\n")
+                (folder / "inbox").mkdir()
+                (folder / "RECOVERY.md").write_text(TEMPLATE_PATH.read_text())
+                (folder / "progress.html").write_text("<p>status</p>")
+                (folder / "evidence").mkdir()
+                compact = checker.check_structure(folder, set(), "compact")
+                self.assertEqual([finding.rule for finding in compact], ["C3", "C3"])
+                (folder / "progress-copy.md").write_text("# Other status\n")
+                (folder / "unrelated").mkdir()
+                full = checker.check_structure(folder, set(), "full")
+                self.assertTrue({"S0", "S2", "S3"}.issubset({finding.rule for finding in full}))
+
 
 if __name__ == "__main__":
     unittest.main()

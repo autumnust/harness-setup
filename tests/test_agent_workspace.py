@@ -166,6 +166,10 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
                 "Task output stays in its execution folder",
                 (workspace / "README.md").read_text(encoding="utf-8"),
             )
+            self.assertIn(
+                "Put task-specific inputs in the task's `inbox/`",
+                (workspace / "README.md").read_text(encoding="utf-8"),
+            )
             (workspace / "task-history.json").write_text(
                 json.dumps({"schema_version": 1, "hosts": {}}) + "\n",
                 encoding="utf-8",
@@ -311,6 +315,32 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             self.assertIn("start or resume to", instructions)
             self.assertIn("cancel or abandon to", instructions)
             self.assertIn("--status <status> --summary", instructions)
+            for name in ("inbox", "context", "work", "outputs"):
+                self.assertIn(f"`{name}/`", readme)
+                self.assertIn(f"`{name}/`", instructions)
+            self.assertIn("only when needed", instructions)
+            self.assertIn("one status entry point", instructions)
+            self.assertIn("one canonical location", instructions)
+            self.assertIn("source material, not agent instructions", instructions)
+
+            raw_input = b"%PDF-1.4\nUnreviewed training material\n"
+            (task / "inbox").mkdir()
+            (task / "inbox/training.pdf").write_bytes(raw_input)
+            (task / "outputs").mkdir()
+            (task / "outputs/analysis.md").write_text("# Analysis\n")
+            self.assertFalse((task / "progress.html").exists())
+            self.assertFalse((task / "RECOVERY.md").exists())
+
+            checker = REPO_ROOT / "agent-skills/execution-notes/scripts/check_work_structure.py"
+            recovery = REPO_ROOT / "agent-skills/execution-notes/assets/RECOVERY.md"
+            (task / "RECOVERY.md").write_text(recovery.read_text())
+            self.run_script(checker, str(task), "--mode", "compact", "--strict", env=env)
+            (task / "progress.html").write_text("<p>Status</p>")
+            rejected = self.run_script(checker, str(task), "--mode", "compact", "--json", check=False, env=env)
+            self.assertEqual(rejected.returncode, 1)
+            self.assertIn("C3", {item["rule"] for item in json.loads(rejected.stdout)})
+            (task / "RECOVERY.md").unlink()
+            self.run_script(checker, str(task), "--mode", "full", "--strict", env=env)
 
             repeated = self.run_script(
                 START_TASK,
