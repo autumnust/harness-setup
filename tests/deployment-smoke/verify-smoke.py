@@ -82,7 +82,7 @@ def verify_install(
     assert claude_settings["effortLevel"] == claude_adapter["effort"]["medium"]
 
     config = tomllib.loads((home / ".codex/config.toml").read_text())
-    assert config["smoke_sentinel"] == "preserved"
+    assert config["history"]["max_bytes"] == 123456
     assert codex_adapter["models"]["coordinator"] == "provider-default"
     assert "model" not in config
     assert config["model_reasoning_effort"] == codex_adapter["reasoning_effort"]["medium"]
