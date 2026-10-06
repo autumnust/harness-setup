@@ -195,7 +195,7 @@ run_inside_sandbox() {
     > "$install_repo/dependencies/external-skills.json"
 
   printf '%s\n' \
-    'smoke_sentinel = "preserved"' \
+    'history.max_bytes = 123456' \
     '' \
     '[mcp_servers.linear]' \
     'url = "https://mcp.linear.app/mcp"' \
