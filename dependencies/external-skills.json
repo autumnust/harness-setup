@@ -5,10 +5,10 @@
       "name": "unslop",
       "repository": "https://github.com/cursor/plugins.git",
       "tracking_ref": "refs/heads/main",
-      "revision": "efa2a531985e0a8084d36ff3cf87233be8a9f34b",
+      "revision": "d73344bee8cf22e53b9d5f4cf5749d38ba38c174",
       "source_path": "pstack/skills/unslop",
       "license_path": "pstack/LICENSE",
-      "content_sha256": "386706a33b6a680f800906566efecfbdd4f04d731b87cbcad95b925647493c24"
+      "content_sha256": "991604a04db475e29f735c6dd0cc071c7d33f859c28db6b5fd649d240b0d9600"
     }
   ]
 }
