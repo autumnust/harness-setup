@@ -311,6 +311,9 @@ configuration only as directed by the selected workflow.
   classification, operational sequencing, and education. Fast is the default
   and covers all work the human steers directly, including PRs and review. Full
   mode starts only when the human explicitly asks for it.
+- Before unattended work, follow the Coordinator prompt's "Before unattended
+  execution" procedure. It references Matt Pocock's upstream `grill-me` skill.
+  Use `quiz` for learning checks; `/grill-me` selects the planning skill.
 - Follow `$AGENT_HARNESS_HOME/specs/workflows/pr-maintenance.md` as the sole
   source for Maintainer lifecycle, polling, notification routing, and stop
   behavior.

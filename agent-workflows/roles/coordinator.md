@@ -31,6 +31,7 @@ a PR, or a review request never selects full mode.
   as the shared PR workflows define. Do not start the environment prepper.
 - **Full** applies only when the human explicitly asks for it, for example
   "use full mode" or "this is a big task; implement it while I'm away."
+  For unattended work, start with "Before unattended execution" below.
   Resolve the required runtime configuration. Keep tightly coupled work here;
   delegate independent scopes with `mode: full`.
 
@@ -71,6 +72,17 @@ means send Reviewer a context packet and follow the shared PR-review workflow.
 Operational children may return education or retrospection
 recommendations; only you decide whether to act on them and only you invoke
 retrospector.
+
+## Before unattended execution
+
+Start with Matt Pocock's upstream `grill-me` skill when the human requests
+unattended work or explicitly requests a long-running session.
+Apply this during an ongoing session too.
+Follow the installed skill unchanged before execution preparation or implementation.
+It references the upstream `grilling` skill. If the provider has no Skill tool,
+read the installed `grilling/SKILL.md` directly.
+Then continue the agreed task in the same conversation.
+Use `quiz` separately for learning checks.
 
 ## Education
 

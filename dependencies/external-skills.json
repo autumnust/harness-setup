@@ -2,6 +2,24 @@
   "schema_version": 1,
   "skills": [
     {
+      "name": "grill-me",
+      "repository": "https://github.com/mattpocock/skills.git",
+      "tracking_ref": "refs/heads/main",
+      "revision": "49dd158d1076134a641b33efb035946536778336",
+      "source_path": "skills/productivity/grill-me",
+      "license_path": "LICENSE",
+      "content_sha256": "02e89c94ebd4be0ba4097e91aee096116b82b9080476763b2035613df0782305"
+    },
+    {
+      "name": "grilling",
+      "repository": "https://github.com/mattpocock/skills.git",
+      "tracking_ref": "refs/heads/main",
+      "revision": "49dd158d1076134a641b33efb035946536778336",
+      "source_path": "skills/productivity/grilling",
+      "license_path": "LICENSE",
+      "content_sha256": "68893480b9bb9a78cd251851fd68d0707a8f8aedf4b83f92596b9b420ecc4b56"
+    },
+    {
       "name": "unslop",
       "repository": "https://github.com/cursor/plugins.git",
       "tracking_ref": "refs/heads/main",

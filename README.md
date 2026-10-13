@@ -183,7 +183,7 @@ Pick one of:
 | `instances/<name>.md` | Appended to `~/AGENTS.md` only when that profile is selected |
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
 | `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
-| revision-pinned entries in `dependencies/external-skills.json` | The same skill locations as portable skills; currently installs `unslop` from `cursor/plugins` |
+| revision-pinned entries in `dependencies/external-skills.json` | The same skill locations as portable skills; installs `unslop` from `cursor/plugins` and `grill-me` with `grilling` from `mattpocock/skills` |
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |
 | coordinator model and workflow depth | Claude Code `opus` (a model family, not a version); Codex keeps its default model; medium effort; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |
@@ -214,6 +214,10 @@ The main session is the coordinator. Fast is the default path: the
 coordinator implements directly or fans out Executors. Education, review, and PR
 maintenance run on that path. Full mode and its environment prepper start only
 when the human explicitly asks.
+Before unattended work, the
+[Coordinator prompt](./agent-workflows/roles/coordinator.md#before-unattended-execution)
+references upstream `grill-me`. The skill and its `grilling` dependency use the
+same [external-skill manifest](./dependencies/external-skills.json) as `unslop`.
 Nesting stops after two subagent levels.
 
 ```mermaid
@@ -329,6 +333,10 @@ The externally resolved `unslop` skill comes from
 [`cursor/plugins`](https://github.com/cursor/plugins/tree/main/pstack/skills/unslop)
 under its [MIT license](https://github.com/cursor/plugins/blob/main/pstack/LICENSE),
 which the installer preserves beside the installed skill as `LICENSE.upstream`.
+The external `grill-me` and `grilling` skills come from
+[`mattpocock/skills`](https://github.com/mattpocock/skills)
+under its [MIT license](https://github.com/mattpocock/skills/blob/main/LICENSE).
+The installer preserves that license with each skill too.
 
 ## Adding and refreshing external skills
 
