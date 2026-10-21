@@ -33,6 +33,12 @@ structure only when the user explicitly invokes an `agent-workspace` task; a
 large change, several repositories, a PR, or full workflow selection is not
 enough.
 
+**Default branch:**
+For ordinary harness improvements, work directly on `main`. Commit and push to
+`main` by default. Create a separate branch or worktree only when the user asks
+or the work requires isolation. Unrelated local edits alone do not require a
+separate branch. Preserve those edits and exclude them from the commit.
+
 **Editing the harness prompt:**
 Edit `home/AGENTS.md` directly. The file uses Markdown. Keep sections
 consistent with the existing structure (ToC, section headers, smell tests).
