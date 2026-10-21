@@ -145,10 +145,17 @@ class AgentTaskTests(unittest.TestCase):
             self.assertTrue(payload["catalog_registered"])
             self.assertEqual(
                 sorted(entry.name for entry in task.iterdir()),
-                ["AGENTS.md", "CLAUDE.md", "README.md", "decisions.md", "tasks.md"],
+                ["AGENTS.md", "CLAUDE.md", "README.md", "decisions.md", "follow-up.md", "tasks.md"],
             )
             self.assertIn("Organize accounts", (task / "README.md").read_text())
             instructions = (task / "AGENTS.md").read_text(encoding="utf-8")
+            follow_up = (task / "follow-up.md").read_text(encoding="utf-8")
+            self.assertIn("## Pending", follow_up)
+            self.assertIn("## Handled", follow_up)
+            self.assertIn("Preserve its wording", follow_up)
+            self.assertIn("[follow-up.md](follow-up.md)", instructions)
+            self.assertIn("before reporting completion", instructions)
+            self.assertIn("[follow-up.md](follow-up.md)", (task / "README.md").read_text())
             self.assertIn("agent-task set-state", instructions)
             self.assertIn("start or resume to `active`", instructions)
             self.assertIn("cancel or abandon to `cancelled`", instructions)
@@ -178,12 +185,15 @@ class AgentTaskTests(unittest.TestCase):
             (task / "RECOVERY.md").unlink()
             self.run_script(checker, str(task), "--mode", "full", "--strict", env=env)
 
+            human_request = "\n- Compare with last week.\n"
+            (task / "follow-up.md").write_text(follow_up + human_request)
             repeated = self.run_script(
                 HYDRATE, "--name", "personal finance", "--destination",
                 str(destination), "--catalog-cli", str(catalog), check=False, env=env,
             )
             self.assertNotEqual(repeated.returncode, 0)
             self.assertIn("refusing to overwrite", repeated.stderr)
+            self.assertEqual((task / "follow-up.md").read_text(), follow_up + human_request)
 
     def test_discovery_uses_only_fixed_catalog_list(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

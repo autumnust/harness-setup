@@ -86,7 +86,7 @@ class ExecutionRecordTests(unittest.TestCase):
                 with self.subTest(marker=marker, mode=mode), tempfile.TemporaryDirectory() as temp:
                     folder = Path(temp)
                     (folder / "README.md").write_text(f"---\n{marker}: 1\n---\n# Task\n")
-                    for name in ("AGENTS.md", "CLAUDE.md", "tasks.md", "decisions.md"):
+                    for name in ("AGENTS.md", "CLAUDE.md", "tasks.md", "decisions.md", "follow-up.md"):
                         (folder / name).write_text("# Task context\n")
                     for name in ("inbox", "context", "work", "outputs"):
                         (folder / name).mkdir()

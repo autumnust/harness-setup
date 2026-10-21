@@ -108,6 +108,7 @@ def _task_context_allowlist(folder: Path) -> set[str]:
             "AGENTS.md",
             "CLAUDE.md",
             "tasks.md",
+            "follow-up.md",
             "decisions.md",
             "context",
             "inbox",

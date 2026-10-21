@@ -36,7 +36,8 @@ or external state.
 
 Both task types permit `inbox/`, `context/`, `work/`, and `outputs/` beside full
 records. The README metadata identifies task folders. Task instructions,
-existing work lists, and decision files are also permitted. A work list must
+existing work lists, decision files, and `follow-up.md` are also permitted.
+The follow-up file holds human requests and their outcomes in every mode. A work list must
 not duplicate the dashboard. Record each durable decision in one canonical
 location. The checker permits these entries but does not assess their content.
 
