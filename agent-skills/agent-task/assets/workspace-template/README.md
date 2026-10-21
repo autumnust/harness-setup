@@ -56,3 +56,10 @@ A task folder does not require recurring status or decision updates.
 
 1. Review available inputs and relevant context.
 2. Choose the first actionable work item. Use [tasks.md](tasks.md) when a work list helps.
+
+## Human follow-up
+
+Add requests to Pending in [follow-up.md](follow-up.md) during execution.
+The coordinator checks it when starting or resuming, before each new work step,
+and before reporting completion. Handled entries retain your wording and the outcome.
+Use chat for urgent changes. Saving the file does not interrupt a running command.

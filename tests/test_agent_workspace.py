@@ -296,7 +296,7 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             self.assertTrue((task / "README.md").is_file())
             self.assertEqual(
                 sorted(entry.name for entry in task.iterdir()),
-                ["AGENTS.md", "README.md"],
+                ["AGENTS.md", "README.md", "follow-up.md"],
             )
             self.assertFalse((workspace / "tasks").exists())
             task_index = workspace / ".git" / "agent-workspace" / "task-paths.json"
@@ -311,6 +311,13 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             self.assertIn("Measure serving latency.", readme)
             self.assertNotIn("tmux", readme.casefold())
             instructions = (task / "AGENTS.md").read_text(encoding="utf-8")
+            follow_up = (task / "follow-up.md").read_text(encoding="utf-8")
+            self.assertIn("## Pending", follow_up)
+            self.assertIn("## Handled", follow_up)
+            self.assertIn("Preserve its wording", follow_up)
+            self.assertIn("[follow-up.md](follow-up.md)", instructions)
+            self.assertIn("before reporting completion", instructions)
+            self.assertIn("[follow-up.md](follow-up.md)", (task / "README.md").read_text())
             self.assertIn("agent-task set-state", instructions)
             self.assertIn("start or resume to", instructions)
             self.assertIn("cancel or abandon to", instructions)
@@ -342,6 +349,8 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             (task / "RECOVERY.md").unlink()
             self.run_script(checker, str(task), "--mode", "full", "--strict", env=env)
 
+            human_request = "\n- Compare with last week.\n"
+            (task / "follow-up.md").write_text(follow_up + human_request)
             repeated = self.run_script(
                 START_TASK,
                 "--workspace",
@@ -355,6 +364,7 @@ class AgentWorkspaceTaskTests(unittest.TestCase):
             )
             self.assertNotEqual(repeated.returncode, 0)
             self.assertIn("refusing to overwrite", repeated.stderr)
+            self.assertEqual((task / "follow-up.md").read_text(), follow_up + human_request)
 
             alternate_parent = root / "alternate"
             alternate_parent.mkdir()
