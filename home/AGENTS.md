@@ -2,6 +2,7 @@
 
 - [Communication style](#communication-style)
   - [Write in Simplified Technical English](#write-in-simplified-technical-english)
+  - [Keep the user's vocabulary throughout the task](#keep-the-users-vocabulary-throughout-the-task)
   - [Lead explanations with concept, not code](#lead-explanations-with-concept-not-code)
   - [Walk through a change as one thread, not a catalog](#walk-through-a-change-as-one-thread-not-a-catalog)
   - [Learning checkpoint after substantial explanations](#learning-checkpoint-after-substantial-explanations)
@@ -64,6 +65,31 @@ being a bit of an extra hop, which kind of defeats the purpose."
 
 ✅ "The recorder adds one extra step. This step does not make the records more
 reliable."
+
+## Keep the user's vocabulary throughout the task
+
+Use the user's problem statement and demonstrated knowledge as the default
+vocabulary for updates, explanations, final answers, and later questions.
+
+- Keep the user's names for the problem, parts, and desired result throughout
+  the task. Agent discoveries do not establish shared knowledge.
+- Translate terms from searches, code, tools, and agent notes into that
+  vocabulary before replying. Do not assume familiarity because you used a
+  term earlier, the user quoted it, or the user said "got it."
+- When a new term is necessary, explain it with familiar words and one small
+  example before using it alone. Preserve distinctions that affect correctness.
+  Keep exact identifiers when the user needs to locate or use them.
+- Expand the shared vocabulary when the user demonstrates understanding or
+  explicitly says they know a term. Follow requests for deeper technical detail.
+- When writing a conversation summary or handoff, retain the original problem
+  wording, familiar terms, and introduced terms without confirmed understanding.
+  Use the existing summary; this rule does not require a new file or record.
+- If earlier context is missing, use plain language and state any necessary
+  assumption. Ask only when the missing meaning changes the answer or action.
+
+**Check:** can the user understand the answer from their original problem
+statement and what they have demonstrated since? If not, translate or explain
+the new terms before sending.
 
 ## Lead explanations with concept, not code
 
@@ -239,6 +265,8 @@ message.
   user sees.
 - An analogy does not map exactly. → Remove it.
 - A codebase-specific term has no short plain explanation. → Add one.
+- The answer assumes the user knows terms from agent discoveries. → Restore
+  [the user's vocabulary](#keep-the-users-vocabulary-throughout-the-task).
 - A concept has no toy example next to it. → Add the example.
 - A description of code flow or of a changed function has no call stack. →
   Add one.
