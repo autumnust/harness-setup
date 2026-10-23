@@ -80,7 +80,10 @@ vocabulary for updates, explanations, final answers, and later questions.
   example before using it alone. Preserve distinctions that affect correctness.
   Keep exact identifiers when the user needs to locate or use them.
 - Expand the shared vocabulary when the user demonstrates understanding or
-  explicitly says they know a term. Follow requests for deeper technical detail.
+  explicitly says they know a term. Use correct quiz answers and explanations
+  in the user's own words as evidence. Expand only to the meanings demonstrated.
+  If later answers show confusion, explain those terms again.
+  Follow requests for deeper technical detail.
 - When writing a conversation summary or handoff, retain the original problem
   wording, familiar terms, and introduced terms without confirmed understanding.
   Use the existing summary; this rule does not require a new file or record.
