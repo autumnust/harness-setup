@@ -3,7 +3,13 @@
 This experiment tests whether later answers still use the user's starting
 vocabulary. It also checks whether plain wording preserves technical meaning.
 
-Status: experiment designed; independent model runs have not started.
+First synthetic trial completed October 22, 2026: 24 answers and six summaries,
+using the same model and three repeats per condition. Both versions avoided
+all five artificial labels. The new rule preserved the original request in
+all three summaries, but one answer gave an inaccurate explanation of record
+identity. User understanding ratings remain uncollected. This trial does not
+establish improvement without accuracy loss.
+
 The examples below are authored illustrations, not measured before-and-after
 outputs. The self-evaluation checks the rule's coverage, not its effectiveness.
 
@@ -155,7 +161,7 @@ The user's first reading should precede any explanation of the expected answer.
 | Does it preserve precision? | The rule requires meaningful distinctions and exact identifiers when needed. The experiment checks this separately. |
 | Does it add bookkeeping? | It uses existing summaries and requires no new file or record. |
 | Can it enforce compliance absolutely? | No. It is a prompt instruction with a self-check, not a mechanical response gate. |
-| Has it improved model behavior? | Unknown. The examples are illustrations; controlled runs and user scores remain necessary. |
+| Has it improved model behavior? | The first synthetic trial showed simpler wording and retained user wording in summaries. It did not establish better user understanding or improvement without accuracy loss. |
 
 The main risk is repetitive explanation. The familiarity case tests whether
 the rule lets the agent stop explaining terms the user already knows.
