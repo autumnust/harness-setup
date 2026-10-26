@@ -136,6 +136,7 @@ def render(snapshot: dict, diagram: str, refresh_command: str) -> str:
     tasks = snapshot["tasks"]
     counts = Counter(task["status"] for task in tasks)
     cards = []
+    rows = []
     for task in tasks:
         links = "".join(f'<a href="{escape(link["url"])}">{escape(link["label"])}</a>'
                         for link in task["links"])
@@ -155,6 +156,20 @@ def render(snapshot: dict, diagram: str, refresh_command: str) -> str:
 <p>Catalog observed: {escape(task['last_seen'] or 'not recorded')}<br>
 Last used: {escape(task['last_used_at'] or 'not recorded')}</p></details>
 <nav aria-label="Links for {escape(task['task_name'])}">{links}</nav></article>''')
+        brief = next((link["url"] for link in task["links"] if link["label"] == "Task brief"), "")
+        name = escape(task["task_name"])
+        if brief:
+            name = f'<a href="{escape(brief)}">{name}</a>'
+        rows.append(f'''<tr class="task-row" data-status="{status}">
+<th scope="row"><div class="task-name">{name}</div>{missing}
+<details class="row-details"><summary>Task details</summary><dl>{details}</dl>
+<p class="path">{escape(task['path'])}</p>
+<p>Catalog observed: {escape(task['last_seen'] or 'not recorded')}<br>
+Last used: {escape(task['last_used_at'] or 'not recorded')}</p></details></th>
+<td><span class="badge {status}">{escape(task['status'])}</span></td>
+<td class="next-action">{linked_text(task['next_task'], Path(task['path'])) or '<span class="muted">Not recorded</span>'}</td>
+<td class="updated-date">{escape(task['updated'] or 'Not recorded')}</td>
+<td><nav class="row-links" aria-label="Links for {escape(task['task_name'])}">{links}</nav></td></tr>''')
     filters = '<button type="button" data-filter="all" aria-pressed="true">All <span>' + str(len(tasks)) + '</span></button>'
     filters += "".join(
         f'<button type="button" data-filter="{escape(status)}" aria-pressed="false">{escape(status.title())} <span>{count}</span></button>'
@@ -168,7 +183,7 @@ Last used: {escape(task['last_used_at'] or 'not recorded')}</p></details>
         "total": str(len(tasks)), "active": str(counts["active"]),
         "attention": str(counts["blocked"] + counts["waiting"]),
         "missing": str(sum(not task["present"] for task in tasks)),
-        "filters": filters, "cards": "\n".join(cards),
+        "filters": filters, "cards": "\n".join(cards), "rows": "\n".join(rows),
         "empty_hidden": "hidden" if tasks else "",
         "diagram": escape(diagram), "refresh": escape(refresh_command),
     }

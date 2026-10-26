@@ -10,9 +10,11 @@ agent-workspace dashboard --workspace /path/to/workspace --status active \
 
 The default destination is `outputs/task-dashboard.html` inside the workspace.
 Repeat `--status` to include several statuses. Omit it to include all statuses.
-The page includes searchable task cards, status filters, file links, and an
-interactive Archify tree grouped by task folder. The tree includes every task
-location in the generated snapshot. Card filters do not change the tree.
+The page opens with a compact task list. Switch to task cards or the interactive
+Archify tree when needed. The list shows status, next action, update date, and
+file links. Expand a task to read its full details. Search and status filters
+apply to both the list and cards. The tree groups tasks by their folder. The tree includes every task
+location in the generated snapshot. Task filters do not change the tree.
 
 The command uses the same workspace identity rules as `list-tasks`. It includes
 registered tasks outside the workspace directory. It does not scan arbitrary
