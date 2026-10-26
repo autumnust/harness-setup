@@ -69,6 +69,13 @@ tracking requires the user's choice. Full mode requires an explicit request and
 adds its records to the same task folder. The execution parent name is
 configurable; its name does not select execution tracking.
 
+## Visualize workspace tasks
+
+Use `agent-workspace dashboard --workspace "<workspace>" --format json` when
+the user asks for a task overview. Add `--status active` for active tasks only.
+Open the returned HTML file. See [task dashboard options](references/task-dashboard.md)
+for output paths, Archify setup, snapshot behavior, and refresh instructions.
+
 ## Repository work
 
 Write generated output to the task's execution folder. Add reusable workspace

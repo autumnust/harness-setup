@@ -51,10 +51,12 @@ agent-workspace init --name "<name>" --destination "<parent>" \
 agent-workspace rehydrate --manifest "<workspace.yaml>" --destination "<path>"
 agent-workspace start-task --workspace "<path>" --name "<task>" --objective "<text>"
 agent-workspace list-tasks --workspace "<path>" --status active -H
+agent-workspace dashboard --workspace "<path>" --status active --format json
 ```
 
 Use `--format json` when an agent or script consumes the result and `-H` for
-terminal output. `reference` is the alternative repository role.
+terminal output. The [task dashboard](agent-skills/agent-workspace/references/task-dashboard.md)
+shows recorded task status, file links, and an interactive Archify tree. `reference` is the alternative repository role.
 Workspace creation and rehydration register the workspace. Rehydration uses the
 exact destination, verifies workspace metadata, repository origins, and primary
 branches, then clones only missing repositories. Task creation only creates and
@@ -191,7 +193,7 @@ Pick one of:
 | `instances/<name>.md` | Appended to `~/AGENTS.md` only when that profile is selected |
 | `claude/settings.json` | `~/.claude/settings.json` (with `node` path repatched) |
 | `agent-skills/<name>/` | `~/.claude/skills/<name>/`; also `~/.agents/skills/<name>/` and `~/.codex/skills/<name>/` when Codex is present |
-| revision-pinned entries in `dependencies/external-skills.json` | The same skill locations as portable skills; installs `unslop` from `cursor/plugins` and `grill-me` with `grilling` from `mattpocock/skills` |
+| revision-pinned entries in `dependencies/external-skills.json` | The same skill locations as portable skills; installs `archify` from `tt-a1i/archify`, `unslop` from `cursor/plugins`, and `grill-me` with `grilling` from `mattpocock/skills` |
 | `agent-workflows/` | `~/.agent-harness/specs/` plus rendered `~/.claude/agents/agent-harness/*.md` and, when Codex is present, `~/.codex/agents/agent-harness-*.toml` |
 | coordinator model and workflow depth | Claude Code `opus` (a model family, not a version); Codex keeps its default model; medium effort; `agents.max_depth = 2` merged into Codex config |
 | mutable runtime configuration | `~/.agent-harness/config.json` (initialized once, confirmed and maintained by the coordinator) |

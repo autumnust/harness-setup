@@ -146,6 +146,18 @@ def run_start_task(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any]
     return payload, status
 
 
+def run_dashboard(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any], int]:
+    command = ["--workspace", str(args.workspace)]
+    for status in args.status:
+        command.extend(("--status", status))
+    optional_path(command, "--output", args.output)
+    optional_path(command, "--archify", args.archify)
+    result = run_helper(
+        helper(root, "agent-workspace", "render_workspace_dashboard.py"), command
+    )
+    return json_output(result, "workspace dashboard generation"), 0
+
+
 def add_format(parser: argparse.ArgumentParser) -> None:
     formats = parser.add_mutually_exclusive_group()
     formats.add_argument("--format", choices=("text", "json", "human"))
@@ -203,11 +215,21 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("blocked", "active", "waiting", "paused", "done", "cancelled", "archived", "unknown"),
     )
     add_format(listing)
+    dashboard = subparsers.add_parser("dashboard", help="write a workspace task dashboard")
+    dashboard.add_argument("--workspace", required=True, type=Path)
+    dashboard.add_argument("--output", type=Path, help="HTML destination; defaults to workspace outputs/task-dashboard.html")
+    dashboard.add_argument("--archify", type=Path, help="Archify skill directory or bin/archify.mjs")
+    dashboard.add_argument("--status", action="append", default=[], choices=(
+        "blocked", "active", "waiting", "paused", "done", "cancelled", "archived", "unknown",
+    ))
+    add_format(dashboard)
     return parser
 
 
 def render_text(payload: dict[str, Any]) -> str:
     operation = payload["operation"]
+    if operation == "dashboard":
+        return f"Dashboard: {payload['output']}\nTasks: {payload['task_count']}"
     if operation in {"init", "rehydrate"}:
         lines = [str(payload["workspace"])]
         if payload.get("outcome") == "partial":
@@ -271,6 +293,8 @@ def main() -> int:
             payload, status = run_rehydrate(args, root)
         elif args.command == "list-tasks":
             payload, status = run_list(args, root)
+        elif args.command == "dashboard":
+            payload, status = run_dashboard(args, root)
         else:
             payload, status = run_start_task(args, root)
     except (OSError, ValueError) as exc:

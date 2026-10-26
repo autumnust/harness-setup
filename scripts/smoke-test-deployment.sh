@@ -135,7 +135,7 @@ run_inside_sandbox() {
   # Its external skill fixture is local so offline mode remains deterministic.
   local install_repo="$root/repository"
   local resolved_external="$install_repo/.resolved-external-skills"
-  rsync -a --exclude='.git' "$REPO_ROOT/" "$install_repo/"
+  rsync -a --exclude='.git' --exclude='.resolved-external-skills' "$REPO_ROOT/" "$install_repo/"
   mkdir -p "$resolved_external/unslop" "$resolved_external/plain-language"
   printf '%s\n' \
     '---' \

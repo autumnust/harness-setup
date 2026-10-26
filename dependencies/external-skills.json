@@ -2,6 +2,15 @@
   "schema_version": 1,
   "skills": [
     {
+      "name": "archify",
+      "repository": "https://github.com/tt-a1i/archify.git",
+      "tracking_ref": "refs/heads/main",
+      "revision": "81c6be8d87090670c45d08a8f97f9d29c5af0bec",
+      "source_path": "archify",
+      "license_path": "archify/LICENSE",
+      "content_sha256": "c7f1a61817d669287921d1d1f08d8e50092d7befa3a28c3f39024ecc1a045734"
+    },
+    {
       "name": "grill-me",
       "repository": "https://github.com/mattpocock/skills.git",
       "tracking_ref": "refs/heads/main",
