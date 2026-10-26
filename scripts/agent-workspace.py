@@ -152,6 +152,11 @@ def run_dashboard(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any],
         command.extend(("--status", status))
     optional_path(command, "--output", args.output)
     optional_path(command, "--archify", args.archify)
+    if args.check:
+        command.append("--check")
+    if args.refresh:
+        command.append("--refresh")
+    command.extend(("--max-age-minutes", str(args.max_age_minutes)))
     result = run_helper(
         helper(root, "agent-workspace", "render_workspace_dashboard.py"), command
     )
@@ -219,6 +224,10 @@ def build_parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--workspace", required=True, type=Path)
     dashboard.add_argument("--output", type=Path, help="HTML destination; defaults to workspace outputs/task-dashboard.html")
     dashboard.add_argument("--archify", type=Path, help="Archify skill directory or bin/archify.mjs")
+    modes = dashboard.add_mutually_exclusive_group()
+    modes.add_argument("--check", action="store_true", help="check freshness without rendering")
+    modes.add_argument("--refresh", action="store_true", help="refresh discovery and rebuild only when needed")
+    dashboard.add_argument("--max-age-minutes", type=float, default=60)
     dashboard.add_argument("--status", action="append", default=[], choices=(
         "blocked", "active", "waiting", "paused", "done", "cancelled", "archived", "unknown",
     ))
@@ -229,7 +238,13 @@ def build_parser() -> argparse.ArgumentParser:
 def render_text(payload: dict[str, Any]) -> str:
     operation = payload["operation"]
     if operation == "dashboard":
-        return f"Dashboard: {payload['output']}\nTasks: {payload['task_count']}"
+        lines = [f"Dashboard: {payload['output']}", f"Tasks: {payload['task_count']}",
+                 f"Freshness: {payload.get('freshness', 'unknown')}", f"Result: {payload['outcome']}"]
+        if payload.get("reasons"):
+            lines.append("Reasons: " + ", ".join(payload["reasons"]))
+        if payload.get("git_ignore", {}).get("warning"):
+            lines.append(payload["git_ignore"]["warning"])
+        return "\n".join(lines)
     if operation in {"init", "rehydrate"}:
         lines = [str(payload["workspace"])]
         if payload.get("outcome") == "partial":

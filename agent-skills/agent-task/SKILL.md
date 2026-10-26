@@ -76,6 +76,13 @@ task state.
 
 Use `task-session` only when the user asks to start a runtime for the task.
 
+For a workspace task, refresh its existing workspace dashboard after a state
+change. Follow the [workspace dashboard procedure](../agent-workspace/references/task-dashboard.md).
+Reuse the known report path and filter. If neither is known, check the workspace's
+default `outputs/task-dashboard.html`. Do not create a report when none exists.
+Use the command's freshness result rather than judging file timestamps yourself.
+Report refresh failures without undoing a successful task state change.
+
 ## Human follow-up
 
 Every task has `follow-up.md` for requests written by the human during execution.

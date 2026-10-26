@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="dashboard-generated-at" content="@@generated@@">
 <title>@@title@@ · Workspace tasks</title>
 <style>
 :root{color-scheme:light;--bg:#f5f6f8;--paper:#fff;--ink:#182334;--muted:#526174;--line:#dce2e9;--blue:#204da5;--focus:#2454b9}
@@ -28,7 +29,7 @@ dl{margin:0 0 16px}dl div+div{margin-top:16px}dt{font-size:12px;font-weight:700;
 <main>
 <div class="intro"><div><p class="eyebrow">WORKSPACE TASKS</p><h1>@@title@@</h1>
 <p class="muted">Review recorded progress and open the next task.</p>
-<p class="muted">Scope: @@scope@@</p><p class="count">Generated <time datetime="@@generated@@">@@generated@@</time></p></div><span class="snapshot">Saved snapshot</span></div>
+<p class="muted">Scope: @@scope@@</p><p class="count">Generated <time id="generated-time" datetime="@@generated@@">@@generated@@</time></p></div><span class="snapshot" id="snapshot-age" data-generated="@@generated@@" data-max-age-minutes="@@max_age_minutes@@">Saved snapshot</span></div>
 <section class="stats" aria-label="Task totals">
 <div class="stat"><strong>@@total@@</strong><span>Task locations</span></div>
 <div class="stat active"><strong>@@active@@</strong><span>Active</span></div>
@@ -44,14 +45,18 @@ dl{margin:0 0 16px}dl div+div{margin-top:16px}dt{font-size:12px;font-weight:700;
 <p id="empty" class="empty" @@empty_hidden@@>No tasks match this view. Change the filter or regenerate with a broader scope.</p></section>
 <section id="map-panel" class="map-panel" aria-label="Workspace map" hidden><p class="map-note">Workspace → task folders → tasks. The map shows all tasks in this snapshot. Task filters do not change it.<span class="mobile-note">Scroll the map horizontally to see its full width.</span></p><div class="map-scroll" tabindex="0" role="region" aria-label="Scrollable workspace map"><iframe title="Interactive workspace task tree" sandbox="allow-scripts allow-downloads" srcdoc="@@diagram@@"></iframe></div></section>
 <noscript><p>JavaScript enables search, status filters, and the map view. The task list remains readable without it.</p></noscript>
-<section class="footnote" aria-label="Snapshot details"><p><strong>Recorded status, not live agent activity.</strong> This page reads the local task catalog. Each task shows its catalog observation time. Regenerate after task changes. Rendering does not change task state or start agents.</p>
+<section class="footnote" aria-label="Snapshot details"><p><strong>Recorded status, not live agent activity.</strong> This page shows a saved task catalog snapshot. Each task shows its catalog observation time. The age badge updates while this page is open, but it cannot detect newer task changes. Refresh after task changes or after @@max_age_minutes@@ minutes. Refresh updates discovery without changing recorded lifecycle states or starting agents.</p>
 <p><a href="@@workspace_url@@">Open workspace folder</a>.</p>
-<details><summary>Refresh this dashboard</summary><p>Run this command, then reload this page. Import unregistered tasks with the existing task catalog commands first.</p><pre>@@refresh@@</pre></details></section>
+<details><summary>Refresh this dashboard</summary><p>Run this command, then reload this page. It refreshes workspace discovery and registered external tasks. It rebuilds only when inputs changed or the age limit expired. Import other external task folders with the existing task catalog commands first.</p><pre>@@refresh@@</pre></details></section>
 <!-- LICENSES -->
 <footer><span>Local files stay on this machine.</span><span>Task tree rendered with <a href="https://github.com/tt-a1i/archify">Archify</a></span></footer>
 </main>
 <script>
 (()=>{
+ const ageBadge=document.getElementById('snapshot-age'),generated=Date.parse(ageBadge.dataset.generated),maxAge=Number(ageBadge.dataset.maxAgeMinutes)*60000;
+ const time=document.getElementById('generated-time');if(Number.isFinite(generated))time.textContent=new Date(generated).toLocaleString(undefined,{timeZoneName:'short'});
+ function updateAge(){const elapsed=Date.now()-generated;const minutes=Math.floor(Math.max(0,elapsed)/60000);const age=minutes<1?'less than a minute':minutes<60?`${minutes} min`:minutes<1440?`${Math.floor(minutes/60)} hr ${minutes%60} min`:`${Math.floor(minutes/1440)} days`;const due=elapsed>=maxAge||elapsed<0;ageBadge.textContent=elapsed<0?'Check device clock':`${due?'Refresh due':'Snapshot'} · ${age} old`;ageBadge.style.background=due?'#fff1d8':'#fff';ageBadge.style.color=due?'#815000':'#182334';ageBadge.title='This shows report age. Task changes require a freshness check or refresh command.';}
+ updateAge();setInterval(updateAge,60000);
  const rows=[...document.querySelectorAll('.task-row')],search=document.getElementById('search');let status='all';
  function filter(){const query=search.value.trim().toLowerCase();let visible=0;for(const row of rows){row.hidden=!((status==='all'||row.dataset.status===status)&&row.textContent.toLowerCase().includes(query));if(!row.hidden)visible++;}document.getElementById('result-count').textContent=`${visible} of ${rows.length} task locations`;document.getElementById('empty').hidden=visible!==0;}
  search.addEventListener('input',filter);

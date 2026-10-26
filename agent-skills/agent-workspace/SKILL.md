@@ -71,8 +71,22 @@ configurable; its name does not select execution tracking.
 
 ## Visualize workspace tasks
 
-Use `agent-workspace dashboard --workspace "<workspace>" --format json` when
+Use `agent-workspace dashboard --workspace "<workspace>" --refresh --format json` when
 the user asks for a task overview. Add `--status active` for active tasks only.
+Refresh before showing an existing dashboard. Compare its scope with the user's
+request; do not present an active-only report as a complete task list.
+The command refreshes discovery and rebuilds changed reports or reports older
+than 60 minutes. Use `--max-age-minutes` for a user-selected age limit.
+Use `--check` for a read-only freshness check. Inspect `freshness` and `reasons`,
+not just the file modification time. A recent timestamp does not prove current data.
+After creating a workspace task or changing its state, refresh an existing
+dashboard for that workspace. Reuse the known output path and status filter.
+When no custom path is known, check the default `outputs/task-dashboard.html`.
+Read the sibling `.dashboard.json` file for the saved workspace, filter, and age limit.
+Do not create a new dashboard merely because a task changed. Refresh before
+sharing the dashboard or reporting completion of work that changed its inputs.
+Report refresh failures and identify the preserved page as an older snapshot.
+The standalone page cannot refresh task data by itself. Never claim live status.
 Open the returned HTML file. See [task dashboard options](references/task-dashboard.md)
 for output paths, Archify setup, snapshot behavior, and refresh instructions.
 

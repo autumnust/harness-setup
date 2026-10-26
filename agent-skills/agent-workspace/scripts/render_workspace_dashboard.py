@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Render a read-only workspace task snapshot with an embedded Archify tree."""
+"""Render or refresh a workspace task snapshot with an embedded Archify tree."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
+import math
 import os
 import re
 import shutil
@@ -20,9 +22,21 @@ from urllib.parse import unquote, urlsplit
 from catalog_client import list_records
 from list_workspace_tasks import STATUS_ORDER, discover
 from start_workspace_task import workspace_identity
+from dashboard_freshness import (
+    atomic_write, check_report, exclude_generated, input_fingerprint,
+    metadata_path, refresh_catalog,
+)
 
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
+
+
+def fingerprint(snapshot: dict) -> str:
+    script = Path(__file__).resolve()
+    return input_fingerprint(snapshot, [
+        script, script.with_name("dashboard_freshness.py"), ASSETS / "task-dashboard.html",
+        script.parents[3] / "dependencies/external-skills.json",
+    ])
 
 
 def find_archify(explicit: Path | None = None) -> Path:
@@ -43,6 +57,7 @@ def find_archify(explicit: Path | None = None) -> Path:
 
 
 def collect(workspace: Path, statuses: set[str] | None) -> dict:
+    workspace = workspace.expanduser().resolve()
     name, _ = workspace_identity(workspace / "workspace.yaml")
     tasks, _ = discover(workspace, statuses)
     # Discovery owns workspace identity, including legacy and external locations.
@@ -169,6 +184,7 @@ Last used: {escape(task['last_used_at'] or 'not recorded')}</p></details></th>
         "title": escape(snapshot["workspace_name"]),
         "workspace_url": escape(Path(snapshot["workspace"]).as_uri()),
         "generated": escape(snapshot["generated_at"]),
+        "max_age_minutes": str(snapshot.get("max_age_minutes", 60)),
         "scope": escape(", ".join(snapshot["statuses"]) if snapshot["statuses"] else "All recorded statuses"),
         "total": str(len(tasks)), "active": str(counts["active"]),
         "attention": str(counts["blocked"] + counts["waiting"]),
@@ -182,7 +198,8 @@ Last used: {escape(task['last_used_at'] or 'not recorded')}</p></details></th>
     return re.sub(r"@@(\w+)@@", lambda m: values[m[1]], template)
 
 
-def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: Path | None) -> dict:
+def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: Path | None,
+             *, snapshot: dict | None = None, max_age_minutes: float = 60) -> dict:
     import shlex
 
     if output.suffix.lower() != ".html":
@@ -191,8 +208,11 @@ def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: 
     node = shutil.which("node")
     if not node:
         raise ValueError("Node.js is required to render the Archify task tree")
-    snapshot = collect(workspace, statuses)
+    snapshot = snapshot if snapshot is not None else collect(workspace, statuses)
+    snapshot["max_age_minutes"] = max_age_minutes
+    inputs = fingerprint(snapshot)
     output.parent.mkdir(parents=True, exist_ok=True)
+    git_ignore = exclude_generated(output)
     # A fresh evidence directory avoids overwriting earlier Archify receipts.
     evidence_root = output.parent / (output.stem + "-assets")
     evidence_root.mkdir(exist_ok=True)
@@ -214,7 +234,8 @@ def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: 
         if license_path.is_file():
             shutil.copy2(license_path, evidence / name)
     cli = Path(__file__).resolve().parents[3] / "scripts/agent-workspace.py"
-    command = [sys.executable, str(cli), "dashboard", "--workspace", str(workspace), "--output", str(output)]
+    command = [sys.executable, str(cli), "dashboard", "--workspace", str(workspace), "--output", str(output),
+               "--refresh", "--max-age-minutes", str(max_age_minutes)]
     for status in sorted(statuses or []):
         command.extend(("--status", status))
     if archify:
@@ -225,16 +246,17 @@ def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: 
                                 for name in ("NOTICE", "LICENSE", "LICENSE-MIT", "THIRD_PARTY_NOTICES.md")
                                 if (evidence / name).is_file())
     document = document.replace("<!-- LICENSES -->", '<details class="licenses"><summary>Archify licenses and notices</summary><pre>' + escape(license_text) + '</pre></details>')
-    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=output.parent, delete=False) as pending:
-        temporary = Path(pending.name)
-        pending.write(document)
-    try:
-        temporary.replace(output)
-    finally:
-        temporary.unlink(missing_ok=True)
+    atomic_write(output, document)
+    atomic_write(metadata_path(output), json.dumps({
+        "schema_version": 1, "generated_at": snapshot["generated_at"],
+        "input_fingerprint": inputs, "output_sha256": hashlib.sha256(document.encode("utf-8")).hexdigest(),
+        "max_age_minutes": max_age_minutes, "workspace": str(workspace),
+        "statuses": sorted(statuses or []),
+    }, indent=2) + "\n")
     return {"operation": "dashboard", "outcome": "complete", "output": str(output),
             "task_count": len(snapshot["tasks"]), "generated_at": snapshot["generated_at"],
-            "evidence": str(evidence), "source": str(source)}
+            "evidence": str(evidence), "source": str(source), "freshness": "current",
+            "max_age_minutes": max_age_minutes, "git_ignore": git_ignore}
 
 
 def main() -> int:
@@ -243,11 +265,32 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--status", action="append", choices=tuple(STATUS_ORDER))
     parser.add_argument("--archify", type=Path)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--check", action="store_true", help="check freshness without rendering or refreshing discovery")
+    modes.add_argument("--refresh", action="store_true", help="refresh discovery and rebuild only when needed")
+    parser.add_argument("--max-age-minutes", type=float, default=60)
     args = parser.parse_args()
     try:
         workspace = args.workspace.expanduser().resolve()
-        output = (args.output or workspace / "outputs/task-dashboard.html").expanduser().absolute()
-        payload = generate(workspace, output, set(args.status) if args.status else None, args.archify)
+        output = (args.output or workspace / "outputs/task-dashboard.html").expanduser().resolve()
+        if not math.isfinite(args.max_age_minutes) or args.max_age_minutes <= 0:
+            raise ValueError("--max-age-minutes must be a positive finite number")
+        if args.refresh:
+            refresh_catalog(workspace)
+        statuses = set(args.status) if args.status else None
+        snapshot = None
+        payload = None
+        if args.check or args.refresh:
+            snapshot = collect(workspace, statuses)
+            snapshot["max_age_minutes"] = args.max_age_minutes
+            checked = check_report(output, snapshot, fingerprint(snapshot), args.max_age_minutes)
+            if args.check:
+                payload = checked
+            elif checked["freshness"] == "current":
+                payload = {**checked, "outcome": "unchanged", "git_ignore": exclude_generated(output)}
+        if payload is None:
+            payload = generate(workspace, output, statuses, args.archify,
+                               snapshot=snapshot, max_age_minutes=args.max_age_minutes)
     except (OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
