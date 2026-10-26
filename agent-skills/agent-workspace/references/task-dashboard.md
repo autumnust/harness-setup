@@ -133,3 +133,32 @@ the same output path. Deployment alone does not create or refresh dashboards.
 The HTML is portable for reading. Task file links use the generation machine's
 paths. Open it on that machine for working file links; copying the HTML alone
 does not copy its linked task documents.
+
+## Serve through an existing document server
+
+Use `--web-root` with the directory served by your HTTP server. Keep the output
+inside that directory. The report uses relative document links within this
+root. Links outside the served directory show an unavailable label.
+
+```bash
+agent-workspace dashboard --workspace /srv/work/project \
+  --output /srv/work/project/outputs/task-dashboard.html \
+  --web-root /srv/work --refresh --format json
+```
+
+For an existing execution folder without a workspace manifest, use `--root`
+instead of `--workspace`. This includes recognized standalone and workspace
+tasks below that folder. It preserves their IDs, membership, and recorded status.
+It does not turn ordinary notes into task records.
+
+```bash
+agent-workspace dashboard --root /srv/work/execution-notes \
+  --output /srv/work/execution-notes/task-dashboard.html \
+  --web-root /srv/work/execution-notes --refresh --format json
+```
+
+Reuse the report's `folder_scope` and `web_root` metadata during later refreshes.
+When `folder_scope` is true, pass its saved `workspace` path as `--root`.
+Keep the same `--web-root` when checking freshness. Forward the existing server
+port through SSH and open the report path under that endpoint. The dashboard
+does not start a server or change its authentication settings.

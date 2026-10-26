@@ -193,6 +193,8 @@ class WorkspaceDashboardTests(unittest.TestCase):
     def write_report_metadata(self, output, snapshot, age_minutes=0):
         output.write_text("saved dashboard")
         snapshot["max_age_minutes"] = 60.0
+        snapshot["web_root"] = ""
+        snapshot["output"] = str(output.resolve())
         metadata = {
             "schema_version": 1,
             "generated_at": (datetime.now(timezone.utc) - timedelta(minutes=age_minutes)).isoformat(),
@@ -282,6 +284,50 @@ class WorkspaceDashboardTests(unittest.TestCase):
                 self.assertEqual(json.loads(result.stdout)["outcome"], outcome, result.stdout)
                 self.assertEqual(json.loads(result.stdout)["freshness"], "current")
                 self.assertEqual(output.stat().st_mtime_ns, before)
+
+    def test_folder_scope_backfills_standalone_and_workspace_tasks_without_rewriting(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            workspace, harness = self.fixture(root)
+            folder = root / "served"
+            standalone = folder / "standalone"
+            standalone.mkdir(parents=True)
+            readme = standalone / "README.md"
+            content = "---\nagent_task: 1\nid: standalone\ntitle: Standalone\nstatus: paused\n---\n# Existing task\n"
+            readme.write_text(content)
+            self.task(folder / "member", harness, "active")
+            self.task(root / "elsewhere", harness, "active", task_id="outside")
+            with patch.dict(os.environ, {"AGENT_HARNESS_HOME": str(harness)}):
+                freshness.refresh_catalog(folder, folder_scope=True)
+                snapshot = dashboard.collect(folder, None, folder_scope=True)
+                self.assertEqual({t["id"] for t in snapshot["tasks"]}, {"standalone", "task-one"})
+                paused = dashboard.collect(folder, {"paused"}, folder_scope=True)
+                self.assertEqual([t["id"] for t in paused["tasks"]], ["standalone"])
+                self.assertFalse((folder / "workspace.yaml").exists())
+                self.assertEqual(readme.read_text(), content)
+
+    def test_http_links_remain_inside_document_root(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            served = root / "served"
+            folder = served / "task space"
+            folder.mkdir(parents=True)
+            report = folder / "README.md"
+            report.write_text("Report")
+            link = served / "escape"
+            link.symlink_to(root / "private.txt")
+            document = (
+                f'<a href="{report.as_uri()}#current%20state">Task</a>'
+                f'<a href="{folder.as_uri()}">Folder</a>'
+                f'<a href="{link.as_uri()}">Private</a>'
+                '<a href="https://example.com">External</a>'
+            )
+            page = dashboard.served_links(document, served / "index.html", served)
+            self.assertIn('href="task%20space/README.md#current%20state"', page)
+            self.assertIn('href="task%20space/"', page)
+            self.assertIn('Private (outside served folder)', page)
+            self.assertIn('href="https://example.com"', page)
+            self.assertNotIn('file://', page)
 
     def test_git_excludes_only_report_files_and_preserves_existing_rules(self):
         with tempfile.TemporaryDirectory() as temp:

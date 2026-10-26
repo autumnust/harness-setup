@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from catalog_client import run_catalog
+from catalog_client import list_records, run_catalog
 from list_workspace_tasks import discover
 
 
@@ -37,14 +37,18 @@ def atomic_write(path: Path, content: str) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def refresh_catalog(workspace: Path) -> None:
+def refresh_catalog(workspace: Path, *, folder_scope: bool = False) -> None:
     def run(*args: str) -> None:
         result = run_catalog(*args)
         if result.returncode:
             raise ValueError("dashboard discovery refresh failed: " + (result.stderr or result.stdout).strip())
 
-    run("register", "--path", str(workspace))
-    tasks, _ = discover(workspace)
+    if folder_scope:
+        tasks = [r for r in list_records() if r.get("kind") in {"agent-task", "workspace-task"}
+                 and Path(r["path"]).resolve().is_relative_to(workspace)]
+    else:
+        run("register", "--path", str(workspace))
+        tasks, _ = discover(workspace)
     roots = [workspace]
     for task in tasks:
         path = Path(task["path"])

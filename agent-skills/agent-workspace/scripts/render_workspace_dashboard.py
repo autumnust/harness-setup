@@ -17,10 +17,10 @@ import tempfile
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 from catalog_client import list_records
-from list_workspace_tasks import STATUS_ORDER, discover
+from list_workspace_tasks import STATUS_ORDER, discover, normalize_record
 from start_workspace_task import workspace_identity
 from dashboard_freshness import (
     atomic_write, check_report, exclude_generated, input_fingerprint,
@@ -56,13 +56,19 @@ def find_archify(explicit: Path | None = None) -> Path:
     raise ValueError("Archify is unavailable. Install the pinned harness skills or pass --archify <skill-directory>.")
 
 
-def collect(workspace: Path, statuses: set[str] | None) -> dict:
+def collect(workspace: Path, statuses: set[str] | None, *, folder_scope: bool = False) -> dict:
     workspace = workspace.expanduser().resolve()
-    name, _ = workspace_identity(workspace / "workspace.yaml")
-    tasks, _ = discover(workspace, statuses)
-    # Discovery owns workspace identity, including legacy and external locations.
-    records = {(r.get("id"), r.get("path")): r
-               for r in list_records("--kind", "workspace-task")}
+    if folder_scope:
+        name = workspace.name + " tasks"
+        raw = [r for r in list_records() if r.get("kind") in {"agent-task", "workspace-task"}
+               and Path(r["path"]).resolve().is_relative_to(workspace)]
+        tasks = [normalize_record(r) for r in raw
+                 if statuses is None or r.get("status", "unknown") in statuses]
+    else:
+        name, _ = workspace_identity(workspace / "workspace.yaml")
+        tasks, _ = discover(workspace, statuses)
+        raw = list_records("--kind", "workspace-task")
+    records = {(r.get("id"), r.get("path")): r for r in raw}
     for task in tasks:
         record = records.get((task["id"], task["path"]), {})
         for key in ("objective", "current_state", "next_task", "last_seen"):
@@ -80,7 +86,7 @@ def collect(workspace: Path, statuses: set[str] | None) -> dict:
                     task["links"].append({"label": label, "url": (folder / filename).as_uri()})
     tasks.sort(key=lambda t: (STATUS_ORDER.get(t["status"], 99), t["task_name"].casefold(), t["path"]))
     return {
-        "workspace": str(workspace), "workspace_name": name,
+        "workspace": str(workspace), "workspace_name": name, "folder_scope": folder_scope,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "statuses": sorted(statuses) if statuses else [], "tasks": tasks,
     }
@@ -198,8 +204,26 @@ Last used: {escape(task['last_used_at'] or 'not recorded')}</p></details></th>
     return re.sub(r"@@(\w+)@@", lambda m: values[m[1]], template)
 
 
+def served_links(document: str, output: Path, web_root: Path) -> str:
+    """Map local document links into the selected HTTP document directory."""
+    def replace(match: re.Match) -> str:
+        prefix, target, suffix, label = match.groups()
+        parsed = urlsplit(html.unescape(target))
+        path = Path(unquote(parsed.path)).resolve()
+        if not path.is_relative_to(web_root):
+            return '<span title="Outside the served folder">' + label + ' (outside served folder)</span>'
+        relative = quote(os.path.relpath(path, output.parent), safe="/")
+        if path.is_dir():
+            relative += "/"
+        if parsed.fragment:
+            relative += "#" + quote(unquote(parsed.fragment), safe="")
+        return prefix + escape(relative) + suffix + label + "</a>"
+    return re.sub(r'(<a\b[^>]*?href=")(file://[^"]*)("[^>]*>)(.*?)</a>', replace, document, flags=re.S)
+
+
 def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: Path | None,
-             *, snapshot: dict | None = None, max_age_minutes: float = 60) -> dict:
+             *, snapshot: dict | None = None, max_age_minutes: float = 60,
+             folder_scope: bool = False, web_root: Path | None = None) -> dict:
     import shlex
 
     if output.suffix.lower() != ".html":
@@ -208,8 +232,10 @@ def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: 
     node = shutil.which("node")
     if not node:
         raise ValueError("Node.js is required to render the Archify task tree")
-    snapshot = snapshot if snapshot is not None else collect(workspace, statuses)
+    snapshot = snapshot if snapshot is not None else collect(workspace, statuses, folder_scope=folder_scope)
     snapshot["max_age_minutes"] = max_age_minutes
+    snapshot["web_root"] = str(web_root) if web_root else ""
+    snapshot["output"] = str(output)
     inputs = fingerprint(snapshot)
     output.parent.mkdir(parents=True, exist_ok=True)
     git_ignore = exclude_generated(output)
@@ -234,13 +260,17 @@ def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: 
         if license_path.is_file():
             shutil.copy2(license_path, evidence / name)
     cli = Path(__file__).resolve().parents[3] / "scripts/agent-workspace.py"
-    command = [sys.executable, str(cli), "dashboard", "--workspace", str(workspace), "--output", str(output),
+    command = [sys.executable, str(cli), "dashboard", "--root" if folder_scope else "--workspace", str(workspace), "--output", str(output),
                "--refresh", "--max-age-minutes", str(max_age_minutes)]
     for status in sorted(statuses or []):
         command.extend(("--status", status))
     if archify:
         command.extend(("--archify", str(archify.expanduser().resolve())))
+    if web_root:
+        command.extend(("--web-root", str(web_root)))
     document = render(snapshot, (evidence / "map.html").read_text(encoding="utf-8"), shlex.join(command))
+    if web_root:
+        document = served_links(document, output, web_root)
     # Carry license text into the standalone document too.
     license_text = "\n\n".join((evidence / name).read_text(encoding="utf-8")
                                 for name in ("NOTICE", "LICENSE", "LICENSE-MIT", "THIRD_PARTY_NOTICES.md")
@@ -251,7 +281,8 @@ def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: 
         "schema_version": 1, "generated_at": snapshot["generated_at"],
         "input_fingerprint": inputs, "output_sha256": hashlib.sha256(document.encode("utf-8")).hexdigest(),
         "max_age_minutes": max_age_minutes, "workspace": str(workspace),
-        "statuses": sorted(statuses or []),
+        "statuses": sorted(statuses or []), "folder_scope": folder_scope,
+        "web_root": str(web_root) if web_root else "",
     }, indent=2) + "\n")
     return {"operation": "dashboard", "outcome": "complete", "output": str(output),
             "task_count": len(snapshot["tasks"]), "generated_at": snapshot["generated_at"],
@@ -261,7 +292,10 @@ def generate(workspace: Path, output: Path, statuses: set[str] | None, archify: 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workspace", required=True, type=Path)
+    scope = parser.add_mutually_exclusive_group(required=True)
+    scope.add_argument("--workspace", type=Path)
+    scope.add_argument("--root", type=Path, help="include all registered tasks under this folder")
+    parser.add_argument("--web-root", type=Path, help="HTTP server document directory")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--status", action="append", choices=tuple(STATUS_ORDER))
     parser.add_argument("--archify", type=Path)
@@ -271,18 +305,26 @@ def main() -> int:
     parser.add_argument("--max-age-minutes", type=float, default=60)
     args = parser.parse_args()
     try:
-        workspace = args.workspace.expanduser().resolve()
+        workspace = (args.root or args.workspace).expanduser().resolve()
+        folder_scope = args.root is not None
+        web_root = args.web_root.expanduser().resolve() if args.web_root else None
+        if not workspace.is_dir():
+            raise ValueError("task scope folder does not exist")
         output = (args.output or workspace / "outputs/task-dashboard.html").expanduser().resolve()
+        if web_root and (not web_root.is_dir() or not output.is_relative_to(web_root)):
+            raise ValueError("dashboard output must be inside the existing --web-root folder")
         if not math.isfinite(args.max_age_minutes) or args.max_age_minutes <= 0:
             raise ValueError("--max-age-minutes must be a positive finite number")
         if args.refresh:
-            refresh_catalog(workspace)
+            refresh_catalog(workspace, folder_scope=folder_scope)
         statuses = set(args.status) if args.status else None
         snapshot = None
         payload = None
         if args.check or args.refresh:
-            snapshot = collect(workspace, statuses)
+            snapshot = collect(workspace, statuses, folder_scope=folder_scope)
             snapshot["max_age_minutes"] = args.max_age_minutes
+            snapshot["web_root"] = str(web_root) if web_root else ""
+            snapshot["output"] = str(output)
             checked = check_report(output, snapshot, fingerprint(snapshot), args.max_age_minutes)
             if args.check:
                 payload = checked
@@ -290,7 +332,8 @@ def main() -> int:
                 payload = {**checked, "outcome": "unchanged", "git_ignore": exclude_generated(output)}
         if payload is None:
             payload = generate(workspace, output, statuses, args.archify,
-                               snapshot=snapshot, max_age_minutes=args.max_age_minutes)
+                               snapshot=snapshot, max_age_minutes=args.max_age_minutes,
+                               folder_scope=folder_scope, web_root=web_root)
     except (OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

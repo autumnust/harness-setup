@@ -147,7 +147,8 @@ def run_start_task(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any]
 
 
 def run_dashboard(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any], int]:
-    command = ["--workspace", str(args.workspace)]
+    command = ["--root", str(args.root)] if args.root else ["--workspace", str(args.workspace)]
+    optional_path(command, "--web-root", args.web_root)
     for status in args.status:
         command.extend(("--status", status))
     optional_path(command, "--output", args.output)
@@ -221,7 +222,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_format(listing)
     dashboard = subparsers.add_parser("dashboard", help="write a workspace task dashboard")
-    dashboard.add_argument("--workspace", required=True, type=Path)
+    scope = dashboard.add_mutually_exclusive_group(required=True)
+    scope.add_argument("--workspace", type=Path)
+    scope.add_argument("--root", type=Path, help="include all registered tasks under this folder")
+    dashboard.add_argument("--web-root", type=Path, help="HTTP server document directory")
     dashboard.add_argument("--output", type=Path, help="HTML destination; defaults to workspace outputs/task-dashboard.html")
     dashboard.add_argument("--archify", type=Path, help="Archify skill directory or bin/archify.mjs")
     modes = dashboard.add_mutually_exclusive_group()
