@@ -135,7 +135,6 @@ def linked_text(value: str, folder: Path) -> str:
 def render(snapshot: dict, diagram: str, refresh_command: str) -> str:
     tasks = snapshot["tasks"]
     counts = Counter(task["status"] for task in tasks)
-    cards = []
     rows = []
     for task in tasks:
         links = "".join(f'<a href="{escape(link["url"])}">{escape(link["label"])}</a>'
@@ -147,15 +146,6 @@ def render(snapshot: dict, diagram: str, refresh_command: str) -> str:
             if task[key]
         )
         missing = '<p class="missing">Task folder is missing on this machine.</p>' if not task["present"] else ""
-        cards.append(f'''<article class="task" data-status="{status}">
-<header><span class="badge {status}">{escape(task['status'])}</span>
-<span class="task-date">Updated {escape(task['updated'] or 'not recorded')}</span></header>
-<h3>{escape(task['task_name'])}</h3><dl>{details}</dl>{missing}
-<details><summary>Location and catalog details</summary>
-<p class="path">{escape(task['path'])}</p>
-<p>Catalog observed: {escape(task['last_seen'] or 'not recorded')}<br>
-Last used: {escape(task['last_used_at'] or 'not recorded')}</p></details>
-<nav aria-label="Links for {escape(task['task_name'])}">{links}</nav></article>''')
         brief = next((link["url"] for link in task["links"] if link["label"] == "Task brief"), "")
         name = escape(task["task_name"])
         if brief:
@@ -183,7 +173,7 @@ Last used: {escape(task['last_used_at'] or 'not recorded')}</p></details></th>
         "total": str(len(tasks)), "active": str(counts["active"]),
         "attention": str(counts["blocked"] + counts["waiting"]),
         "missing": str(sum(not task["present"] for task in tasks)),
-        "filters": filters, "cards": "\n".join(cards), "rows": "\n".join(rows),
+        "filters": filters, "rows": "\n".join(rows),
         "empty_hidden": "hidden" if tasks else "",
         "diagram": escape(diagram), "refresh": escape(refresh_command),
     }

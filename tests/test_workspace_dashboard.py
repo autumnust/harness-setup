@@ -77,6 +77,46 @@ class WorkspaceDashboardTests(unittest.TestCase):
             self.assertEqual(snapshot["tasks"][0]["links"], [])
             self.assertIn("folder missing", dashboard.tree_source(snapshot)["nodes"][-1]["sublabel"])
 
+    def test_backfill_on_another_machine_uses_its_paths_and_catalog(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "source"
+            destination = root / "destination"
+            source.mkdir()
+            destination.mkdir()
+            _, source_harness = self.fixture(source)
+            workspace, harness = self.fixture(destination)
+            original = source / "execution-notes/previous-task"
+            self.task(original, source_harness, "paused")
+            restored = destination / "execution-notes/previous-task"
+            shutil.copytree(original, restored)
+            readme = (restored / "README.md").read_bytes()
+            (harness / "current").mkdir()
+            (harness / "current/source").symlink_to(ROOT, target_is_directory=True)
+            for name in ("agent-task", "agent-workspace"):
+                shutil.copy2(ROOT / f"scripts/{name}.py", harness / "bin" / name)
+            env = {**os.environ, "AGENT_HARNESS_HOME": str(harness)}
+            command = [sys.executable, str(harness / "bin/agent-task"), "reconcile",
+                       str(workspace), str(restored.parent), "--format", "json"]
+            for _ in range(2):
+                subprocess.run(command, env=env, capture_output=True, check=True)
+            result = subprocess.run(
+                [sys.executable, str(harness / "bin/agent-workspace"), "list-tasks",
+                 "--workspace", str(workspace), "--format", "json"],
+                env=env, capture_output=True, text=True, check=True,
+            )
+            tasks = json.loads(result.stdout)["tasks"]
+            self.assertEqual(len(tasks), 1)
+            self.assertEqual(tasks[0]["path"], str(restored.resolve()))
+            self.assertEqual(tasks[0]["id"], "task-one")
+            self.assertEqual(tasks[0]["status"], "paused")
+            self.assertEqual((restored / "README.md").read_bytes(), readme)
+            with patch.dict(os.environ, {"AGENT_HARNESS_HOME": str(harness)}):
+                snapshot = dashboard.collect(workspace, None)
+            page = dashboard.render(snapshot, "<html>map</html>", "refresh")
+            self.assertIn(restored.resolve().as_uri(), page)
+            self.assertNotIn(original.resolve().as_uri(), page)
+
     def test_empty_workspace_has_valid_root_and_empty_message(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
