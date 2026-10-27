@@ -51,6 +51,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -328,12 +330,32 @@ def render_text(folder: Path, findings: list[Finding], mode: str = "full") -> st
     return "\n".join(lines)
 
 
+def check_task_metadata(folder: Path) -> list[Finding]:
+    source = Path(__file__).resolve().parents[3] / "scripts/task-catalog.py"
+    if not source.is_file():
+        source = Path(os.environ.get("AGENT_HARNESS_HOME", str(Path.home() / ".agent-harness"))).expanduser() / "bin/task-catalog"
+    try:
+        result = subprocess.run(
+            [sys.executable, str(source), "validate", "--path", str(folder), "--format", "json"],
+            capture_output=True, text=True, check=False,
+        )
+        payload = json.loads(result.stdout)
+        if result.returncode == 0 and payload.get("ok") is True:
+            return []
+        message = payload.get("error", "Task metadata validation failed.")
+        message += " " + payload.get("repair", "Run agent-task validate --task-dir for details.")
+    except (OSError, ValueError, AttributeError):
+        message = "Cannot run task metadata validation. Install the current harness and run agent-task validate --task-dir for this folder."
+    return [Finding("T1", "error", str(folder / "README.md"), message)]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Validate compact or full records against the execution-record policy.",
     )
     parser.add_argument("folder", type=Path, help="path to the task folder")
     parser.add_argument("--mode", choices=("compact", "full"), required=True)
+    parser.add_argument("--task", action="store_true", help="require valid metadata for an explicitly designated task folder")
     parser.add_argument("--json", action="store_true", help="emit findings as JSON")
     parser.add_argument(
         "--strict", action="store_true", help="treat warnings as errors for exit code"
@@ -356,6 +378,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     findings = check_structure(folder, set(args.allow), args.mode)
+    if args.task:
+        findings.extend(check_task_metadata(folder))
 
     if args.json:
         print(json.dumps([asdict(f) for f in findings], indent=2))

@@ -41,6 +41,7 @@ cannot be scripted.
 ```bash
 # General task
 agent-task init --name "<name>" --objective "<text>" --destination "<parent>"
+agent-task validate --task-dir "<path>" --format json
 agent-task list -H
 agent-task set-state --task-dir "<path>" --status waiting \
   --summary "<state>" --next-step "<resume trigger>" --format json

@@ -327,6 +327,73 @@ def parse_task_readme(path: Path) -> dict[str, str] | None:
     }
 
 
+def validate_task_folder(path: Path) -> dict[str, Any]:
+    """Check an explicitly selected task without opening or changing the catalog."""
+    path = path.expanduser().resolve()
+    errors: list[str] = []
+    record = None
+    try:
+        text = (path / "README.md").read_text(encoding="utf-8")
+        lines = text.splitlines()
+        end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+        if not lines or lines[0].strip() != "---" or end is None:
+            errors.append("README.md must start with a complete task metadata block delimited by ---.")
+        else:
+            keys: set[str] = set()
+            for line in lines[1:end]:
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                if ":" not in line or line[:1].isspace():
+                    errors.append("Task metadata must use top-level key: value entries.")
+                    continue
+                key = line.split(":", 1)[0].strip()
+                if key in keys:
+                    errors.append(f"Duplicate task metadata field: {key}.")
+                keys.add(key)
+                value = line.split(":", 1)[1].strip()
+                if value.startswith('"'):
+                    try:
+                        if not isinstance(json.loads(value), str):
+                            raise ValueError("not a string")
+                    except ValueError:
+                        errors.append(f"Invalid quoted metadata value for {key}.")
+                elif value.startswith("'") and not (len(value) >= 2 and value.endswith("'")):
+                    errors.append(f"Invalid quoted metadata value for {key}.")
+                elif value.startswith(("[", "{", "|", ">")):
+                    errors.append(f"Task metadata field {key} must contain one scalar value.")
+            metadata, _body = parse_front_matter(text)
+            markers = [key for key in ("agent_task", "workspace_task") if key in metadata]
+            if len(markers) != 1 or metadata[markers[0]] != "1":
+                errors.append("Use exactly one task marker: agent_task: 1 or workspace_task: 1.")
+            task_id = metadata.get("id", "").strip()
+            if not task_id or task_id in {"null", "~"} or (task_id.startswith("[") and task_id.endswith("]")):
+                errors.append("Set id to a stable task identifier; preserve an existing ID.")
+            if metadata.get("status") not in set(STATUS_ORDER) - {""}:
+                errors.append("Set status to active, paused, waiting, blocked, done, cancelled, archived, or unknown.")
+            if not errors:
+                record = parse_task_readme(path / "README.md")
+                if record is None:
+                    errors.append("The catalog does not recognize this task metadata.")
+                elif record["kind"] == "workspace-task" and not record["workspace_id"].strip():
+                    errors.append("A workspace task needs a nonempty workspace ID or a readable workspace reference.")
+    except (CatalogError, OSError, UnicodeError) as exc:
+        errors.append(str(exc))
+    payload: dict[str, Any] = {
+        "schema_version": 1, "operation": "agent-task-validate", "ok": not errors,
+        "path": str(path), "errors": errors,
+    }
+    if errors:
+        payload["error"] = " ".join(errors)
+        payload["repair"] = (
+            "Repair only the README task metadata and validate again. Preserve existing IDs and document content. "
+            "Use recorded status or unknown when no status is established. Do not rerun init on this folder. "
+            "After validation passes, run task-catalog register --path with this folder."
+        )
+    else:
+        payload["record"] = record
+    return payload
+
+
 def run_git(path: Path, *arguments: str) -> str:
     result = subprocess.run(
         ["git", "-C", str(path), *arguments],
@@ -786,6 +853,10 @@ def build_parser() -> argparse.ArgumentParser:
     register.add_argument("--path", required=True, type=Path)
     add_output_format(register, "json")
 
+    validate = commands.add_parser("validate", help="check task metadata without writing files or the catalog")
+    validate.add_argument("--path", required=True, type=Path)
+    add_output_format(validate, "json")
+
     listing = commands.add_parser("list", help="list registered local folders")
     add_listing_arguments(listing)
 
@@ -802,6 +873,15 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    if args.command == "validate":
+        payload = validate_task_folder(args.path)
+        if args.format == "json":
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(("Valid task: " if payload["ok"] else "Invalid task: ") + payload["path"])
+            if not payload["ok"]:
+                print(payload["error"] + "\n" + payload["repair"])
+        return 0 if payload["ok"] else 1
     try:
         with connect(args.db) as connection:
             if args.command == "register":

@@ -395,6 +395,17 @@ repositories and reusable context. A task holds one objective, its inputs,
 working files, and outputs. It can stand alone or belong to a workspace.
 Task size does not decide workspace membership.
 
+Create each new persistent task folder through `agent-task init` or
+`agent-workspace start-task` before adding custom files or copying another task's layout.
+Before using an existing folder as a task, run
+`agent-task validate --task-dir "<folder>" --format json`.
+Run it again after replacing or editing the README metadata.
+If validation fails, preserve the folder and repair the reported metadata before registration.
+Keep existing IDs and recorded lifecycle states. Use `unknown` when no status is established.
+Never rerun initialization over an existing folder or copy another task's ID.
+This rule applies to explicitly designated task folders in every subject and mode.
+Ordinary notes, output directories, and experiment subfolders do not become tasks by location alone.
+
 Both task types permit these artifact folders in every mode:
 
 | Path | Purpose |

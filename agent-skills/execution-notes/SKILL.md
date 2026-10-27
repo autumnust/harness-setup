@@ -8,6 +8,15 @@ description: Create or validate compact and full execution records. Use compact 
 Preserve enough state to resume work without turning routine interaction into a
 second stream of status reporting.
 
+## Task metadata prerequisite
+
+Before adding execution records to a designated task folder, run
+`agent-task validate --task-dir "<folder>" --format json`.
+If it fails, follow the [task metadata repair procedure](../agent-task/SKILL.md#task-identity-and-validation).
+Preserve the metadata when editing the task README.
+Use `--task` in the structure checker to validate task identity and record layout together.
+Omit that flag only for document folders that are not designated tasks.
+
 ## When to use
 
 Use this skill only after the human picks a compact record in fast mode or
@@ -47,7 +56,7 @@ loss, during a handoff, or after a non-obvious failure. Validate it with:
 
 ```bash
 python3 <this-skill-directory>/scripts/check_work_structure.py \
-  <task-folder> --mode compact
+  <task-folder> --task --mode compact
 ```
 
 Keep task lists separate from recovery status. Record each durable decision in
@@ -75,7 +84,7 @@ validate them with:
 
 ```bash
 python3 <this-skill-directory>/scripts/check_work_structure.py \
-  <task-folder> --mode full
+  <task-folder> --task --mode full
 ```
 
 When invoked as the execution environment prepper:
@@ -103,7 +112,7 @@ When invoked as the execution environment prepper:
 
    ```bash
    python3 <this-skill-directory>/scripts/check_work_structure.py \
-     <task-folder> --mode full
+     <task-folder> --task --mode full
    ```
 
    Use `--json` for structured findings and `--strict` to treat warnings as

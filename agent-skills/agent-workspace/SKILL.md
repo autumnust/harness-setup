@@ -56,6 +56,10 @@ agent, TSS, or tmux. If no folder option is provided, it uses the configured
 execution root. Read the returned folder's `README.md` and `AGENTS.md`. Use
 `-H` for direct terminal reading.
 
+Before using a task folder, run `agent-task validate --task-dir "<folder>" --format json`.
+Preserve its README metadata when adding a custom layout. For copied or existing
+folders with missing metadata, follow the [task validation and repair procedure](../agent-task/SKILL.md#task-identity-and-validation).
+
 Use `agent-task set-state` for explicit lifecycle changes. Use `task-session`
 only when the user asks to start a runtime.
 

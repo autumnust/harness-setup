@@ -63,12 +63,30 @@ def emit(payload: dict[str, Any], output_format: str) -> None:
     if payload.get("ok"):
         if payload.get("operation") == "agent-task-set-state":
             print(f"Task state: {payload['status']}")
+        if payload.get("operation") == "agent-task-validate":
+            print("Task metadata: valid")
         print(f"Task folder: {payload['path']}")
         if payload.get("catalog_warning"):
             print(f"Catalog refresh warning: {payload['catalog_warning']}")
         return
     print(f"Task folder: {payload.get('path', 'not created')}")
     print(f"Error: {payload['error']}", file=sys.stderr)
+
+
+def validate_task(arguments: argparse.Namespace) -> int:
+    try:
+        catalog = source_root() / "scripts/task-catalog.py"
+        code, payload, error = run_json([
+            sys.executable, str(catalog), "validate", "--path", str(arguments.task_dir), "--format", "json",
+        ])
+        if not payload:
+            raise ValueError(error or "task metadata validator returned no result")
+    except (OSError, ValueError) as exc:
+        code, payload = 1, {"ok": False, "path": str(arguments.task_dir), "error": str(exc)}
+    emit(payload, arguments.format)
+    if arguments.format != "json" and payload.get("repair"):
+        print(payload["repair"], file=sys.stderr)
+    return code
 
 
 def init_task(arguments: argparse.Namespace) -> int:
@@ -414,6 +432,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="text",
     )
     init_parser.set_defaults(handler=init_task)
+
+    validate_parser = subparsers.add_parser("validate", help="check task metadata without changing files or the catalog")
+    validate_parser.add_argument("--task-dir", required=True, type=Path)
+    add_output_format(validate_parser, choices=("text", "json", "human"), default="text")
+    validate_parser.set_defaults(handler=validate_task)
 
     state_parser = subparsers.add_parser(
         "set-state", help="record an explicit lifecycle change"

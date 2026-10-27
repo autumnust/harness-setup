@@ -10,6 +10,29 @@ alone or belong to a workspace. Task size does not decide workspace membership.
 The folder and its Git history preserve task context. Runtime sessions and
 execution tracking are optional and managed separately.
 
+## Task identity and validation
+
+Create task folders through the task commands before adding a custom layout.
+Copying another folder's files does not create a new task identity.
+Validate a new, copied, or existing folder before using it as a task:
+
+```bash
+agent-task validate --task-dir "<folder>" --format json
+```
+
+Validation is read-only. It requires exactly one supported task marker, a stable
+ID, and a recorded status. Workspace tasks also need a workspace ID or a readable
+workspace reference. It checks the same metadata that catalog discovery reads.
+Success does not register the folder or prove that its recorded state is current.
+
+If validation fails, preserve the documents and repair only the reported metadata.
+Keep any existing ID. For an explicitly adopted folder without an ID, assign a new
+UUID. Preserve the recorded status; use `unknown` when no status is established.
+Do not infer workspace membership from the parent folder. Validate again, then
+run `task-catalog register --path "<folder>"`. Never rerun `init` over an existing folder.
+Preserve metadata when rewriting a README, and validate after metadata changes.
+Apply this to task folders, not ordinary notes, outputs, or experiment subfolders.
+
 ## Create a standalone task
 
 Use `agent-workspace start-task` to create the same task concept with workspace

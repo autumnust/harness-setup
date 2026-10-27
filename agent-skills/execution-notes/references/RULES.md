@@ -43,3 +43,11 @@ location. The checker permits these entries but does not assess their content.
 
 When the policy prose changes, update this map and the checker in the same
 change.
+
+## Explicit task metadata check
+
+Pass `--task` when the folder is explicitly designated as an agent task.
+Rule `T1` requires the [task metadata contract](../../agent-task/SKILL.md#task-identity-and-validation).
+The check is read-only and reports repair instructions for missing or invalid metadata.
+Without `--task`, the checker continues to validate record layout only.
+Do not classify ordinary notes or experiment folders as tasks from their location.
