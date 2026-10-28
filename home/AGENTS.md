@@ -444,7 +444,8 @@ explicitly asks for it, for example
   the full record structure?" Do not pick a record level from task size or
   risk. Keep no record until the human answers.
 - **Use one compact recovery record when the human picks it.** Keep exactly
-  one `RECOVERY.md` in the task folder. It contains only the objective, durable decisions, PR and commit
+  one `RECOVERY.md` in the task folder. It contains only the objective, the user's original problem wording and
+  confirmed terms, durable decisions, PR and commit
   state, blockers, latest meaningful validation, and next action. PR and commit
   state means identifiers and unpublished local work, not copied PR text or
   live GitHub checks. Summarize validation; do not paste passing command output.
@@ -460,6 +461,9 @@ explicitly asks for it, for example
   durable decisions in `RECOVERY.md` for compact tracking or `README.md` or
   `SPEC.md` for full tracking. Move decisions when retiring their canonical
   record during a format change. Keep each decision in one place.
+- **Read the user's words on resume.** Before the first message to the user,
+  read the problem wording and confirmed terms in `RECOVERY.md` or in the full
+  `README.md` or `SPEC.md`.
 - **Expand when the human switches to full mode.** Carry the durable content
   of `RECOVERY.md` into the full structure, remove `RECOVERY.md`, and continue
   with one current status entry point. Do not keep both formats current.
@@ -478,7 +482,7 @@ For the full structure:
 
   | Path | Purpose |
   |---|---|
-  | `README.md` or `SPEC.md` | Self-contained "what and how": goal, success criteria, folder layout, how to add work, and how to resume. |
+  | `README.md` or `SPEC.md` | Self-contained "what and how": goal, the user's original problem wording and confirmed terms, success criteria, folder layout, how to add work, and how to resume. |
   | `progress.html` | Human/agent dashboard for "where we are": current status, completed stages, active blockers, open follow-ups, and links to stage evidence. |
   | `findings/` | Issues discovered while executing. Keep a catalog with ticket links, source scenario, status, and resolution. Closed items should remain visible but marked closed. |
   | `evidence/` or `logs/` | Raw logs, traces, dry-run JSON, screenshots, command output, and artifact summaries worth preserving. |
