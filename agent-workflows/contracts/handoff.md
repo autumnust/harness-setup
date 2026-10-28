@@ -7,6 +7,11 @@ access to the parent's conversation history. Include:
   routing only when the work creates a PR or needs review, in either mode.
 - **Goal:** the concrete outcome and why it matters.
 - **User intent:** relevant user wording, preferences, and decisions.
+- **User vocabulary:** the user's original problem wording, quoted; the terms
+  the user has shown they understand; and the terms an agent introduced that
+  the user has not confirmed. Follow `~/AGENTS.md` section "Keep the user's
+  vocabulary throughout the task". The child sees only this packet, so state
+  these items here and do not rely on that file.
 - **Scope:** owned files or systems, plus explicit exclusions.
 - **Constraints:** applicable instructions, safety limits, and depth remaining.
 - **Runtime configuration:** only the resolved values relevant to this child.

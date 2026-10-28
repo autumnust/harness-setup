@@ -3,7 +3,10 @@
 Every child returns a compact result to its permitted parent or message target:
 
 - **Status:** complete, blocked, or needs-decision.
-- **Outcome:** what changed or what was learned.
+- **Outcome:** what changed or what was learned. Write it, and the blockers,
+  in the user vocabulary from the packet. Keep exact identifiers that the user
+  needs. List each new term you use, with a one-line plain meaning, so that the
+  coordinator can explain it.
 - **Evidence:** commands, artifacts, findings, or links supporting the result.
 - **Blockers and decisions:** items requiring the coordinator or the human user.
 - **Model provenance:** provider, foundation, concrete model, and agent identity.
