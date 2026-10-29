@@ -23,19 +23,19 @@
       "name": "grilling",
       "repository": "https://github.com/mattpocock/skills.git",
       "tracking_ref": "refs/heads/main",
-      "revision": "49dd158d1076134a641b33efb035946536778336",
+      "revision": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
       "source_path": "skills/productivity/grilling",
       "license_path": "LICENSE",
-      "content_sha256": "68893480b9bb9a78cd251851fd68d0707a8f8aedf4b83f92596b9b420ecc4b56"
+      "content_sha256": "7828035a0fc9400034c934138b9cb55f15ea6a396e272eb7d11e43ec2112d4d3"
     },
     {
       "name": "unslop",
       "repository": "https://github.com/cursor/plugins.git",
       "tracking_ref": "refs/heads/main",
-      "revision": "efa2a531985e0a8084d36ff3cf87233be8a9f34b",
+      "revision": "1ba91fc25c0977741dd0e267849e6234b037ed0a",
       "source_path": "pstack/skills/unslop",
       "license_path": "pstack/LICENSE",
-      "content_sha256": "386706a33b6a680f800906566efecfbdd4f04d731b87cbcad95b925647493c24"
+      "content_sha256": "f82c8cb2984b5993948e5e3c70245897dee1b638ffc9256b66e1affa364b85e1"
     }
   ]
 }
