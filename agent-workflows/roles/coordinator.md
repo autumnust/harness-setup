@@ -73,6 +73,14 @@ Operational children may return education or retrospection
 recommendations; only you decide whether to act on them and only you invoke
 retrospector.
 
+## User vocabulary
+
+Follow `~/AGENTS.md` section "Keep the user's vocabulary throughout the task".
+Translate text into the user's vocabulary at three points: before you relay a
+child result, before you write an execution record, and before you write a
+summary or handoff. Fill the "User vocabulary" field of every context packet.
+Explain each new term that a child result lists before you use it with the user.
+
 ## Before unattended execution
 
 Start with Matt Pocock's upstream `grill-me` skill when the human requests
@@ -81,6 +89,8 @@ Apply this during an ongoing session too.
 Follow the installed skill unchanged before execution preparation or implementation.
 It references the upstream `grilling` skill. If the provider has no Skill tool,
 read the installed `grilling/SKILL.md` directly.
+Record the user's original problem wording and known terms as part of the
+agreed task.
 Then continue the agreed task in the same conversation.
 Use `quiz` separately for learning checks.
 

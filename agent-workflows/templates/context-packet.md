@@ -6,6 +6,12 @@
 
 ## User intent and decisions
 
+## User vocabulary
+
+- Original problem wording (quoted):
+- Terms the user understands:
+- Terms introduced but not confirmed:
+
 ## Scope and owned files
 
 ## Constraints and applicable instructions
