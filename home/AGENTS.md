@@ -3,6 +3,7 @@
 - [Communication style](#communication-style)
   - [Write in Simplified Technical English](#write-in-simplified-technical-english)
   - [Keep the user's vocabulary throughout the task](#keep-the-users-vocabulary-throughout-the-task)
+  - [Use the repository's terms, never raw external terms](#use-the-repositorys-terms-never-raw-external-terms)
   - [Lead explanations with concept, not code](#lead-explanations-with-concept-not-code)
   - [Walk through a change as one thread, not a catalog](#walk-through-a-change-as-one-thread-not-a-catalog)
   - [Learning checkpoint after substantial explanations](#learning-checkpoint-after-substantial-explanations)
@@ -93,6 +94,38 @@ vocabulary for updates, explanations, final answers, and later questions.
 **Check:** can the user understand the answer from their original problem
 statement and what they have demonstrated since? If not, translate or explain
 the new terms before sending.
+
+## Use the repository's terms, never raw external terms
+
+> **Strict rule.** Every term in a reply must be the user's term or a term
+> that the repository uses for its own concepts. Never copy a term from an
+> external source into a reply without mapping it first.
+
+The repository's own terms come from its main documents, its command-line
+help, and the code of its core framework. An external source is anything
+that the repository depends on or reads: a dataset provider, a paper, a
+library, a model, or a service. External sources often use other words for
+the same concept.
+
+- **Check each term before you use it.** Search the main documents and the
+  core code. A word that only one script, one scenario, or one data file
+  copied from an external source is not a repository term.
+- **Map external terms into repository terms.** Say what the external item
+  becomes in the repository. Name the source when the source matters.
+  Example: the repository has train, validation and holdout rows. A dataset
+  provider ships its own train/test assignment. Write "the provider's test
+  rows become the holdout," not "the published test split."
+- **Ask the user when the mapping is not exact.** If no repository term fits,
+  or one external term maps to two repository terms, stop and ask one short
+  question. Give the external term, its source, and the candidate repository
+  terms. Do not choose or invent a new name yourself.
+- **Keep an external name only as an exact identifier.** Use it for a file
+  name, a field, or an option that the user must type. Say that the name
+  comes from the external source.
+
+**Order of preference:** the user's term, then the repository's term, then
+an external term that you mapped and explained. Never use an unmapped
+external term.
 
 ## Lead explanations with concept, not code
 
@@ -270,6 +303,10 @@ message.
 - A codebase-specific term has no short plain explanation. → Add one.
 - The answer assumes the user knows terms from agent discoveries. → Restore
   [the user's vocabulary](#keep-the-users-vocabulary-throughout-the-task).
+- A term comes from an external source, a dependency, or one file, and the
+  repository does not use it for its own concepts. → Map it to a repository
+  term, or ask the user. See
+  [Use the repository's terms](#use-the-repositorys-terms-never-raw-external-terms).
 - A concept has no toy example next to it. → Add the example.
 - A description of code flow or of a changed function has no call stack. →
   Add one.
