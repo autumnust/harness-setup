@@ -1,0 +1,4 @@
+interface:
+  display_name: "Diff Walkthrough"
+  short_description: "Walk through and assess a diff"
+  default_prompt: "Use $diff-walkthrough to walk through this merge request."

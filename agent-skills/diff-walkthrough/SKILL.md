@@ -1,11 +1,12 @@
 ---
-name: mr-walkthrough
-description: Write a structured walkthrough of a merge request or pull request — glossary, problem, solution shape with toy examples and call stacks, an assessment with corner cases and the author's open decisions, and a close. Use when the user asks to walk through, explain, summarize, assess, or review a merge request or pull request, given as a URL, a number, or a branch.
+name: diff-walkthrough
+description: Write a structured walkthrough of a merge request, a pull request, or another diff — glossary, problem, solution shape with toy examples and call stacks, an assessment with corner cases and the author's open decisions, and a close. Use when the user asks to walk through, explain, summarize, assess, or review a merge request, a pull request, or a diff between two branches or commits, given as a URL, a number, a branch, or a commit range.
 ---
 
-# MR walkthrough
+# Diff walkthrough
 
-Explain one merge request (MR) or pull request (PR) as one story. The reader
+Explain one diff as one story. The diff is usually a merge request (MR) or a
+pull request (PR). It can also be a local branch or a commit range. The reader
 must understand the problem, the shape of the solution, and the weak points
 without reading the diff first.
 
