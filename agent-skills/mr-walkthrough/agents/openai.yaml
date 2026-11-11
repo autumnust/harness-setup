@@ -1,0 +1,4 @@
+interface:
+  display_name: "MR Walkthrough"
+  short_description: "Walk through and assess a merge request"
+  default_prompt: "Use $mr-walkthrough to walk through this merge request."
