@@ -9,6 +9,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -417,14 +418,39 @@ def git_metadata(path: Path) -> dict[str, str]:
     }
 
 
+BUSY_TIMEOUT_SECONDS = 5.0
+
+
+def enable_wal(connection: sqlite3.Connection) -> None:
+    # The switch to WAL needs an exclusive lock. When other processes open
+    # the same new database at the same time, SQLite can return "database is
+    # locked" here at once, without calling the busy handler. Retry until the
+    # busy timeout ends.
+    deadline = time.monotonic() + BUSY_TIMEOUT_SECONDS
+    delay = 0.005
+    while True:
+        try:
+            connection.execute("PRAGMA journal_mode = WAL")
+            return
+        except sqlite3.OperationalError as exc:
+            busy = (exc.sqlite_errorcode & 0xFF) in (
+                sqlite3.SQLITE_BUSY,
+                sqlite3.SQLITE_LOCKED,
+            )
+            if not busy or time.monotonic() >= deadline:
+                raise
+        time.sleep(delay)
+        delay = min(delay * 2, 0.1)
+
+
 def connect(database: Path) -> sqlite3.Connection:
     database = database.expanduser().resolve()
     database.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(database, timeout=5)
+    connection = sqlite3.connect(database, timeout=BUSY_TIMEOUT_SECONDS)
     connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA busy_timeout = 5000")
+    connection.execute(f"PRAGMA busy_timeout = {int(BUSY_TIMEOUT_SECONDS * 1000)}")
     connection.execute("PRAGMA foreign_keys = ON")
-    connection.execute("PRAGMA journal_mode = WAL")
+    enable_wal(connection)
     metadata_exists = connection.execute(
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'catalog_metadata'"
     ).fetchone()
